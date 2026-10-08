@@ -1,0 +1,20 @@
+{
+  "name": "ai-project",
+  "private": true,
+  "scripts": {
+    "frontend": "npm --prefix \"Orbital Clash\" run dev",
+    "frontend:install": "npm --prefix \"Orbital Clash\" install",
+    "frontend:build": "npm --prefix \"Orbital Clash\" run build",
+    "frontend:preview": "npm --prefix \"Orbital Clash\" run preview",
+    "frontend:lint": "npm --prefix \"Orbital Clash\" run lint",
+    "backend": "npm --prefix backend start",
+    "backend:install": "npm --prefix backend install",
+    "dev": "npm run frontend"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mammoth": "^1.12.1",
+    "multer": "^2.2.0"
+  }
+}

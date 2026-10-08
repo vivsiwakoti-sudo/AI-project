@@ -1,0 +1,319 @@
+/* ==========================================================================
+   ORBITAL CLASH — GLOBAL DESIGN SYSTEM
+   --------------------------------------------------------------------------
+   One source of truth for colour, type, spacing, radius and motion. Every
+   screen and component reads these variables, so the whole game shares a
+   single futuristic-arcade identity: dark navy surfaces, electric blue
+   primary, bright cyan secondary and purple accents.
+   ========================================================================== */
+
+:root {
+  /* --- Surfaces (dark base -> elevated) ------------------------------- */
+  --bg: #05070f;
+  --bg-deep: #02030a;
+  --surface: #0a0f1c;
+  --surface-alt: #0d1424;
+  --surface-elevated: #111a2e;
+  --surface-glass: rgba(13, 20, 36, 0.72);
+
+  /* --- Primary accents ------------------------------------------------ */
+  --primary: #2f7bff;          /* electric blue */
+  --primary-soft: rgba(47, 123, 255, 0.14);
+  --primary-glow: rgba(47, 123, 255, 0.45);
+
+  /* --- Secondary accents ---------------------------------------------- */
+  --cyan: #00f2ff;             /* bright cyan — the game's signature */
+  --cyan-soft: rgba(0, 242, 255, 0.12);
+  --cyan-glow: rgba(0, 242, 255, 0.45);
+
+  /* --- Purple accents ------------------------------------------------- */
+  --purple: #a855f7;
+  --purple-soft: rgba(168, 85, 247, 0.14);
+
+  /* --- Semantic states ------------------------------------------------ */
+  --success: #46e6a0;
+  --warning: #ffb347;
+  --danger: #ff4d6d;
+  --danger-soft: rgba(255, 77, 109, 0.14);
+
+  /* --- Text ----------------------------------------------------------- */
+  --text: #eaf4ff;
+  --text-h: #ffffff;
+  --text-secondary: #8fa6bd;
+  --text-muted: #5d7186;
+
+  /* --- Borders -------------------------------------------------------- */
+  --border: #1b2c44;
+  --border-soft: #16233a;
+  --border-strong: #28405f;
+
+  /* --- Gradients & shadows -------------------------------------------- */
+  --grad-surface: linear-gradient(160deg, #0b1120 0%, #070b16 100%);
+  --grad-elevated: linear-gradient(150deg, #131d33 0%, #0b1322 100%);
+  --grad-primary: linear-gradient(135deg, var(--primary) 0%, var(--cyan) 100%);
+  --grad-accent: linear-gradient(135deg, var(--cyan) 0%, var(--primary) 55%, var(--purple) 100%);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 26px -8px rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 24px 60px -18px rgba(0, 0, 0, 0.8);
+  --shadow-glow: 0 0 18px var(--cyan-glow), 0 0 40px rgba(0, 242, 255, 0.12);
+
+  /* --- Geometry ------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* --- Spacing scale -------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* --- Motion --------------------------------------------------------- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 360ms;
+
+  /* --- Typography ----------------------------------------------------- */
+  /* Orbitron — game title and major headings */
+  --font-title: "Orbitron", "Segoe UI", sans-serif;
+  /* Oxanium — class names and buttons */
+  --font-ui: "Oxanium", "Segoe UI", sans-serif;
+  /* Rajdhani — UI text and body copy */
+  --font-data: "Rajdhani", "Segoe UI", sans-serif;
+  /* Share Tech Mono — numerical / stat readouts */
+  --font-mono: "Share Tech Mono", ui-monospace, "Consolas", monospace;
+
+  /* Legacy aliases kept so any existing rule still resolves. */
+  --neon-blue: var(--cyan);
+  --bg-color: var(--bg-deep);
+  --text-color: var(--text);
+  --code-bg: #0d1424;
+
+  font: 16px/1.5 var(--font-data);
+  letter-spacing: 0.2px;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow-y: auto;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 700px at 50% -10%, rgba(47, 123, 255, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 100% 100%, rgba(168, 85, 247, 0.08), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+  font-family: var(--font-data);
+}
+
+#root {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  text-align: center;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.arena-screen {
+  width: 100%;
+  min-height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  align-items: flex-start !important;
+}
+
+.arena-layout {
+  width: min(1264px, calc(100% - 24px));
+  max-width: 1264px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 220px) minmax(0, 800px) minmax(0, 220px);
+  gap: 12px;
+  margin: 0 auto;
+  align-items: center !important;
+}
+
+/* A column holding more than one panel splits its width between them instead of
+   stacking them, so every fighter's HUD is visible side by side. */
+.arena-stats {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Column widths are driven by the panels they must hold, not by a fixed guess.
+   A two-panel column needs 2 x 113px panel floor + 6px gap = 232px, and the
+   single-panel column keeps the full 220px it has in a duel.
+
+   3 fighters: [0, 2] skinny (232px) | [1] full size (220px)
+   4 fighters: [0, 2] skinny (232px) | [1, 3] skinny (232px) */
+
+/* 3 fighters: the two-panel side is skinny so the single panel on the other side
+   keeps its FULL size, which is the readable arrangement. */
+.arena-layout-3 {
+  grid-template-columns: minmax(0, 232px) minmax(0, 640px) minmax(0, 220px);
+}
+
+/* 4 fighters: both sides carry two panels, so both go skinny and the arena gives
+   up the width they need. */
+.arena-layout-4 {
+  grid-template-columns: minmax(0, 232px) minmax(0, 600px) minmax(0, 232px);
+}
+
+/* The narrow column in each layout, and how the panels inside it share space. */
+.arena-layout-3 .arena-stats-skinny,
+.arena-layout-4 .arena-stats {
+  gap: 6px;
+}
+
+.arena-scroll {
+  width: min(100%, max(320px, calc(100vh - 170px)));
+  aspect-ratio: 1;
+  justify-self: center;
+  min-width: 0;
+  overflow: visible;
+}
+
+.arena-stats {
+  width: 100%;
+  min-width: 0;
+  align-self: center;
+}
+
+.arena-scroll canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+@media (max-width: 900px) {
+  .arena-layout {
+    width: min(620px, calc(100% - 24px));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .arena-scroll {
+    width: min(100%, max(320px, calc(100vh - 150px)));
+    grid-row: 1;
+  }
+
+  .arena-stats-left {
+    grid-row: 2;
+  }
+
+  .arena-stats-right {
+    grid-row: 3;
+  }
+
+  /* Below this width the three columns stack, so a "side" is now a full-width
+     row. The panels sit side by side across that row, and each gets an equal
+     share - so the skinny/compact type treatment is not needed and would only
+     make the HUD harder to read than it needs to be. */
+  .arena-layout-3,
+  .arena-layout-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .arena-stats-skinny .hud-panel { flex: 1 1 0; }
+}
+
+@media (max-width: 640px) {
+  .fighter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .main-title {
+    font-size: clamp(1.8rem, 9vw, 3em);
+    letter-spacing: 2px;
+  }
+}
+
+/* --- Base element defaults ------------------------------------------- */
+h1,
+h2,
+h3 {
+  font-family: var(--font-title);
+  color: var(--text-h);
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: var(--font-ui);
+  color: inherit;
+}
+
+code,
+.counter {
+  font-family: var(--font-mono);
+  display: inline-flex;
+  border-radius: var(--radius-sm);
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
+
+/* --- Scrollbars ------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* --- Accessibility ---------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

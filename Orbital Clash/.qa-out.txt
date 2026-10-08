@@ -1,0 +1,116 @@
+﻿url        http://localhost:5199
+http       200
+load       92049ms
+title      "frontend"
+bodyChars  2273
+patchright C:\Users\siwak\.vscode\extensions\danielsanmedium.dscodegpt-3.24.75\standalone/
+text       ORBITAL CLASH 🔊 SOUND ROSTER • 25 FIGHTERS PICK YOUR FIGHTERS ALL MELEE PROJECTILE BEAM AOE BODY TRAIL A-Z ↑ RESET PROGRESS Alchemist Projectile HP 90 DMG 12 SPD 5 px/f UNRANKED ◆ Throws potions with
+script     {
+ "steps": [
+  "selected Mahoraga",
+  "selected Spearman",
+  "selected Knight",
+  "selected Meteor",
+  "started battle"
+ ],
+ "selected": 4,
+ "reachedResults": true,
+ "results": {
+  "summary": "FIGHT LENGTH 83s TOTAL DAMAGE 479 WINNER HP 76",
+  "winner": "Meteor",
+  "orderVsSurvival": [
+   "1st=SURVIVED 83s",
+   "2nd=SURVIVED 83s",
+   "3rd=SURVIVED 76s",
+   "4th=SURVIVED 53s"
+  ],
+  "rows": [
+   {
+    "order": "1st",
+    "name": "1st Meteor",
+    "outcome": "VICTORY",
+    "metrics": [
+     "DAMAGE 300",
+     "TAKEN 24",
+     "KILLS 2",
+     "HITS 6",
+     "SURVIVED 83s",
+     "HP LEFT 76",
+     "WINS 1",
+     "LOSSES 0",
+     "KILLS 4",
+     "WIN % 100%"
+    ]
+   },
+   {
+    "order": "2nd",
+    "name": "2nd Knight",
+    "outcome": "DEFEAT",
+    "metrics": [
+     "DAMAGE 75",
+     "TAKEN 168",
+     "KILLS 1",
+     "HITS 5",
+     "SURVIVED 83s",
+     "HP LEFT 0",
+     "WINS 0",
+     "LOSSES 1",
+     "KILLS 2",
+     "WIN % 0%"
+    ]
+   },
+   {
+    "order": "3rd",
+    "name": "3rd Mahoraga",
+    "outcome": "DEFEAT",
+    "metrics": [
+     "DAMAGE 56",
+     "TAKEN 142",
+     "KILLS 0",
+     "HITS 7",
+     "SURVIVED 76s",
+     "HP LEFT 0",
+     "WINS 0",
+     "LOSSES 1",
+     "KILLS 0",
+     "WIN % 0%"
+    ]
+   },
+   {
+    "order": "4th",
+    "name": "4th Spearman",
+    "outcome": "DEFEAT",
+    "metrics": [
+     "DAMAGE 48",
+     "TAKEN 145",
+     "KILLS 0",
+     "HITS 12",
+     "SURVIVED 53s",
+     "HP LEFT 0",
+     "WINS 0",
+     "LOSSES 1",
+     "KILLS 0",
+     "WIN % 0%"
+    ]
+   }
+  ]
+ }
+}
+
+console errors/warnings (14):
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+  [warning] The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+
+requests failed (0):

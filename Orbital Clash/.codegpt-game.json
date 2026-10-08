@@ -1,0 +1,8 @@
+{
+  "name": "orbital-clash",
+  "engine": "generic",
+  "launch": { "cmd": "C:/Program Files/nodejs/node.exe", "args": ["node_modules/vite/bin/vite.js", "--port", "5199", "--strictPort"] },
+  "log": { "stdout": true },
+  "ready": "Local:",
+  "sourceRoots": ["src"]
+}

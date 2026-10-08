@@ -1,0 +1,9 @@
+﻿
+script     {
+  "selected Mahoraga",
+  "selected Spearman",
+  "selected Knight",
+  "selected Meteor",
+ "selected": 4,
+ "reachedResults": false,
+console errors/warnings (14):
