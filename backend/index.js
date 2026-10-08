@@ -4,7 +4,7 @@ const mammoth = require("mammoth");
 const path = require("path");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
@@ -35,6 +35,13 @@ async function loadSoftwarePlan() {
     }
 }
 
+const softwarePlanReady = loadSoftwarePlan();
+
+app.use(async (req, res, next) => {
+    await softwarePlanReady;
+    next();
+});
+
 app.get("/", (req, res) => {
     res.json({
         message: "AI Game Backend is running!"
@@ -48,8 +55,12 @@ app.get("/api/software-plan", (req, res) => {
     });
 });
 
-loadSoftwarePlan().then(() => {
+if (require.main === module) {
+    softwarePlanReady.then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
-});
+    });
+}
+
+module.exports = app;

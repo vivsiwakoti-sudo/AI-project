@@ -2,3 +2,9 @@
 /*
 !/.gitignore
 !/Orbital Clash/
+!/api/
+!/backend/
+!/package.json
+!/package-lock.json
+!/Software Planning (1).docx
+!/vercel.json
