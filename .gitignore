@@ -1,0 +1,4 @@
+# Publish only the game folder.
+/*
+!/.gitignore
+!/Orbital Clash/

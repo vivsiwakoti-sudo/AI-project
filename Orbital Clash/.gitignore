@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Local QA scratch files and tool configs
+.qa-*
+.mutant-touch-check.mjs
+qa-out.txt
+.codegpt-game.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
