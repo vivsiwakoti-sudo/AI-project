@@ -271,4 +271,110 @@ export function beamColumn(ctx, x1, y1, x2, y2, width, color, time) {
   ctx.restore();
 }
 
+// Star burst for a critical/heavy hit. `progress` runs 0..1 across the effect's
+// life; spikes flare out and thin as they go. Kept deliberately simple - eight
+// strokes and one ring - so it can fire on every crit without cost.
+export function critBurst(ctx, x, y, radius, progress, color = "#ffd166") {
+  const p = Math.max(0, Math.min(1, progress));
+  const alpha = 1 - p;
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.95;
+  ctx.strokeStyle = color;
+  ctx.lineCap = "round";
+  ctx.shadowBlur = 16;
+  ctx.shadowColor = color;
+
+  const spikes = 8;
+  const spin = p * 0.9;
+  const inner = radius * (1 + p * 0.35);
+  const outer = radius * (1.7 + p * 1.6);
+  ctx.lineWidth = 3 * (1 - p) + 1;
+  ctx.beginPath();
+  for (let i = 0; i < spikes; i++) {
+    const a = (i / spikes) * TAU + spin;
+    ctx.moveTo(x + Math.cos(a) * inner, y + Math.sin(a) * inner);
+    ctx.lineTo(x + Math.cos(a) * outer, y + Math.sin(a) * outer);
+  }
+  ctx.stroke();
+
+  // Bright shock ring snapping outward underneath the spikes.
+  ctx.globalAlpha = alpha * 0.7;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * (0.9 + p * 1.9), 0, TAU);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Ability-cast sigil. A single ring whose silhouette is chosen by `kind`, so a
+// beam, a projectile and an AOE burst each read differently with one helper.
+// The caller drives `progress` 0..1 over the cast window.
+export function castSigil(ctx, x, y, radius, progress, color, kind = "burst") {
+  const p = Math.max(0, Math.min(1, progress));
+  const alpha = Math.sin(p * Math.PI) * 0.9; // fade in, then out
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.shadowBlur = 14;
+  ctx.shadowColor = color;
+  ctx.lineCap = "round";
+  ctx.translate(x, y);
+
+  if (kind === "beam") {
+    // Concentric rings collapsing inward, reading as an energy draw-down.
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < 3; i++) {
+      const rr = radius * (2.2 - p * 1.4 - i * 0.3);
+      if (rr <= 0) continue;
+      ctx.globalAlpha = alpha * (0.9 - i * 0.25);
+      ctx.beginPath();
+      ctx.arc(0, 0, rr, 0, TAU);
+      ctx.stroke();
+    }
+  } else if (kind === "projectile") {
+    // A single ring plus a forward chevron pointing along the cast angle (drawn
+    // rotated by the caller's own transform when they want a direction).
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * (1 + p * 0.6), 0, TAU);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(radius * 0.6, -radius * 0.5);
+    ctx.lineTo(radius * (1.2 + p * 0.8), 0);
+    ctx.lineTo(radius * 0.6, radius * 0.5);
+    ctx.stroke();
+  } else if (kind === "aoe") {
+    // Two dashed rings sweeping out, like a ground-tell pulse.
+    ctx.setLineDash([10, 8]);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * (1.2 + p * 2), 0, TAU);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * (0.7 + p * 1.4), 0, TAU);
+    ctx.stroke();
+  } else {
+    // Default: a bright ring plus a short six-point flare.
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * (1 + p * 0.9), 0, TAU);
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    const r0 = radius * 1.05;
+    const r1 = radius * (1.5 + p * 0.8);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * TAU + p * 0.5;
+      ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+      ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export { TAU };

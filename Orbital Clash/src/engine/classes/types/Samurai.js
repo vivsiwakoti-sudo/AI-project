@@ -37,7 +37,7 @@ export class Samurai extends FighterBase {
                 // 6 damage for a normal katana cut (the class's defined damage), 15
                 // on a critical. The blade used to land a flat 5 and the crit 7.5,
                 // ignoring the stat block while every other class honoured it.
-                if (DamageSystem.applyDamage(this, opponent, isCrit ? 15 : this.damage, "Melee", { ignoreCooldown: true })) {
+                if (DamageSystem.applyDamage(this, opponent, isCrit ? 15 : this.damage, "Melee", { ignoreCooldown: true, crit: isCrit })) {
                     opponent.pauseAttacks?.(Samurai.ATTACK_PAUSE);
                     this.triggerSwing(tip.angle, { duration: 0.2, reach: 40, color: isCrit ? "#ffd166" : "#ff5050" });
                     if (opponent.particleSystem) opponent.particleSystem.emitImpact(opponent.x, opponent.y, isCrit ? "#ffd166" : "#ff3232", isCrit ? 22 : 12);
@@ -128,7 +128,7 @@ export class Samurai extends FighterBase {
                 opponent,
                 isCrit ? 15 : this.damage,
                 "Melee",
-                { ignoreCooldown: true }
+                { ignoreCooldown: true, crit: isCrit }
             );
             if (landed) opponent.pauseAttacks?.(Samurai.ATTACK_PAUSE);
         }

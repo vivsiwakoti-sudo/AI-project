@@ -1,6 +1,6 @@
 import { EffectSystem } from "../systems/EffectSystem.js";
 import { audioManager } from "../audio/AudioManager.js";
-import { glowCircle, hitFlash, squashTransform } from "../systems/Fx.js";
+import { glowCircle, hitFlash, squashTransform, critBurst, castSigil } from "../systems/Fx.js";
 import { traceShape } from "../systems/Shapes.js";
 
 // Longest a pin/stun may last when the class that applied it never set a timer.
@@ -37,6 +37,8 @@ export class FighterBase {
         this.damageNumbers = [];       // floating damage readouts
         this.particleSystem = null;    // injected by the arena
         this.spinAngle = Math.random() * Math.PI * 2;
+        this.comboCount = 0;           // rapid hits inside the combo window
+        this.comboTimer = 0;           // seconds left before the combo resets
 
         // Bounce / deflection state -------------------------------------------------
         // squashX/squashY are render-only scale factors driven by impacts. They
@@ -84,6 +86,16 @@ export class FighterBase {
         this.shieldFlashTimer = 0;     // ring when a shield/parry absorbs a blow
         this.buffFlashTimer = 0;       // upward glow when a buff is applied
         this.damageVignette = 0;       // 0..1 low-HP danger tint behind the body
+
+        // Ability animation -------------------------------------------------------
+        // A single, shared "cast" window every class's ability fires through. It
+        // drives one quick, category-tinted sigil so an ability reads as a moment
+        // rather than an instant snap. castKind picks which sigil shape is drawn.
+        this.castKind = "burst";       // burst | beam | projectile | aoe
+        this.castSigilTimer = 0;       // counts down; >0 means the sigil is showing
+        this.castSigilDuration = 0.3;  // seconds the sigil animates for
+        this.castColor = null;         // defaults to the fighter's accent
+        this.hitStopTimer = 0;         // brief freeze-frame on a heavy/critical hit
     }
 
     // ---- Presentation-only feedback hooks -----------------------------------
@@ -95,6 +107,24 @@ export class FighterBase {
     // only - it decides how loud a hit LOOKS, never how much it hurts.
     triggerCriticalFlash() {
         this.criticalFlashTimer = 0.34;
+    }
+
+    // Fire the shared ability-cast sigil. `kind` selects the silhouette so a
+    // projectile ability, a beam and a burst each announce themselves differently
+    // without any class needing its own bespoke animation. Purely visual.
+    triggerCastVisual(kind = "burst", color = null, duration = 0.3) {
+        this.castKind = kind;
+        this.castColor = color;
+        this.castSigilTimer = duration;
+        this.castSigilDuration = duration;
+    }
+
+    // A brief freeze-frame on a heavy blow. Attack pause already exists for the
+    // victim's attacks; this one is presentation-only and just holds the pose so a
+    // crit lands with weight. It never blocks damage (nothing consults it in
+    // DamageSystem) so two fighters can never deadlock by freezing each other.
+    triggerHitStop(seconds = 0.12) {
+        this.hitStopTimer = Math.max(this.hitStopTimer || 0, seconds);
     }
 
     triggerHealFlash() {
@@ -275,7 +305,23 @@ export class FighterBase {
     useAbility() {
         if (Number.isFinite(this.cooldown) && this.cooldown > 0) this.cooldownTimer = this.cooldown;
         this.castTimer = 0.16;
+        // Every ability announces itself with one shared, category-tinted sigil.
+        // The shape is derived from the class's own attack type, so a beam, a
+        // projectile and an AOE burst read differently with no per-class code.
+        this.triggerCastVisual(FighterBase.castKindFor(this));
         audioManager.playAbilityCast(this.name);
+    }
+
+    // Maps a fighter's declared attack style to one of the shared cast-sigil
+    // silhouettes. Falls back to the generic burst for anything unrecognised, so a
+    // new class always gets a readable cast with no extra work.
+    static castKindFor(fighter) {
+        const type = (fighter?.attackType || "").toLowerCase();
+        if (type.includes("beam")) return "beam";
+        if (type.includes("projectile") || type.includes("bullet") || type.includes("spear")
+            || type.includes("rope") || type.includes("potion") || type.includes("bomb")) return "projectile";
+        if (type.includes("area") || type.includes("aoe") || type.includes("zone") || type.includes("trap")) return "aoe";
+        return "burst";
     }
 
     tickTimers(dt) {
@@ -288,6 +334,14 @@ export class FighterBase {
         this.healFlashTimer = Math.max(0, this.healFlashTimer - dt);
         this.shieldFlashTimer = Math.max(0, this.shieldFlashTimer - dt);
         this.buffFlashTimer = Math.max(0, this.buffFlashTimer - dt);
+        this.castSigilTimer = Math.max(0, this.castSigilTimer - dt);
+        this.hitStopTimer = Math.max(0, this.hitStopTimer - dt);
+        // Rapid-hit combo counter. It only widens the damage readout (see
+        // addDamageNumber); it has no effect on damage, cooldowns or hit detection.
+        if (this.comboTimer > 0) {
+            this.comboTimer = Math.max(0, this.comboTimer - dt);
+            if (this.comboTimer <= 0) this.comboCount = 0;
+        }
         // Low-HP danger tint: rises as health drops below 35%, so a fighter that
         // is nearly out reads as endangered at a glance. Pure presentation.
         const hpRatio = this.maxHealth > 0 ? Math.max(0, this.health) / this.maxHealth : 1;
@@ -325,22 +379,67 @@ export class FighterBase {
         this.particleSystem.emit(this.x, this.y, color, count, { speed });
     }
 
-    addDamageNumber(amount, color = this.color) {
+    addDamageNumber(amount, { color = this.color, crit = false, category = null } = {}) {
         const value = Math.round(amount * 10) / 10;
         if (value <= 0) return;
-        this.damageNumbers.push({ amount: value, life: 0.8, color, offsetX: (Math.random() - 0.5) * 18 });
+
+        // Merge rapid hits into one rising readout instead of stacking fifty
+        // overlapping numbers on a chip-damage class. A combo window of 0.35s is
+        // presentation only; it never changes how much damage is dealt.
+        const merged = this.comboTimer > 0 && this.damageNumbers.length > 0
+            ? this.damageNumbers[this.damageNumbers.length - 1]
+            : null;
+        this.comboCount = this.comboTimer > 0 ? this.comboCount + 1 : 1;
+        this.comboTimer = 0.35;
+
+        if (merged && !crit) {
+            // Fold the new hit into the freshest readout and refresh its life, so a
+            // steady stream reads as one escalating number rather than a rain of 1s.
+            merged.amount = Math.round((merged.amount + value) * 10) / 10;
+            merged.hits = (merged.hits || 1) + 1;
+            merged.life = merged.maxLife;
+            merged.pop = 1; // replay the scale pop on every contribution
+            return;
+        }
+
+        this.damageNumbers.push({
+            amount: value,
+            life: 0.8,
+            maxLife: 0.8,
+            color: crit ? "#ffd166" : color,
+            crit,
+            category,
+            hits: 1,
+            pop: crit ? 1.3 : 1,   // crit reads bigger for its whole life
+            drift: (Math.random() - 0.5) * 30,
+            offsetX: (Math.random() - 0.5) * 18
+        });
         if (this.damageNumbers.length > 6) this.damageNumbers.shift();
     }
 
     // Called by DamageSystem after a successful hit; drives hit feedback everywhere.
-    onDamaged(amount, category) {
-        this.hitFlashTimer = 0.22;
-        this.addDamageNumber(amount);
+    // `options.crit` is set by the damage system (an explicit crit roll or an
+    // unusually heavy blow) and only affects presentation.
+    onDamaged(amount, category, options = {}) {
+        const crit = options.crit === true;
+        this.hitFlashTimer = crit ? 0.3 : 0.22;
+        this.addDamageNumber(amount, { crit, category });
+        if (crit) this.triggerHitStop(0.1);
         if (!this.particleSystem) return;
         const angle = this.lastAngle;
-        this.particleSystem.emit(this.x, this.y, this.hitColor || this.color, 10, { angle, spread: 1.6, speed: 300, size: 2.6 });
-        if (category === "AOE" || amount >= 20) {
-            this.particleSystem.ring(this.x, this.y, this.hitColor || this.color, { startRadius: 10, endRadius: 70, life: 0.4, lineWidth: 4 });
+        this.particleSystem.emit(this.x, this.y, crit ? "#ffd166" : (this.hitColor || this.color), crit ? 18 : 10, {
+            angle,
+            spread: 1.6,
+            speed: crit ? 420 : 300,
+            size: 2.6
+        });
+        if (crit || category === "AOE" || amount >= 20) {
+            this.particleSystem.ring(this.x, this.y, crit ? "#ffd166" : (this.hitColor || this.color), {
+                startRadius: 10,
+                endRadius: crit ? 90 : 70,
+                life: crit ? 0.5 : 0.4,
+                lineWidth: 4
+            });
         }
     }
 
@@ -382,7 +481,14 @@ export class FighterBase {
     updateDamageNumbers(dt) {
         this.damageNumbers.forEach(entry => {
             entry.life -= dt;
-            entry.offsetY = (entry.offsetY ?? 0) - dt * 34;
+            // Ease-out rise: fast at first, slowing as it fades, so the number
+            // "pops" up out of the body instead of sliding at a constant rate.
+            const t = Math.min(1, entry.life / entry.maxLife);
+            entry.offsetY = (entry.offsetY ?? 0) - dt * (16 + t * 34);
+            entry.offsetX = (entry.offsetX || 0) + (entry.drift || 0) * dt;
+            if (entry.pop !== undefined && entry.pop > 0) {
+                entry.pop = Math.max(0, entry.pop - dt * 4);
+            }
         });
         this.damageNumbers = this.damageNumbers.filter(entry => entry.life > 0);
     }
@@ -396,15 +502,57 @@ export class FighterBase {
 
     drawDamageNumbers(ctx) {
         this.damageNumbers.forEach(entry => {
-            const alpha = Math.max(0, entry.life / 0.8);
+            const alpha = Math.max(0, entry.life / entry.maxLife);
+            const rise = 1 - alpha; // 0 on spawn -> 1 at fade-out
+            // Crit numbers are larger, gold, and carry a small burst behind them so
+            // a big blow is unmistakable at a glance; ordinary hits stay small and
+            // tinted to the victim's accent.
+            const big = entry.crit;
+            const pop = 1 + (entry.pop || 0) * 0.35;
+            const baseSize = big ? 22 : 15;
+            const size = (baseSize + rise * 4) * pop;
+            const x = this.x + (entry.offsetX || 0);
+            const y = this.y - this.radius - 14 + (entry.offsetY || 0);
+
             ctx.save();
             ctx.globalAlpha = alpha;
-            ctx.font = "15px 'Share Tech Mono', 'Rajdhani', monospace";
             ctx.textAlign = "center";
-            ctx.fillStyle = entry.color;
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = entry.color;
-            ctx.fillText(`-${entry.amount}`, this.x + entry.offsetX, this.y - this.radius - 12 + (entry.offsetY || 0));
+            ctx.textBaseline = "middle";
+            ctx.font = `bold ${size}px 'Share Tech Mono', 'Rajdhani', monospace`;
+
+            if (big) {
+                // Gold glow + a thin dark outline so the crit stays legible over any
+                // background or explosion behind it.
+                ctx.shadowBlur = 16;
+                ctx.shadowColor = "#ffd166";
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = "rgba(60, 30, 0, 0.85)";
+                ctx.strokeText(`-${entry.amount}`, x, y);
+                ctx.fillStyle = "#fff3b0";
+                ctx.fillText(`-${entry.amount}`, x, y);
+
+                // CRIT tag above the number, only for the first beat of the pop.
+                if (alpha > 0.55) {
+                    ctx.shadowBlur = 10;
+                    ctx.font = `bold ${Math.round(11 + rise * 2)}px 'Share Tech Mono', 'Rajdhani', monospace`;
+                    ctx.fillStyle = "#ffd166";
+                    ctx.fillText("CRIT", x, y - size * 0.85);
+                }
+            } else {
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = entry.color;
+                ctx.fillStyle = entry.color;
+                ctx.fillText(`-${entry.amount}`, x, y);
+            }
+
+            // A small hit-count suffix when several rapid ticks have merged, so a
+            // chip stream reads as "x4" rather than silently inflating one number.
+            if ((entry.hits || 1) > 2 && !big) {
+                ctx.shadowBlur = 0;
+                ctx.font = `bold ${Math.round(size * 0.55)}px 'Share Tech Mono', 'Rajdhani', monospace`;
+                ctx.fillStyle = "rgba(255,255,255,0.75)";
+                ctx.fillText(`x${entry.hits}`, x, y + size * 0.7);
+            }
             ctx.restore();
         });
     }
@@ -514,24 +662,7 @@ export class FighterBase {
         // normal hit flash so a big blow is unmistakable.
         if (this.criticalFlashTimer > 0) {
             const progress = 1 - this.criticalFlashTimer / 0.34;
-            const alpha = 1 - progress;
-            ctx.save();
-            ctx.globalAlpha = alpha * 0.9;
-            ctx.strokeStyle = "#fff3b0";
-            ctx.lineWidth = 3;
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = "#ffd166";
-            const spikes = 8;
-            const inner = this.radius * (1 + progress * 0.3);
-            const outer = this.radius * (1.6 + progress * 1.5);
-            ctx.beginPath();
-            for (let i = 0; i < spikes; i++) {
-                const a = (i / spikes) * Math.PI * 2 + progress * 0.6;
-                ctx.moveTo(this.x + Math.cos(a) * inner, this.y + Math.sin(a) * inner);
-                ctx.lineTo(this.x + Math.cos(a) * outer, this.y + Math.sin(a) * outer);
-            }
-            ctx.stroke();
-            ctx.restore();
+            critBurst(ctx, this.x, this.y, this.radius, progress, "#ffd166");
         }
 
         // Heal feedback: green rising sparks that read as restoration, clearly
@@ -595,6 +726,14 @@ export class FighterBase {
             ctx.restore();
         }
 
+        // Ability-cast sigil: one quick, category-shaped pulse the moment a class
+        // fires its ability. It reads as a deliberate "cast" beat without any class
+        // needing its own animation code.
+        if (this.castSigilTimer > 0) {
+            const progress = 1 - this.castSigilTimer / this.castSigilDuration;
+            castSigil(ctx, this.x, this.y, this.radius + 6, progress, this.castColor || this.color, this.castKind);
+        }
+
         // Wind-up/charge telegraph shared by every class.
         if (this.isCharging || this.castTimer > 0) {
             const progress = this.isCharging ? (this.chargeProgress ?? 0) : 1 - this.castTimer / 0.16;
@@ -609,6 +748,21 @@ export class FighterBase {
             ctx.arc(this.x, this.y, this.radius + 9, this.spinAngle, this.spinAngle + Math.PI * 1.6);
             ctx.stroke();
             ctx.setLineDash([]);
+            ctx.restore();
+        }
+
+        // Freeze-frame cue: a tight white flash hugging the body so a hit-stop reads
+        // as weight rather than the simulation simply pausing.
+        if (this.hitStopTimer > 0) {
+            const p = 1 - this.hitStopTimer / 0.12;
+            ctx.save();
+            ctx.globalAlpha = (1 - p) * 0.5;
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowBlur = 24;
+            ctx.shadowColor = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius + 2, 0, Math.PI * 2);
+            ctx.fill();
             ctx.restore();
         }
 

@@ -60,7 +60,7 @@ export class Assassin extends FighterBase {
         if (reaching && !this.weaponHot && this.cooldownTimer <= 0) {
             this.weaponHot = true;
             const isCrit = Math.random() < 0.25;
-            if (DamageSystem.applyDamage(this, opponent, isCrit ? 25 : this.damage, "Melee", { ignoreCooldown: true })) {
+            if (DamageSystem.applyDamage(this, opponent, isCrit ? 25 : this.damage, "Melee", { ignoreCooldown: true, crit: isCrit })) {
                 this.useAbility();
                 this.isRedirecting = true; // Re-aim after a landed strike.
                 this.hitColor = isCrit ? "#ffd166" : "#ffffff";

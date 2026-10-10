@@ -14,6 +14,14 @@ const BODY_CLASS_NAMES = new Set(["Duplicator", "Ghost", "Mutant", "Mahoraga"]);
 // deals damage reliably instead of intermittently doing nothing.
 const CONTACT_TOLERANCE = 0.5;
 
+// A hit reads as a "critical" - bigger, brighter, with extra feedback - when the
+// attacker flagged it (options.crit) or when it lands a disproportionately large
+// blow. The threshold is presentation only: it decides how loud the hit LOOKS,
+// never how much it hurts. 18 damage is roughly a heavy melee blow, so routine
+// chip damage and DOT ticks stay quiet while an Assassin dagger (25) or a
+// Samurai finisher (15, flagged explicitly) pops.
+export const CRIT_DAMAGE_THRESHOLD = 18;
+
 export class DamageSystem {
     // The single source of truth for "is this fighter a Body attacker?"
     //
@@ -143,11 +151,26 @@ export class DamageSystem {
         }
 
         const appliedDamage = Math.max(0, finalDamage);
+
+        // How hard the blow reads. An explicit crit flag always wins; otherwise a
+        // blow that lands well above an ordinary hit is promoted to one so the
+        // feedback matches the number even for classes that never roll a crit.
+        const isCrit = options.crit === true || appliedDamage >= CRIT_DAMAGE_THRESHOLD;
+
         victim.health -= appliedDamage;
         // Per-fighter statistics. Damage received is tracked on the victim so the
         // results screen can show it for every fighter, not just the winner.
         victim.totalDamageTaken = (victim.totalDamageTaken || 0) + appliedDamage;
-        if (victim.onDamaged) victim.onDamaged(appliedDamage, category);
+        if (victim.onDamaged) victim.onDamaged(appliedDamage, category, { crit: isCrit });
+
+        // Presentation-only impact feedback. Every source funnels through here, so
+        // crit star-bursts, knockback impulses and the camera jolt are applied
+        // identically whether the blow came from a blade, a bullet or a body slam.
+        // These never mutate combat state.
+        if (isCrit && typeof victim.triggerCriticalFlash === "function") {
+            victim.triggerCriticalFlash();
+        }
+        DamageSystem.applyImpactFeedback(attacker, victim, appliedDamage, category, isCrit, options);
 
         // Death is resolved before crediting stats so the killer is recorded even
         // when the killing blow comes from a DOT, an AOE field or a clone.
@@ -174,5 +197,73 @@ export class DamageSystem {
         // hit has no attacker (fields, sudden death) it falls back to the category.
         audioManager.playHitSfx(category, attacker?.name || null);
         return true;
+    }
+
+    // Knockback + camera shake for a landed hit. Kept separate from applyDamage so
+    // the geometry of "who got hit" and the feel of "how it landed" can be tuned
+    // independently, and so a future caller can ask for the damage without the
+    // shove. Everything here is presentation: a missing field on either fighter
+    // simply skips that channel rather than throwing.
+    static applyImpactFeedback(attacker, victim, damage, category, isCrit, options = {}) {
+        if (!victim || victim.isDead) return;
+
+        // How strong the shove / shake is. Scales gently with damage so a chip hit
+        // nudges and a crit punctuates, with the crit flag adding a deliberate pop.
+        const base = Math.min(1.4, 0.18 + damage / 60) + (isCrit ? 0.5 : 0);
+        const strength = options.impact ?? base;
+
+        // Only a direct, aimed blow shoves the victim. AOE fields, beams and body/
+        // contact damage are passive or area sources (webs, poison, slams, sudden
+        // death) - knocking fighters away from those would fight the very trap or
+        // hug that applied them, and would make a DOT field permanently repel its
+        // victim instead of holding them in it.
+        const knockbackCategory = category !== "AOE" && category !== "Beam" && category !== "Body" && category !== "Overlap";
+
+        if (attacker && attacker !== victim && knockbackCategory) {
+            const angle = Math.atan2(victim.y - attacker.y, victim.x - attacker.x);
+            // A short outward nudge plus a squash, so the victim visibly recoils
+            // along the blow instead of only flashing. vx/vy are a normalised
+            // direction (magnitude ~1) that the mover scales by `speed`, so the
+            // shove re-normalises after adding - a raw +2.2 would both blow past a
+            // unit vector and make the recoil depend on which way the victim moved.
+            const shove = (isCrit ? 0.35 : 0.18) * Math.min(1.6, strength);
+            const nvx = (victim.vx || 0) + Math.cos(angle) * shove;
+            const nvy = (victim.vy || 0) + Math.sin(angle) * shove;
+            const magnitude = Math.hypot(nvx, nvy) || 1;
+            victim.vx = nvx / magnitude;
+            victim.vy = nvy / magnitude;
+            // The squash/spark/ring vocabulary belongs to applyDeflection, so reuse
+            // it - but only for hits strong enough to be worth a visible recoil.
+            // A stream of 1-3 damage DOT ticks must not rattle the body every frame.
+            if (strength > 0.35 && typeof victim.applyDeflection === "function") {
+                victim.applyDeflection(-Math.cos(angle), -Math.sin(angle), Math.min(1.6, strength), {
+                    source: "fighter",
+                    other: attacker
+                });
+            }
+            // A critical hit jolts the camera, so the blow is felt as well as seen.
+            if (isCrit) {
+                victim.screenShake = Math.max(victim.screenShake || 0, 0.12);
+            }
+        }
+
+        // Beams, body slams and AOE already draw their own area/contact tell; the
+        // extra spark burst is reserved for the single-target blows where a crit
+        // should read as focused.
+        if (isCrit && victim.particleSystem && knockbackCategory) {
+            const color = victim.hitColor || attacker?.hitColor || attacker?.color || victim.color;
+            victim.particleSystem.ring(victim.x, victim.y, "#ffd166", {
+                startRadius: victim.radius,
+                endRadius: victim.radius + 70,
+                life: 0.32,
+                lineWidth: 3,
+                alpha: 0.85
+            });
+            victim.particleSystem.emit(victim.x, victim.y, color, isCrit ? 12 : 6, {
+                speed: isCrit ? 460 : 320,
+                size: 2.6,
+                life: 0.5
+            });
+        }
     }
 }
