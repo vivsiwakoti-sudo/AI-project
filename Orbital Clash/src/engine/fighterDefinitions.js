@@ -332,7 +332,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Melee",
     cooldown: 0.25,
     description: "Heals on hit, evolves speed and damage.",
-    description2: "Stake strikes deal 8 damage and heal 5 HP. Every third successful heal triggers an evolution: +2 speed and +2 damage. The first evolution grows wings, cutting a 25% dodge chance out of incoming melee and ranged attacks.",
+    description2: "Stake strikes deal 8 damage and heal 5 HP at stage 1, 7 HP at stage 2 and 10 HP at stage 3. Every third successful heal triggers an evolution: +2 speed and +2 damage. The first evolution grows wings, cutting a 25% dodge chance out of incoming melee and ranged attacks.",
     keywords: ["stake", "lifesteal", "evolve", "dodge"],
   },
   "Mahoraga": {

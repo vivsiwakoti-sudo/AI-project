@@ -39,11 +39,7 @@ export class Alchemist extends FighterBase {
 
         this.projectiles.forEach(potion => {
             potion.update(dt);
-            // A thrown flask is a travelling hitbox, so it can smash onto any
-            // fighter it reaches. The landed-on victim is captured here and the
-            // splash is then applied to EVERY fighter inside the blast radius
-            // (see applyPotionEffect) instead of only the one opponent the arena
-            // handed over.
+            // A thrown flask is a travelling hitbox: it bursts on the first victim it reaches.
             const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
             const struck = candidates.find(f => f && !f.isDead
                 && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: 7 }, f, "Body"));
@@ -55,10 +51,8 @@ export class Alchemist extends FighterBase {
                     timer: 0.35,
                     color: potion.effect.type === "slow" ? "#63d9ff" : potion.effect.type === "poison" ? "#75e35f" : "#ff9f5a"
                 });
-                this.hitPotion = potion;
-                this.applyPotionEffect(potion.effect, potion.x, potion.y, potion.impactRadius);
-                // A parried potion is knocked away untouched, so its splash and all
-                // its status effects are skipped entirely.
+                this.applyPotionEffect(potion, struck);
+                // The flask is spent on impact, whether or not the hit lands.
                 potion.active = false;
             }
         });
@@ -82,43 +76,61 @@ export class Alchemist extends FighterBase {
         this.projectiles.push(p);
     }
 
-    applyPotionEffect(effect, impactX, impactY, impactRadius) {
-        // `this.opponent` is the arena's victim list for THIS fighter, so the
-        // splash reaches everyone standing in the blast - not just the single
-        // opponent this class is aiming at.
-        const splash = (this.opponent?.victims?.length ? this.opponent.victims : [])
-            .filter(f => f && !f.isDead && Math.hypot(f.x - impactX, f.y - impactY) <= impactRadius + f.radius);
-        if (splash.length === 0) return;
-        const opponent = splash[0];
+    // Living fighters inside the blast. The struck fighter is always included.
+    blastVictims(potion, struck) {
+        const pool = this.victims?.length ? this.victims : [struck];
+        return pool.filter(f => f && !f.isDead && (f === struck
+            || Math.hypot(f.x - potion.x, f.y - potion.y) <= potion.impactRadius + f.radius));
+    }
+
+    // The flask bursts on `struck`. A parry on that hit stops the whole flask;
+    // otherwise every fighter inside the blast takes the effect.
+    applyPotionEffect(potion, struck) {
+        const { effect } = potion;
+        const blast = this.blastVictims(potion, struck);
 
         const burstColor = effect.type === "slow" ? "#63d9ff" : effect.type === "poison" ? "#75e35f" : effect.type === "stun" ? "#ffe066" : "#ff9f5a";
-        this.particleSystem?.emit(impactX, impactY, burstColor, 20, { speed: 340, size: 3 });
-        this.particleSystem?.ring(impactX, impactY, burstColor, { startRadius: 8, endRadius: impactRadius * 1.6, life: 0.4, lineWidth: 4 });
+        this.particleSystem?.emit(potion.x, potion.y, burstColor, 20, { speed: 340, size: 3 });
+        this.particleSystem?.ring(potion.x, potion.y, burstColor, { startRadius: 8, endRadius: potion.impactRadius * 1.6, life: 0.4, lineWidth: 4 });
 
         if (effect.type === "percent") {
-            // Percentage damage bypasses resistances and is applied through the damage system
-            // so record keeping, hit feedback and death handling all stay consistent.
             // The percentage is rolled PER VICTIM: splitting one roll between them
             // would make the potion weaker the more fighters it happened to catch.
-            splash.forEach(victim => {
+            blast.forEach(victim => {
                 const percentageDamage = victim.health * (0.1 + Math.random() * 0.15);
                 DamageSystem.applyDamage(this, victim, percentageDamage, "AOE", { ignoreCooldown: true });
             });
             return;
         }
 
-        // The potion is passed in so a parry can hurl the flask itself aside.
-        const landed = DamageSystem.applyDamage(this, opponent, effect.damage, "Projectile", { projectile: this.hitPotion });
+        // The struck fighter takes the flask's own hit, which a parry can stop.
+        // The splash is area damage, so it is never parried.
+        const landed = DamageSystem.applyDamage(this, struck, effect.damage, "Projectile", { projectile: potion, ignoreCooldown: true });
         if (!landed) return;
+        this.applyStatus(effect, struck);
+
+        blast.forEach(victim => {
+            if (victim === struck) return;
+            if (DamageSystem.applyDamage(this, victim, effect.damage, "AOE", { ignoreCooldown: true })) {
+                this.applyStatus(effect, victim);
+            }
+        });
+
+        if (effect.type === "vampire") {
+            this.health = Math.min(this.maxHealth, this.health + 5);
+        }
+    }
+
+    applyStatus(effect, victim) {
         if (effect.type === "slow") {
-            EffectSystem.addEffect(opponent, { name: "slow", duration: effect.duration });
+            EffectSystem.addEffect(victim, { name: "slow", duration: effect.duration });
         } else if (effect.type === "poison") {
             // The damage-over-time is applied to its own target. Applying it with
             // `this` as the attacker (as this used to) swung every tick from the
             // damage system's per-attacker cooldown, so a poison tick could block
             // the Alchemist's own next throw - and with four fighters it gated the
             // wrong fighter's attack entirely.
-            EffectSystem.addEffect(opponent, {
+            EffectSystem.addEffect(victim, {
                 name: "poison",
                 duration: 5,
                 onUpdate: (fighter, status, elapsed) => {
@@ -130,15 +142,13 @@ export class Alchemist extends FighterBase {
                 }
             });
         } else if (effect.type === "stun") {
-            EffectSystem.addEffect(opponent, {
+            EffectSystem.addEffect(victim, {
                 name: "stun",
                 duration: effect.duration,
                 onUpdate: (fighter) => { fighter.isStuck = true; },
                 onEnd: (fighter) => { fighter.isStuck = false; }
             });
-            opponent.isStuck = true;
-        } else if (effect.type === "vampire") {
-            this.health = Math.min(this.maxHealth, this.health + 5);
+            victim.isStuck = true;
         }
     }
 

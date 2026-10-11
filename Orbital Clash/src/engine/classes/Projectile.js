@@ -11,7 +11,8 @@ export class Projectile {
     update(dt) {
         this.x += this.vx * dt * 100;
         this.y += this.vy * dt * 100;
-        if (this.x < 0 || this.x > 800 || this.y < 0 || this.y > 800) this.active = false;
+        const size = this.owner?.arenaSize ?? 800;
+        if (this.x < 0 || this.x > size || this.y < 0 || this.y > size) this.active = false;
     }
     draw(ctx) {
         ctx.fillStyle = "orange";

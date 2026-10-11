@@ -56,10 +56,11 @@ export class Tunneler extends FighterBase {
                 const availableWalls = wallNames.filter(wallName => wallName !== this.entryWall);
                 const wall = wallNames.indexOf(availableWalls[Math.floor(Math.random() * availableWalls.length)]);
                 const edge = 20 + this.radius;
-                if (wall === 0) { this.x = edge; this.y = edge + Math.random() * (800 - edge * 2); }
-                else if (wall === 1) { this.x = 800 - edge; this.y = edge + Math.random() * (800 - edge * 2); }
-                else if (wall === 2) { this.x = edge + Math.random() * (800 - edge * 2); this.y = edge; }
-                else { this.x = edge + Math.random() * (800 - edge * 2); this.y = 800 - edge; }
+                const size = this.arenaSize ?? 800;
+                if (wall === 0) { this.x = edge; this.y = edge + Math.random() * (size - edge * 2); }
+                else if (wall === 1) { this.x = size - edge; this.y = edge + Math.random() * (size - edge * 2); }
+                else if (wall === 2) { this.x = edge + Math.random() * (size - edge * 2); this.y = edge; }
+                else { this.x = edge + Math.random() * (size - edge * 2); this.y = size - edge; }
                 this.entryWall = null;
                 this.burrowFlash = 0.4;
                 // Fire spikes aimed at opponent

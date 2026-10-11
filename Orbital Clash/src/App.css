@@ -356,6 +356,36 @@
 
 .selection-slots small { color: var(--text-muted); font: 0.58rem var(--font-data); letter-spacing: 0.14em; }
 
+/* Map size picker shown in the dock before every match. */
+.map-size-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font: 0.58rem var(--font-data);
+  letter-spacing: 0.14em;
+}
+
+.map-size-picker button {
+  min-height: 28px;
+  padding: 0 10px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font: 600 0.6rem var(--font-data);
+  letter-spacing: 0.1em;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.map-size-picker button:hover,
+.map-size-picker .map-size-active {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: var(--cyan-soft);
+}
+
 .start-battle-button,
 .return-roster-button {
   border: 0;

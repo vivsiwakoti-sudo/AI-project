@@ -4,6 +4,9 @@ import assert from 'node:assert/strict';
 import { FighterBase } from '../FighterBase.js';
 import { Spider } from './Spider.js';
 import { EffectSystem } from '../../systems/EffectSystem.js';
+import { installTestAudio } from '../../audio/testAudioStub.js';
+
+installTestAudio();
 
 test('Spider lays webs where it moves instead of shooting them', () => {
   const spider = new Spider({
@@ -40,7 +43,7 @@ test('Spider lays webs where it moves instead of shooting them', () => {
   assert.equal(spider.webProjectiles, undefined, 'Spider should no longer shoot projectiles');
 });
 
-test('Web bites for 1 damage on touch then 1 damage per second', () => {
+test('A web bites once for 3 damage and is then spent', () => {
   const spider = new Spider({
     name: 'Spider',
     color: '#7CFF6B',
@@ -69,18 +72,18 @@ test('Web bites for 1 damage on touch then 1 damage per second', () => {
   spider.createWeb(700, 100);
   const startHealth = target.health;
 
-  // First frame inside the web: exactly 1 damage from the touch bite.
+  // First frame inside the web: exactly 3 damage from the touch bite.
   spider.update(1 / 60, target);
   const afterTouch = startHealth - target.health;
-  assert.equal(afterTouch, 1, `touch should deal exactly 1 damage, dealt ${afterTouch}`);
+  assert.equal(afterTouch, 3, `touch should deal exactly 3 damage, dealt ${afterTouch}`);
+  assert.equal(spider.webs.some(w => w.x === 700 && w.y === 100), false, 'a touched web should be spent');
 
-  // A further 1.5s inside should add 1-2 damage (1/sec), not the old 5 per tick.
+  // Staying inside afterwards must not bite again.
   for (let i = 0; i < 90; i++) spider.update(1 / 60, target);
-  const total = startHealth - target.health;
-  assert.ok(total >= 2 && total <= 3, `1.5s in the web should total ~2-3 damage, got ${total}`);
+  assert.equal(startHealth - target.health, 3, 'a spent web should not keep biting');
 });
 
-test('Leaving a web lets it bite again on re-entry', () => {
+test('Re-entering a spent web does not bite; a fresh web does', () => {
   const spider = new Spider({
     name: 'Spider',
     color: '#7CFF6B',
@@ -106,14 +109,16 @@ test('Leaving a web lets it bite again on re-entry', () => {
   }, 700, 100);
 
   spider.createWeb(700, 100);
-  spider.update(1 / 60, target);       // enters -> 1 touch damage
+  spider.update(1 / 60, target);       // enters -> 3 touch damage, web spent
   target.x = 2000;                      // steps out
   spider.update(1 / 60, target);
-  target.x = 700;                       // steps back in
+  target.x = 700;                       // steps back in onto the spent web
   spider.update(1 / 60, target);
+  assert.equal(100 - target.health, 3, 'a spent web must not bite on re-entry');
 
-  assert.equal(spider.webs[0].touched, true, 'web should register the fresh touch');
-  assert.equal(100 - target.health, 2, 'two separate touches should deal 2 total');
+  spider.createWeb(700, 100);           // a freshly laid web bites again
+  spider.update(1 / 60, target);
+  assert.equal(100 - target.health, 6, 'each fresh web should bite once');
 });
 
 test('Web slow effects apply a 60% movement reduction', () => {

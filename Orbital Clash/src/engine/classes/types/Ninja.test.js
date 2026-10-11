@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 
 import { FighterBase } from '../FighterBase.js';
 import { Ninja } from './Ninja.js';
+import { installTestAudio } from '../../audio/testAudioStub.js';
+
+installTestAudio();
 
 const makeDummy = (x, y) => new FighterBase({
   name: 'Dummy',

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { audioManager } from "../engine/audio/AudioManager";
-import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
+import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory } from "../engine/battleHistory";
 import ClassCard from "./MenuComponents/ClassCard";
 
@@ -53,6 +53,7 @@ export default function Menu({ onStart }) {
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(loadHistory);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+  const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
 
   useEffect(() => {
     audioManager.playMenuMusic();
@@ -61,7 +62,8 @@ export default function Menu({ onStart }) {
   // Right-click opens the detail panel; Escape or any other click closes it.
   useEffect(() => {
     if (!info) return;
-    const close = () => setInfo(null);
+    // Clicks inside the panel belong to its own buttons, so they must not close it.
+    const close = (event) => { if (!event.target.closest?.(".fighter-info-panel")) setInfo(null); };
     const onKey = (event) => { if (event.key === "Escape") setInfo(null); };
     window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", close);
@@ -164,17 +166,22 @@ export default function Menu({ onStart }) {
   };
 
   const filterOptions = ["ALL", "MELEE", "PROJECTILE", "BEAM", "AOE", "BODY", "TRAIL"];
+  // Every attackType used in fighterDefinitions.js maps to one filter bucket.
   const getFilterCategory = (attackType) => {
     const categoryMap = {
+      Melee: "MELEE",
       Sword: "MELEE",
       Hook: "MELEE",
       Projectile: "PROJECTILE",
       Bullet: "PROJECTILE",
+      Spear: "PROJECTILE",
+      "Rope-dart": "PROJECTILE",
       Potion: "PROJECTILE",
+      Beam: "BEAM",
       Area: "AOE",
       Bombs: "AOE",
-      "Rope-dart": "TRAIL",
-      Spear: "TRAIL"
+      Body: "BODY",
+      Trail: "TRAIL"
     };
     return categoryMap[attackType] || attackType.toUpperCase();
   };
@@ -324,7 +331,7 @@ export default function Menu({ onStart }) {
         </div>
       )}
 
-      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length}-WAY FREE FOR ALL — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) }))); }}>START BATTLE</button></footer>
+      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length}-WAY FREE FOR ALL — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize); }}>START BATTLE</button></footer>
     </main>
   );
 }

@@ -109,7 +109,8 @@ export class Vampire extends FighterBase {
     }
 
     registerClawHit() {
-        this.health = Math.min(this.maxHealth, this.health + 5);
+        const heal = this.evolutionLevel >= 2 ? 10 : this.evolutionLevel >= 1 ? 7 : 5;
+        this.health = Math.min(this.maxHealth, this.health + heal);
         this.successfulHeals++;
 
         if (this.successfulHeals >= 3 && this.evolutionLevel < 3) {

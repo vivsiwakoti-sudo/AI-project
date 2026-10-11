@@ -49,7 +49,7 @@ export class SolarBeam extends FighterBase {
                     audioManager.playSolarBeamHit();
                 }
 
-                if (this.beamProjectile.distance >= 800 || this.hasHit) {
+                if (this.beamProjectile.distance >= (this.arenaSize ?? 800) || this.hasHit) {
                     this.beamActive = false;
                     this.beamProjectile = null;
                     this.hasHit = false;

@@ -67,7 +67,7 @@ export class Duplicator extends FighterBase {
     }
 
     keepCloneInArena(clone) {
-        const arenaSize = 800;
+        const arenaSize = this.arenaSize ?? 800;
         const innerBoundary = 20;
         const min = innerBoundary + clone.radius;
         const max = arenaSize - innerBoundary - clone.radius;
@@ -189,6 +189,7 @@ export class Duplicator extends FighterBase {
             cloneHealth
         );
         clone.root = root;
+        clone.arenaSize = this.arenaSize;
         clone.health = cloneHealth;
         clone.maxHealth = cloneHealth;
         root.clones.push(clone);

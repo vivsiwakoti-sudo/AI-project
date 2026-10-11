@@ -49,7 +49,7 @@ class Spear extends Projectile {
 
     update(dt, opponent) {
         if (this.isStuck && this.stuckTarget) {
-            const arenaSize = 800;
+            const arenaSize = this.owner?.arenaSize ?? 800;
             
             // Use the impact trajectory to choose the wall, with a safe fallback.
             if (!this.wallTarget) {
@@ -193,7 +193,7 @@ export class Spearman extends FighterBase {
                     spear.isStuck = true;
                     spear.stuckTarget = struck;
                     spear.stuckTime = spear.stuckDuration;
-                    spear.setWallTarget(800);
+                    spear.setWallTarget(this.arenaSize ?? 800);
                     struck.isStunned = true;
                     struck.vx = 0;
                     struck.vy = 0;

@@ -276,7 +276,7 @@ function finishBattle(fighters) {
 // page rather than a readable error. Every failure mode is therefore converted
 // into a real Error carrying the offending class name, and the caller renders
 // that instead of letting it escape during render.
-function createFighters(fighters) {
+function createFighters(fighters, arenaSize) {
   const list = Array.isArray(fighters) ? fighters : [];
   if (list.length < MIN_FIGHTERS) {
     throw new Error(`A battle needs at least ${MIN_FIGHTERS} fighters, but received ${list.length}.`);
@@ -293,7 +293,7 @@ function createFighters(fighters) {
 
     // Each fighter is placed on its own seat (left/right, plus bottom for a
     // 3rd and top for a 4th) and launched inward on its own random heading.
-    const { x, y } = spawnPositionFor(i, 800);
+    const { x, y } = spawnPositionFor(i, arenaSize);
 
     let fighter;
     try {
@@ -311,6 +311,7 @@ function createFighters(fighters) {
     fighter.vx = vx;
     fighter.vy = vy;
     fighter.teamIndex = i;
+    fighter.arenaSize = arenaSize;
 
     // Per-fighter battle state. Every fighter owns its own copy, so nothing is
     // shared between fighters: each has its own target, HP, cooldowns, status
@@ -331,9 +332,9 @@ function createFighters(fighters) {
 }
 
 
-export default function Arena({ fighters, onFinish }) {
+export default function Arena({ fighters, arenaSize = 800, onFinish }) {
   const canvasRef = useRef(null);
-  const ARENA_SIZE = 800;
+  const ARENA_SIZE = arenaSize;
   const [zoomLevel, setZoomLevel] = useState(0.75);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const speedMultiplierRef = useRef(1);
@@ -348,7 +349,7 @@ export default function Arena({ fighters, onFinish }) {
   // state initializers must stay pure (and must not throw).
   const [fighterState, setFighterState] = useState(() => {
     try {
-      return { fighters: createFighters(fighters), error: null };
+      return { fighters: createFighters(fighters, arenaSize), error: null };
     } catch (error) {
       return { fighters: [], error };
     }
@@ -735,7 +736,7 @@ export default function Arena({ fighters, onFinish }) {
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, ARENA_SIZE, ARENA_SIZE);
 
-      // Zoom: the world is 800x800 at zoom 1. Scaling the context alone makes
+      // Zoom: the world is ARENA_SIZE square at zoom 1. Scaling the context alone makes
       // the drawable area shrink into the middle of the canvas, which puts the
       // drawn border inside the region fighters can actually reach. Undo the
       // inset by translating in screen space first, so the playable rectangle and
@@ -908,6 +909,8 @@ export default function Arena({ fighters, onFinish }) {
               audioManager.playUiClick();
               audioManager.stopMusic();
               gameState.current.resolved = true;
+              // Claim the hand-off now: the loop would otherwise report this exit as a finished battle and award wins/losses.
+              gameState.current.handoffStarted = true;
               gameState.current.replayEndTime = gameState.current.replayTime;
               onFinish(gameState.current.fighters, { aborted: true, replayFrames: await getReplayFrames() });
             }}>Exit Game</button>

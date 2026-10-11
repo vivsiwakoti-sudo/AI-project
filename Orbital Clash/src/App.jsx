@@ -3,11 +3,13 @@ import Menu from "./components/Menu";
 import Arena from "./components/Arena";
 import EndScreen from "./components/EndScreen";
 import { audioManager } from "./engine/audio/AudioManager";
+import { DEFAULT_ARENA_SIZE } from "./engine/config";
 import "./App.css";
 
 function App() {
   const [screen, setScreen] = useState("menu");
   const [selectedFighters, setSelectedFighters] = useState([]);
+  const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
   const [battleResults, setBattleResults] = useState(null);
   const [battleAborted, setBattleAborted] = useState(false);
   const [replayFrames, setReplayFrames] = useState([]);
@@ -43,8 +45,8 @@ function App() {
           <button className="audio-toggle-button" onClick={toggleMute} aria-pressed={isMuted}>{isMuted ? "🔇 MUTED" : "🔊 SOUND"}</button>
         </div>
       </header>
-      {screen === "menu" && <Menu onStart={(f) => { setSelectedFighters(f); setScreen("game"); }} />}
-      {screen === "game" && <Arena fighters={selectedFighters} onFinish={(res, meta) => { setBattleResults(res); setBattleAborted(Boolean(meta?.aborted)); setReplayFrames(meta?.replayFrames || []); setScreen("end"); }} />}
+      {screen === "menu" && <Menu onStart={(f, size) => { setSelectedFighters(f); setArenaSize(size); setScreen("game"); }} />}
+      {screen === "game" && <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => { setBattleResults(res); setBattleAborted(Boolean(meta?.aborted)); setReplayFrames(meta?.replayFrames || []); setScreen("end"); }} />}
       {screen === "end" && <EndScreen results={battleResults} aborted={battleAborted} replayFrames={replayFrames} onReturn={returnToRoster} />}
     </div>
   );

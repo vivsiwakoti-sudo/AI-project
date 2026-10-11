@@ -16,15 +16,11 @@ export class Meteor extends FighterBase {
             this.warningTimer -= dt;
             this.chargeProgress = Math.min(1, 1 - this.warningTimer / 3);
             if (this.warningTimer <= 0) {
-                // The meteor damages everyone inside the zone, the Meteor included.
-                // `victims` is the arena's list of every hittable fighter, so the
-                // other two fighters of a four-way brawl are crushed too - the
-                // zone used to only ever test the single opponent reference this
-                // class was handed, letting the rest walk through the impact.
-                const standing = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead);
-                const victims = [this, ...standing].filter(f => f && !f.isDead && !f.isUntouchable && this.isInsideZone(f));
+                // Crushes every other fighter in the zone; Meteor-class fighters are immune.
+                const standing = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead && !(f instanceof Meteor));
+                const victims = standing.filter(f => !f.isUntouchable && this.isInsideZone(f));
                 victims.forEach(victim => {
-                    DamageSystem.applyDamage(this === victim ? null : this, victim, this.damage, "AOE", { ignoreCooldown: true, allowSelfDamage: true });
+                    DamageSystem.applyDamage(this, victim, this.damage, "AOE", { ignoreCooldown: true, allowSelfDamage: true });
                 });
                 if (this.particleSystem) {
                     const cx = this.targetZone.x + this.targetZone.width / 2;
