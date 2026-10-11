@@ -37,9 +37,10 @@ export class SolarBeam extends FighterBase {
                 for (const victim of inBeam) {
                     if (!DamageSystem.applyDamage(this, victim, this.damage, "Beam")) continue;
                     this.hasHit = true;
-                    // Each landed beam permanently shortens the charge, down to a 2s floor.
-                    this.cooldown = Math.max(2, this.cooldown * 0.9);
-                    this.cooldownTimer = this.cooldown;
+                    // Each landed beam permanently shortens the cycle by 10%, down to a 2s floor.
+                    const shortened = Math.max(2, this.cooldown * 0.9);
+                    this.cooldownTimer = Math.max(0, this.cooldownTimer - (this.cooldown - shortened));
+                    this.cooldown = shortened;
                     this.charge = Math.max(0, (this.charge || 0) - 1);
                     if (victim.particleSystem) {
                         victim.particleSystem.emitImpact(victim.x, victim.y, "#ffe066", 30);
@@ -47,6 +48,7 @@ export class SolarBeam extends FighterBase {
                     }
                     // Distinct solar burn/crack when the beam lands.
                     audioManager.playSolarBeamHit();
+                    break;
                 }
 
                 if (this.beamProjectile.distance >= (this.arenaSize ?? 800) || this.hasHit) {
@@ -85,6 +87,8 @@ export class SolarBeam extends FighterBase {
                 this.chargeProgress = 0;
                 this.chargeTimer = 0;
                 this.beamActive = true;
+                // Each cycle starts its cooldown on release, whether or not the beam hits.
+                this.cooldownTimer = this.cooldown;
                 // Fire the discharge the instant the beam releases.
                 audioManager.playSolarBeamFire();
                 this.beamProjectile = {
