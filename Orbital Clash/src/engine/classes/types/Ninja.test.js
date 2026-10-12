@@ -42,7 +42,7 @@ function landDart(ninja, target) {
   return false;
 }
 
-test('Ninja dart travels at the reduced, dodgeable speed', () => {
+test('Ninja dart launches fast', () => {
   const ninja = makeNinja();
   const target = makeDummy(360, 100);
 
@@ -51,7 +51,7 @@ test('Ninja dart travels at the reduced, dodgeable speed', () => {
 
   assert.ok(ninja.ropeDart, 'the dart should have been fired');
   const launchedSpeed = Math.hypot(ninja.ropeDart.vx, ninja.ropeDart.vy);
-  assert.ok(launchedSpeed < 10, `dart launch speed should be below 10 px/frame, got ${launchedSpeed}`);
+  assert.ok(launchedSpeed >= 14, `dart launch speed should be at least 14 px/frame, got ${launchedSpeed}`);
 });
 
 test('Victim keeps meaningful speed after the rope dart releases', () => {

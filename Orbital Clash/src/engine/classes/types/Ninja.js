@@ -10,10 +10,8 @@ export class Ninja extends FighterBase {
         this.cooldownTimer = 0;
         this.ropeDart = null;
         this.ropeSwing = 0;
-        // Travel speed is in px/frame (see the dart's += vx below) and is the same
-        // normalised units the rest of the engine uses. 8 instead of 13 makes the
-        // dart visibly slower so the opponent has a chance to dodge it.
-        this.ropeDartSpeed = 8;
+        // Px/frame. The dart flies straight once launched and never re-aims.
+        this.ropeDartSpeed = 14;
     }
 
     update(dt, opponent) {
@@ -58,18 +56,6 @@ export class Ninja extends FighterBase {
             this.ropeSwing += dt * 24;
 
             const dart = this.ropeDart;
-            if (opponent) {
-                const targetAngle = Math.atan2(opponent.y - dart.y, opponent.x - dart.x);
-                // Gentler homing so a moving target can actually juke the dart.
-                const turnRate = 0.09;
-                const currentAngle = Math.atan2(dart.vy, dart.vx);
-                const diff = Math.atan2(Math.sin(targetAngle - currentAngle), Math.cos(targetAngle - currentAngle));
-                const adjusted = currentAngle + Math.max(-turnRate, Math.min(turnRate, diff));
-                const speed = this.ropeDartSpeed;
-                dart.vx = Math.cos(adjusted) * speed;
-                dart.vy = Math.sin(adjusted) * speed;
-            }
-
             dart.x += dart.vx;
             dart.y += dart.vy;
             dart.traveled += Math.hypot(dart.vx, dart.vy);
