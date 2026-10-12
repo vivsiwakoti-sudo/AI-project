@@ -1,6 +1,6 @@
 // No-op Web Audio so engine code can run under node:test, which has no `window`.
 export function installTestAudio() {
-  const param = () => ({ value: 0, setValueAtTime() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { } });
+  const param = () => ({ value: 0, setValueAtTime() { }, setTargetAtTime() { }, cancelScheduledValues() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { } });
   globalThis.window = {
     AudioContext: function () {
       return {

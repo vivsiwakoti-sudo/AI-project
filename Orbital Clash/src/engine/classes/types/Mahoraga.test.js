@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 // DamageSystem reaches the Web Audio API as soon as a hit lands, so give the
 // suite a no-op context instead of requiring a browser. `createBuffer` must
 // return a real array: the death SFX loops over it synchronously.
-const param = () => ({ value: 0, setValueAtTime() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { } });
+const param = () => ({ value: 0, setValueAtTime() { }, setTargetAtTime() { }, cancelScheduledValues() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { } });
 const audioContextStub = () => ({
   createGain: () => ({ connect() { }, gain: param() }),
   createOscillator: () => ({ connect() { }, start() { }, stop() { }, frequency: param(), detune: param(), type: '' }),

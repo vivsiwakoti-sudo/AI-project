@@ -14,6 +14,10 @@ export class Tornado extends FighterBase {
     update(dt, opponent) {
         super.update(dt, opponent);
 
+        // Attack-paused (e.g. latched by the Vampire's Blood Dash): hold the wind
+        // burst entirely - neither advance its timer nor release a new one.
+        if (this.attackPauseTimer > 0) return;
+
         if (this.aoeActive) {
             this.aoeTimer -= dt;
             if (this.aoeTimer <= 0) {

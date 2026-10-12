@@ -31,7 +31,7 @@ const makeCtx = () => {
   return ctx;
 };
 
-const param = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
+const param = () => ({ value: 0, setValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
 globalThis.window = {
   AudioContext: function () {
     return {

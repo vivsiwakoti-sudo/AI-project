@@ -1,5 +1,10 @@
 // Procedurally synthesized music/SFX via Web Audio API (no external audio files needed).
 
+import { getSettings } from "../settings.js";
+
+const MUSIC_BUS_GAIN = 0.72;
+const SFX_BUS_GAIN = 0.85;
+
 const noiseBufferCache = new WeakMap();
 
 function getSharedNoiseBuffer(ctx) {
@@ -409,14 +414,19 @@ class AudioManager {
       this.masterGain.gain.value = this.muted ? 0 : 1.0;
       this.masterGain.connect(this.ctx.destination);
 
+      // The player's music volume sits on its own node, so fades and pauses on musicGain never touch it.
+      this.musicLevel = this.ctx.createGain();
+      this.musicLevel.connect(this.masterGain);
+
       // Music sits clearly on top of the SFX bus so the battle track actually drives.
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.value = 0.72;
-      this.musicGain.connect(this.masterGain);
+      this.musicGain.gain.value = MUSIC_BUS_GAIN;
+      this.musicGain.connect(this.musicLevel);
 
       this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.value = 0.85;
+      this.sfxGain.gain.value = SFX_BUS_GAIN;
       this.sfxGain.connect(this.masterGain);
+      this.applyVolumes();
     }
     if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
     return this.ctx;
@@ -434,6 +444,15 @@ class AudioManager {
   toggleMuted() {
     this.setMuted(!this.muted);
     return this.muted;
+  }
+
+  // Pushes the saved music and sound-effect volumes onto their buses.
+  applyVolumes() {
+    if (!this.ctx) return;
+    const { musicVolume, sfxVolume } = getSettings();
+    const now = this.ctx.currentTime;
+    this.musicLevel.gain.setTargetAtTime(musicVolume, now, 0.02);
+    this.sfxGain.gain.setTargetAtTime(SFX_BUS_GAIN * sfxVolume, now, 0.02);
   }
 
   // Hard-cuts the music: stops the scheduler AND mutes the music bus at once, so
@@ -468,7 +487,7 @@ class AudioManager {
     const param = this.musicGain.gain;
     param.cancelScheduledValues(now);
     param.setValueAtTime(param.value, now);
-    param.setValueAtTime(0.72, now + 0.06);
+    param.setValueAtTime(MUSIC_BUS_GAIN, now + 0.06);
   }
 
   // Silences the audio output without tearing down the running scheduler, so

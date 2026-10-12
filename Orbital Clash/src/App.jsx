@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Menu from "./components/Menu";
 import Arena from "./components/Arena";
 import EndScreen from "./components/EndScreen";
+import SettingsPanel from "./components/SettingsPanel";
 import { audioManager } from "./engine/audio/AudioManager";
 import { DEFAULT_ARENA_SIZE } from "./engine/config";
 import "./App.css";
@@ -14,6 +15,7 @@ function App() {
   const [battleAborted, setBattleAborted] = useState(false);
   const [replayFrames, setReplayFrames] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const returnToRoster = () => {
     setBattleResults(null);
@@ -43,8 +45,10 @@ function App() {
           {screen === "game" && <div className="app-live-label">LIVE COMBAT</div>}
           {screen === "end" && <div className="app-live-label">BATTLE REPORT</div>}
           <button className="audio-toggle-button" onClick={toggleMute} aria-pressed={isMuted}>{isMuted ? "🔇 MUTED" : "🔊 SOUND"}</button>
+          <button className="audio-toggle-button" onClick={() => setShowSettings(true)} aria-haspopup="dialog">SETTINGS</button>
         </div>
       </header>
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       {screen === "menu" && <Menu onStart={(f, size) => { setSelectedFighters(f); setArenaSize(size); setScreen("game"); }} />}
       {screen === "game" && <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => { setBattleResults(res); setBattleAborted(Boolean(meta?.aborted)); setReplayFrames(meta?.replayFrames || []); setScreen("end"); }} />}
       {screen === "end" && <EndScreen results={battleResults} aborted={battleAborted} replayFrames={replayFrames} onReturn={returnToRoster} />}

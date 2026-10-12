@@ -3,11 +3,14 @@ import { Projectile } from "../Projectile.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
+// Same inset as the inner border in CollisionSystem.resolveFighterWall.
+const WALL_INSET = 20;
+
 class Potion extends Projectile {
     constructor(x, y, vx, vy, owner, effect) {
         super(x, y, vx, vy, effect.damage, owner);
         this.effect = effect;
-        this.impactRadius = 48;
+        this.impactRadius = 20;
     }
 }
 
@@ -39,22 +42,23 @@ export class Alchemist extends FighterBase {
 
         this.projectiles.forEach(potion => {
             potion.update(dt);
-            // A thrown flask is a travelling hitbox: it bursts on the first victim it reaches.
+            // A thrown flask is a travelling hitbox: it bursts on the first victim it reaches,
+            // or on the arena wall if it gets there first.
             const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
             const struck = candidates.find(f => f && !f.isDead
-                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: 7 }, f, "Body"));
-            if (struck) {
-                this.impactEffects.push({
-                    x: potion.x,
-                    y: potion.y,
-                    radius: potion.impactRadius,
-                    timer: 0.35,
-                    color: potion.effect.type === "slow" ? "#63d9ff" : potion.effect.type === "poison" ? "#75e35f" : "#ff9f5a"
-                });
-                this.applyPotionEffect(potion, struck);
-                // The flask is spent on impact, whether or not the hit lands.
-                potion.active = false;
-            }
+                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: 7 }, f, "Body")) || null;
+            if (!struck && !this.touchesWall(potion)) return;
+
+            this.impactEffects.push({
+                x: potion.x,
+                y: potion.y,
+                radius: potion.impactRadius,
+                timer: 0.35,
+                color: potion.effect.type === "slow" ? "#63d9ff" : potion.effect.type === "poison" ? "#75e35f" : "#ff9f5a"
+            });
+            this.applyPotionEffect(potion, struck);
+            // The flask is spent on impact, whether or not the hit lands.
+            potion.active = false;
         });
         this.projectiles = this.projectiles.filter(potion => potion.active);
     }
@@ -76,15 +80,23 @@ export class Alchemist extends FighterBase {
         this.projectiles.push(p);
     }
 
-    // Living fighters inside the blast. The struck fighter is always included.
+    // True when the flask has reached the playable border.
+    touchesWall(potion) {
+        const size = this.arenaSize ?? 800;
+        return potion.x <= WALL_INSET || potion.x >= size - WALL_INSET
+            || potion.y <= WALL_INSET || potion.y >= size - WALL_INSET;
+    }
+
+    // Living fighters whose body reaches within impactRadius of the burst.
+    // The struck fighter, if there is one, is always included.
     blastVictims(potion, struck) {
-        const pool = this.victims?.length ? this.victims : [struck];
+        const pool = this.victims?.length ? this.victims : (struck ? [struck] : []);
         return pool.filter(f => f && !f.isDead && (f === struck
             || Math.hypot(f.x - potion.x, f.y - potion.y) <= potion.impactRadius + f.radius));
     }
 
-    // The flask bursts on `struck`. A parry on that hit stops the whole flask;
-    // otherwise every fighter inside the blast takes the effect.
+    // `struck` is the fighter the flask hit, or null for a wall burst. A parry on a
+    // direct hit stops the whole flask; otherwise every fighter inside the blast takes the effect.
     applyPotionEffect(potion, struck) {
         const { effect } = potion;
         const blast = this.blastVictims(potion, struck);
@@ -103,20 +115,25 @@ export class Alchemist extends FighterBase {
             return;
         }
 
-        // The struck fighter takes the flask's own hit, which a parry can stop.
-        // The splash is area damage, so it is never parried.
-        const landed = DamageSystem.applyDamage(this, struck, effect.damage, "Projectile", { projectile: potion, ignoreCooldown: true });
-        if (!landed) return;
-        this.applyStatus(effect, struck);
+        let hits = 0;
+        if (struck) {
+            // The struck fighter takes the flask's own hit, which a parry can stop.
+            const landed = DamageSystem.applyDamage(this, struck, effect.damage, "Projectile", { projectile: potion, ignoreCooldown: true });
+            if (!landed) return;
+            this.applyStatus(effect, struck);
+            hits++;
+        }
 
+        // The splash is area damage, so it is never parried.
         blast.forEach(victim => {
             if (victim === struck) return;
             if (DamageSystem.applyDamage(this, victim, effect.damage, "AOE", { ignoreCooldown: true })) {
                 this.applyStatus(effect, victim);
+                hits++;
             }
         });
 
-        if (effect.type === "vampire") {
+        if (effect.type === "vampire" && hits > 0) {
             this.health = Math.min(this.maxHealth, this.health + 5);
         }
     }

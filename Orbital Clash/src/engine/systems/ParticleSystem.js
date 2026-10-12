@@ -1,5 +1,10 @@
 import { expandingRing, TAU } from "./Fx.js";
 
+// Performance mode thins every burst and lowers the live particle cap.
+const PERFORMANCE_DENSITY = 0.4;
+const PERFORMANCE_MAX_PARTICLES = 300;
+const DEFAULT_MAX_PARTICLES = 900;
+
 function pushParticle(system, particle) {
     // Hard cap keeps long stalemate fights from degrading the frame rate.
     if (system.particles.length > system.maxParticles) system.particles.shift();
@@ -7,16 +12,18 @@ function pushParticle(system, particle) {
 }
 
 export class ParticleSystem {
-    constructor() {
+    constructor({ performanceMode = false } = {}) {
         this.particles = [];
         this.rings = [];
-        this.maxParticles = 900;
+        this.densityScale = performanceMode ? PERFORMANCE_DENSITY : 1;
+        this.maxParticles = performanceMode ? PERFORMANCE_MAX_PARTICLES : DEFAULT_MAX_PARTICLES;
     }
 
     // Velocity is px/second, so particles behave identically at 1x/2x/3x speed.
     emit(x, y, color, count = 15, options = {}) {
         const { speed = 320, spread = TAU, angle = 0, life = 1, size = 3.2, gravity = 0 } = options;
-        for (let i = 0; i < count; i++) {
+        const total = count > 0 ? Math.max(1, Math.round(count * this.densityScale)) : 0;
+        for (let i = 0; i < total; i++) {
             const dir = angle + (Math.random() - 0.5) * spread;
             const magnitude = speed * (0.35 + Math.random() * 0.65);
             pushParticle(this, {

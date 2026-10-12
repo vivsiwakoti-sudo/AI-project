@@ -142,8 +142,10 @@ export class FighterBase {
     // Advances the constant orbit and returns the live weapon tip position, so a
     // subclass can run its own hit test against it. `lanes` draws several blades
     // (e.g. Berserker's two axes) evenly spaced around the ring.
-    // Hit-stop: while paused a fighter's weapon stops spinning and none of its
-    // attacks can deal damage (see DamageSystem.applyDamage).
+    // Freezes a fighter's attacks for `seconds`: its weapon stops spinning, its
+    // ability cooldown stops ticking (so cooldown-gated classes like the Fireball
+    // or Tornado cannot fire a fresh attack) and none of its attacks can deal
+    // damage while the pause is live (see DamageSystem.applyDamage).
     pauseAttacks(seconds) {
         this.attackPauseTimer = Math.max(this.attackPauseTimer || 0, seconds);
     }
@@ -325,7 +327,10 @@ export class FighterBase {
     }
 
     tickTimers(dt) {
-        this.cooldownTimer = Math.max(0, this.cooldownTimer - dt);
+        // While attacks are paused the ability cooldown is held still, so a class
+        // gated on `cooldownTimer <= 0` (Fireball, Tornado, Gunner, ...) genuinely
+        // stops firing instead of merely dealing no damage when its shots land.
+        if (this.attackPauseTimer <= 0) this.cooldownTimer = Math.max(0, this.cooldownTimer - dt);
         this.castTimer = Math.max(0, this.castTimer - dt);
         this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
         // Presentation-only feedback timers. Each eases toward 0 so its effect

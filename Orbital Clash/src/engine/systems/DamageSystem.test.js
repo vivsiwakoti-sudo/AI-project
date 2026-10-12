@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 // AudioManager touches the Web Audio API as soon as a hit lands, so give the
 // suite a no-op context instead of requiring a browser.
-const param = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
+const param = () => ({ value: 0, setValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
 globalThis.window = {
   AudioContext: function () {
     return {

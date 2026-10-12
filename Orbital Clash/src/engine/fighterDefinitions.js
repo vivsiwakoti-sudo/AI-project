@@ -114,7 +114,7 @@ export const FIGHTER_CLASSES = {
   "Fireball": {
     name: "Fireball",
     color: "#FF6347",
-    health: 100,
+    health: 75,
     damage: 5,
     speed: 5,
     bodySize: 40,

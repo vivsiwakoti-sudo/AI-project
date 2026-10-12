@@ -8,6 +8,12 @@ import { audioManager } from "../engine/audio/AudioManager";
 import StatsPanel from "./StatsPanel";
 import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSystem";
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
+import { getSettings } from "../engine/settings";
+
+// Turns every shadowBlur write into a no-op, removing glow from all draw code at once.
+function disableGlow(ctx) {
+  Object.defineProperty(ctx, "shadowBlur", { get: () => 0, set: () => {} });
+}
 
 // Distributes the fighter HUD panels across the two sides of the arena.
 //
@@ -332,10 +338,18 @@ function createFighters(fighters, arenaSize) {
 }
 
 
+const ZOOM_MIN = 10;
+const ZOOM_MAX = 200;
+const ZOOM_STEP = 10;
+const ZOOM_DEFAULT = 100;
+const ZOOM_OPTIONS = Array.from({ length: (ZOOM_MAX - ZOOM_MIN) / ZOOM_STEP + 1 }, (_, i) => ZOOM_MIN + i * ZOOM_STEP);
+
 export default function Arena({ fighters, arenaSize = 800, onFinish }) {
   const canvasRef = useRef(null);
   const ARENA_SIZE = arenaSize;
-  const [zoomLevel, setZoomLevel] = useState(0.75);
+  const [zoomPercent, setZoomPercent] = useState(ZOOM_DEFAULT);
+  // The game loop is set up once, so it reads the zoom from this ref, not from state.
+  const zoomRef = useRef(ZOOM_DEFAULT / 100);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const speedMultiplierRef = useRef(1);
   const [isPaused, setIsPaused] = useState(false);
@@ -374,7 +388,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
     resolutionGrace: 0,
     // Set once the afterglow expires so the onFinish hand-off fires exactly once.
     handoffStarted: false,
-    particles: new ParticleSystem(),
+    particles: new ParticleSystem({ performanceMode: getSettings().performanceMode }),
     replayTime: 0,
     nextReplayCapture: 0,
     replayEndTime: null,
@@ -442,12 +456,17 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
+    const performanceMode = getSettings().performanceMode;
+    if (performanceMode) disableGlow(ctx);
+    // Performance mode captures replay frames half as often to cut encoding work.
+    const replayInterval = performanceMode ? 0.5 : 0.2;
     const replayCanvas = document.createElement("canvas");
     replayCanvas.width = 480;
     replayCanvas.height = 480;
     const replayCtx = replayCanvas.getContext("2d");
     let animationFrameId;
     let timerAccumulator = 0;
+    let suddenDeathAccumulator = 0;
     let fighterUiAccumulator = 0;
 
     const captureReplaySnapshot = () => {
@@ -523,7 +542,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
           gameState.current.replayTime += simulationDt;
           if (gameState.current.replayTime >= gameState.current.nextReplayCapture) {
             shouldCaptureReplayFrame = true;
-            gameState.current.nextReplayCapture = gameState.current.replayTime + 0.2;
+            gameState.current.nextReplayCapture = gameState.current.replayTime + replayInterval;
           }
         }
         timerAccumulator += simulationDt;
@@ -537,6 +556,16 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
             }
             return currentTimer - 1;
           });
+        }
+
+        // One tick per second: per-frame hits would flood the hit feedback.
+        let suddenDeathTick = false;
+        if (gameState.current.suddenDeath) {
+          suddenDeathAccumulator += simulationDt;
+          if (suddenDeathAccumulator >= 1) {
+            suddenDeathAccumulator -= 1;
+            suddenDeathTick = true;
+          }
         }
 
         // Ramp the battle music up as the fight heats up: intensity rises with
@@ -575,14 +604,10 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
           f.touchVictims = DamageSystem.isBodyAttacker(f)
             ? f.victims.filter(other => !other.isInvulnerable)
             : [];
-          if (gameState.current.suddenDeath) {
-            // Routed through the damage system so sudden death obeys the same
-            // invulnerability, adaptation and avoidance rules as every attack.
+          if (suddenDeathTick) {
             // A null attacker means it hurts everyone equally and credits nobody.
-            DamageSystem.applyDamage(null, f, 0.03 * f.maxHealth * simulationDt, "AOE", { ignoreCooldown: true });
-            if (Math.random() < 0.35) {
-              gameState.current.particles.emit(f.x + (Math.random() - 0.5) * f.radius * 2, f.y, "#ff4d6d", 2, { speed: 60, size: 2.2, life: 0.6 });
-            }
+            DamageSystem.applyDamage(null, f, 2, "AOE", { ignoreCooldown: true });
+            gameState.current.particles.emit(f.x + (Math.random() - 0.5) * f.radius * 2, f.y, "#ff4d6d", 2, { speed: 60, size: 2.2, life: 0.6 });
           }
           f.update(simulationDt, opponent);
           // The sponsored target pass below rewrites `target`, so add this
@@ -728,6 +753,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       }
 
       // Draw
+      const zoomLevel = zoomRef.current;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
@@ -880,7 +906,16 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
   return (
     <div className="arena-screen" style={{ display: "flex", justifyContent: "center", alignItems: "center", color: "white", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "20px", marginBottom: "10px" }}>
-            <span style={{ fontFamily: "var(--font-mono)" }}>Zoom: {Math.round(zoomLevel * 100)}%</span>
+            <label className="zoom-control" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>Zoom</span>
+              <select
+                className="zoom-select"
+                value={zoomPercent}
+                onChange={e => { const next = Number(e.target.value); zoomRef.current = next / 100; setZoomPercent(next); }}
+              >
+                {ZOOM_OPTIONS.map(percent => <option key={percent} value={percent}>{percent}%</option>)}
+              </select>
+            </label>
             <div className="speed-controls" aria-label="Combat speed">
               {[1, 2, 3].map(speed => (
                 <button

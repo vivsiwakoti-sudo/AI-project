@@ -109,3 +109,26 @@ test('a parried potion does nothing, including its splash', () => {
   assert.equal(parrier.health, 1000);
   assert.equal(bystander.health, 1000);
 });
+
+test('a potion that reaches the wall bursts there and hits only fighters within 20px', () => {
+  const alchemist = makeAlchemist();
+  const far = makeVictim(200);
+  const near = makeVictim(44); // centre 30px from the burst at x=14, body edge 16px away: inside the radius
+  alchemist.victims = [far, near];
+  alchemist.opponent = far;
+  far.victims = [alchemist, near];
+
+  alchemist.throwPotion(far);
+  const flask = alchemist.projectiles[0];
+  flask.effect = { type: 'slow', damage: 5, duration: 2 };
+  flask.vx = 0;
+  flask.vy = 0;
+  flask.x = 14; // inside the 20px wall inset
+  flask.y = 100;
+  alchemist.cooldownTimer = 999;
+  alchemist.update(0.016, far);
+
+  assert.equal(near.health, 995);
+  assert.equal(far.health, 1000);
+  assert.equal(alchemist.projectiles.length, 0);
+});

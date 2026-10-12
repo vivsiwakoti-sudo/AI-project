@@ -80,6 +80,12 @@ export class Vampire extends FighterBase {
         const hold = this.radius + target.radius - 2;
         this.x = target.x + Math.cos(this.drainAngle) * hold;
         this.y = target.y + Math.sin(this.drainAngle) * hold;
+        // Being latched-on pins the victim's offence: while the Vampire holds on,
+        // the target's attacks stay frozen (spinning blades stop turning, ranged
+        // volleys stop firing). The pause is refreshed every frame so it lasts
+        // exactly as long as the latch and then lapses on its own - no state to
+        // clear in endBloodDash().
+        target.pauseAttacks?.(0.1);
         this.drainTimer -= dt;
         this.drainTick -= dt;
         if (this.drainTick <= 0 && this.drainTicks < 3) {

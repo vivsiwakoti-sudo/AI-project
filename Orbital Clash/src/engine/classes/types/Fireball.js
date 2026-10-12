@@ -14,7 +14,9 @@ export class Fireball extends FighterBase {
 
     update(dt, opponent) {
         super.update(dt, opponent);
-        this.attackTimer -= dt;
+        // While attack-paused (e.g. latched by the Vampire's Blood Dash) the volley
+        // timer is held still, so no fresh fireballs leave the launcher.
+        if (this.attackPauseTimer <= 0) this.attackTimer -= dt;
         if (this.attackTimer <= 0 && opponent) {
             this.shotsFired++;
             const baseAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
