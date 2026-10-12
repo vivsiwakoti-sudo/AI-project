@@ -92,7 +92,7 @@ export const FIGHTER_CLASSES = {
     bodySize: 40,
     shape: "octagon",
     attackType: "Hook",
-    cooldown: 4,
+    cooldown: 8,
     description: "Latches and spins, manipulates momentum.",
     description2: "Spins a 100px hook for 3 seconds. Catching the opponent deals 5 damage, whips them around for 2 seconds, then releases them at double speed for 2.5 seconds - each wall they slam into hurts for extra damage.",
     keywords: ["hook", "grab", "momentum", "wall"],

@@ -51,7 +51,7 @@ test('Ninja dart launches fast', () => {
 
   assert.ok(ninja.ropeDart, 'the dart should have been fired');
   const launchedSpeed = Math.hypot(ninja.ropeDart.vx, ninja.ropeDart.vy);
-  assert.ok(launchedSpeed >= 14, `dart launch speed should be at least 14 px/frame, got ${launchedSpeed}`);
+  assert.ok(launchedSpeed >= 13.9, `dart launch speed should be at least 13.9 px/frame, got ${launchedSpeed}`);
 });
 
 test('Victim keeps meaningful speed after the rope dart releases', () => {

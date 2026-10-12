@@ -48,6 +48,11 @@ export class Grappler extends FighterBase {
                 opponent.pinTimer = this.hookTimer;
                 opponent.x = this.x + Math.cos(this.hookTimer * 5) * Math.min(70, hookDistance);
                 opponent.y = this.y + Math.sin(this.hookTimer * 5) * Math.min(70, hookDistance);
+                // A grappled victim is held fast, so its attacks are frozen for as
+                // long as the chain keeps it latched: spinning blades stop turning
+                // and ranged volleys stop firing. The pause is refreshed every frame
+                // so it lasts exactly as long as the pin and then lapses on its own.
+                opponent.pauseAttacks?.(0.1);
                 if (!this.latched) {
                     this.latched = true;
                     DamageSystem.applyDamage(this, opponent, this.damage, "Melee", { ignoreCooldown: true });
