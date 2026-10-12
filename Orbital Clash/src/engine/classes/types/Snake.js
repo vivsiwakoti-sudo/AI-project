@@ -28,7 +28,7 @@ export class Snake extends FighterBase {
         this.trail.forEach(segment => { segment.age += dt; });
         this.trail = this.trail.filter(segment => segment.age < this.trailLife);
 
-        // Trail collision logic - slow 50% and deal 6 damage per second.
+        // Trail collision logic - slow 50% and deal 1 damage every half second.
         // A trail is something anyone can run into, so every living fighter is
         // tested, not just the single opponent reference handed over by the arena.
         // The DOT accumulator is per victim as well: sharing one between them made
@@ -44,7 +44,7 @@ export class Snake extends FighterBase {
                 this.dotAccumulator += dt;
                 if (this.dotAccumulator >= 0.5) {
                     this.dotAccumulator = 0;
-                    DamageSystem.applyDamage(this, victim, 3, "AOE", { ignoreCooldown: true });
+                    DamageSystem.applyDamage(this, victim, 1, "AOE", { ignoreCooldown: true });
                 }
             }
         }

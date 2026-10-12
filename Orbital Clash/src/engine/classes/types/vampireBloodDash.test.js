@@ -3,16 +3,16 @@ import assert from 'node:assert/strict';
 
 // Minimal audio stub so the classes' constructor/update paths that touch
 // audioManager do not throw in a headless run (mirrors the other engine tests).
-const param = () => ({ value: 0, setValueAtTime() {}, setTargetAtTime() {}, cancelScheduledValues() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
+const param = () => ({ value: 0, setValueAtTime() { }, setTargetAtTime() { }, cancelScheduledValues() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { } });
 globalThis.window = {
   AudioContext: function () {
     return {
-      createGain: () => ({ connect() {}, gain: param() }),
-      createOscillator: () => ({ connect() {}, start() {}, stop() {}, frequency: param(), detune: param(), type: '' }),
-      createBiquadFilter: () => ({ connect() {}, frequency: param(), Q: param(), type: '' }),
-      createBufferSource: () => ({ connect() {}, start() {}, stop() {}, buffer: null, playbackRate: param() }),
+      createGain: () => ({ connect() { }, gain: param() }),
+      createOscillator: () => ({ connect() { }, start() { }, stop() { }, frequency: param(), detune: param(), type: '' }),
+      createBiquadFilter: () => ({ connect() { }, frequency: param(), Q: param(), type: '' }),
+      createBufferSource: () => ({ connect() { }, start() { }, stop() { }, buffer: null, playbackRate: param() }),
       createBuffer: (c, l) => ({ getChannelData: () => new Float32Array(l) }),
-      destination: {}, currentTime: 0, state: 'running', sampleRate: 44100, resume() {}
+      destination: {}, currentTime: 0, state: 'running', sampleRate: 44100, resume() { }
     };
   }
 };
