@@ -1,11 +1,32 @@
 {
-  "version": 2,
-  "installCommand": "npm install && npm --prefix \"Orbital Clash\" install",
-  "buildCommand": "npm run frontend:build",
-  "outputDirectory": "Orbital Clash/dist",
-  "functions": {
-    "api/[...path].js": {
-      "includeFiles": "Software Planning (1).docx"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "backend": {
+      "root": "backend",
+      "framework": "express",
+      "functions": {
+        "index.js": {
+          "includeFiles": "Software Planning (1).docx"
+        }
+      }
+    },
+    "orbitalclash": {
+      "root": "Orbital Clash",
+      "framework": "vite"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "orbitalclash"
+      }
+    }
+  ]
 }

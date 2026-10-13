@@ -13,11 +13,7 @@ let softwarePlan = "";
 
 async function loadSoftwarePlan() {
     try {
-        const documentPath = path.join(
-            __dirname,
-            "..",
-            "Software Planning (1).docx"
-        );
+        const documentPath = path.join(__dirname, "Software Planning (1).docx");
 
         const result = await mammoth.extractRawText({
             path: documentPath
