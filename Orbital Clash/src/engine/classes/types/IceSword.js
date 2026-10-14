@@ -3,6 +3,9 @@ import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { drawSword, weaponTrail } from "../../systems/Weapons.js";
 
+// Shared by the hitbox and the drawn blade so they always agree.
+const SWORD_LENGTH = 78.75;
+
 export class IceSword extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -19,8 +22,7 @@ export class IceSword extends FighterBase {
 
         // Sword collision logic
         if (opponent && !this.isDead && !opponent.isDead) {
-            // The blade is 50% longer again, so the striking tip sits further out.
-            const swordDistance = this.radius + 45;
+            const swordDistance = this.radius + SWORD_LENGTH;
             const swordX = this.x + Math.cos(this.swordAngle) * swordDistance;
             const swordY = this.y + Math.sin(this.swordAngle) * swordDistance;
 
@@ -56,7 +58,7 @@ export class IceSword extends FighterBase {
 
         ctx.save();
         ctx.translate(this.x, this.y);
-        const swordLength = 78.75;
+        const swordLength = SWORD_LENGTH;
         weaponTrail(ctx, this.swordAngle, 1, this.radius + 8, this.radius + swordLength, "#7fdcff", { sweep: 1.1, alpha: 0.35 });
         ctx.rotate(this.swordAngle);
 
