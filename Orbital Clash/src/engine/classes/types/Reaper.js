@@ -31,8 +31,9 @@ export class Reaper extends FighterBase {
             const tipX = this.x + Math.cos(this.scytheAngle) * tipDistance;
             const tipY = this.y + Math.sin(this.scytheAngle) * tipDistance;
 
-            if (this.bladeTouches(tipX, tipY, opponent, 12) && this.cooldownTimer <= 0) {
-                const dealt = DamageSystem.applyDamage(this, opponent, this.currentDamage, "Melee", { ignoreCooldown: true });
+            const target = this.bladeTouchTarget(tipX, tipY, opponent, 12);
+            if (target && this.cooldownTimer <= 0) {
+                const dealt = DamageSystem.applyDamage(this, target, this.currentDamage, "Melee", { ignoreCooldown: true });
                 // Only a *successful* hit scales the scythe, so a miss or dodge costs nothing.
                 if (dealt) {
                     this.useAbility();
@@ -42,9 +43,9 @@ export class Reaper extends FighterBase {
                     this.reapFlash = 1;
                     // Heavy scythe sweep arc, longer reach to match the bigger blade.
                     this.triggerSwing(this.scytheAngle, { duration: 0.28, reach: 54, color: "#d49aff" });
-                    if (opponent.particleSystem) {
-                        opponent.particleSystem.emitImpact(scytheX, scytheY, "#d49aff", 24);
-                        opponent.particleSystem.ring(this.x, this.y, "#8b2cff", { startRadius: this.radius, endRadius: 120, life: 0.4, lineWidth: 4 });
+                    if (target.particleSystem) {
+                        target.particleSystem.emitImpact(scytheX, scytheY, "#d49aff", 24);
+                        target.particleSystem.ring(this.x, this.y, "#8b2cff", { startRadius: this.radius, endRadius: 120, life: 0.4, lineWidth: 4 });
                     }
                 }
             }

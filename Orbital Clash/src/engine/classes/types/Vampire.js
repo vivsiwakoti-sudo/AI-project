@@ -142,7 +142,8 @@ export class Vampire extends FighterBase {
         // crosses. The heal (and therefore evolution) is paced by the orbit so a
         // blade parked on a target cannot lifesteal every frame.
         const [tip] = this.meleeSpinUpdate(dt);
-        const reaching = this.bladeTouches(tip.x, tip.y, opponent, 8);
+        const target = this.bladeTouchTarget(tip.x, tip.y, opponent, 8);
+        const reaching = target !== null;
         if (reaching && !this.weaponHot && this.clawCooldown <= 0) {
             this.weaponHot = true;
             this.lastAngle = tip.angle;
@@ -153,9 +154,9 @@ export class Vampire extends FighterBase {
             // resisted stake used to leave the fighter unable to heal or evolve for
             // the whole rest of the fight, because `registerClawHit` only ran when
             // `applyDamage` returned true.
-            const landed = DamageSystem.applyDamage(this, opponent, this.damage, "Melee", { ignoreCooldown: true });
+            const landed = DamageSystem.applyDamage(this, target, this.damage, "Melee", { ignoreCooldown: true });
             this.registerClawHit();
-            if (landed && opponent.particleSystem) opponent.particleSystem.emitImpact(opponent.x, opponent.y, "#ff2d55", 14);
+            if (landed && target.particleSystem) target.particleSystem.emitImpact(target.x, target.y, "#ff2d55", 14);
         } else if (!reaching) {
             this.weaponHot = false;
         }

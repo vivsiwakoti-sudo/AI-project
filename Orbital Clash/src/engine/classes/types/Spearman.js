@@ -48,6 +48,13 @@ class Spear extends Projectile {
     }
 
     update(dt, opponent) {
+        if (this.isStuck && this.stuckTarget?.isDead) {
+            // The impaled fighter died mid-stun: free the spear rather than dragging the corpse.
+            this.isStuck = false;
+            this.stuckTarget = null;
+            this.active = false;
+            return;
+        }
         if (this.isStuck && this.stuckTarget) {
             const arenaSize = this.owner?.arenaSize ?? 800;
             

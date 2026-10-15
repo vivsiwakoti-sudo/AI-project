@@ -35,16 +35,18 @@ export class Berserker extends FighterBase {
             const blade2X = this.x + Math.cos(this.bladeAngle + Math.PI) * bladeDistance;
             const blade2Y = this.y + Math.sin(this.bladeAngle + Math.PI) * bladeDistance;
 
-            const blade1Hit = this.bladeTouches(blade1X, blade1Y, opponent, this.bladeEdgeRadius);
-            const blade2Hit = this.bladeTouches(blade2X, blade2Y, opponent, this.bladeEdgeRadius);
+            const blade1Target = this.bladeTouchTarget(blade1X, blade1Y, opponent, this.bladeEdgeRadius);
+            const blade2Target = this.bladeTouchTarget(blade2X, blade2Y, opponent, this.bladeEdgeRadius);
+            const blade1Hit = blade1Target !== null;
+            const blade2Hit = blade2Target !== null;
 
             // Each blade may only connect once per pass so it cannot shred a stationary target.
             if (blade1Hit && !this.blade1Hot) {
-                if (DamageSystem.applyDamage(this, opponent, this.damage, "Melee", { ignoreCooldown: true })) {
+                if (DamageSystem.applyDamage(this, blade1Target, this.damage, "Melee", { ignoreCooldown: true })) {
                     this.rotationSpeed *= 1.1; // Multiplicative stack
                     // Quick axe chop arc toward the target on each connect.
-                    this.triggerSwing(Math.atan2(opponent.y - this.y, opponent.x - this.x), { duration: 0.18, reach: 40, color: "#ff4d4d" });
-                    if (opponent.particleSystem) opponent.particleSystem.emitImpact(blade1X, blade1Y, "#ff4d4d", 12);
+                    this.triggerSwing(Math.atan2(blade1Target.y - this.y, blade1Target.x - this.x), { duration: 0.18, reach: 40, color: "#ff4d4d" });
+                    if (blade1Target.particleSystem) blade1Target.particleSystem.emitImpact(blade1X, blade1Y, "#ff4d4d", 12);
                 }
                 this.blade1Hot = true;
             } else if (!blade1Hit) {
@@ -52,10 +54,10 @@ export class Berserker extends FighterBase {
             }
 
             if (blade2Hit && !this.blade2Hot) {
-                if (DamageSystem.applyDamage(this, opponent, this.damage, "Melee", { ignoreCooldown: true })) {
+                if (DamageSystem.applyDamage(this, blade2Target, this.damage, "Melee", { ignoreCooldown: true })) {
                     this.rotationSpeed *= 1.1; // Multiplicative stack
-                    this.triggerSwing(Math.atan2(opponent.y - this.y, opponent.x - this.x), { duration: 0.18, reach: 40, color: "#ff4d4d" });
-                    if (opponent.particleSystem) opponent.particleSystem.emitImpact(blade2X, blade2Y, "#ff4d4d", 12);
+                    this.triggerSwing(Math.atan2(blade2Target.y - this.y, blade2Target.x - this.x), { duration: 0.18, reach: 40, color: "#ff4d4d" });
+                    if (blade2Target.particleSystem) blade2Target.particleSystem.emitImpact(blade2X, blade2Y, "#ff4d4d", 12);
                 }
                 this.blade2Hot = true;
             } else if (!blade2Hit) {

@@ -26,25 +26,24 @@ export class IceSword extends FighterBase {
             const swordX = this.x + Math.cos(this.swordAngle) * swordDistance;
             const swordY = this.y + Math.sin(this.swordAngle) * swordDistance;
 
-            // A blade connects when the sword TOUCHES the opponent - the blade's
-            // own edge radius is added on top of the victim's body.
-            if (this.bladeTouches(swordX, swordY, opponent, this.bladeEdgeRadius)) {
+            const target = this.bladeTouchTarget(swordX, swordY, opponent, this.bladeEdgeRadius);
+            if (target) {
                 // The blade may only connect once per sweep, not every frame it overlaps.
-                if (this.cooldownTimer <= 0 && DamageSystem.applyDamage(this, opponent, this.damage, "Melee", { ignoreCooldown: true })) {
+                if (this.cooldownTimer <= 0 && DamageSystem.applyDamage(this, target, this.damage, "Melee", { ignoreCooldown: true })) {
                     this.useAbility();
                     this.slashFlash = 1;
                     this.slashX = swordX;
                     this.slashY = swordY;
                     // Quick frost swipe arc in the direction the blade struck.
                     this.triggerSwing(this.swordAngle, { duration: 0.2, reach: 38, color: "#bfe9ff" });
-                    EffectSystem.addEffect(opponent, {
+                    EffectSystem.addEffect(target, {
                         name: "slow",
                         duration: 2,
                         onEnd: fighter => { fighter.slowVisual = false; }
                     });
-                    opponent.slowVisual = true;
-                    if (opponent.particleSystem) {
-                        opponent.particleSystem.emitImpact(swordX, swordY, "#bfe9ff", 12);
+                    target.slowVisual = true;
+                    if (target.particleSystem) {
+                        target.particleSystem.emitImpact(swordX, swordY, "#bfe9ff", 12);
                     }
                 }
             }

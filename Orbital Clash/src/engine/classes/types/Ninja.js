@@ -45,6 +45,7 @@ export class Ninja extends FighterBase {
                     traveled: 0,
                     maxDistance: 300,
                     hit: false,
+                    target: null,
                     savedVx: 0,
                     savedVy: 0
                 };
@@ -60,42 +61,45 @@ export class Ninja extends FighterBase {
             dart.y += dart.vy;
             dart.traveled += Math.hypot(dart.vx, dart.vy);
 
-            if (opponent) {
-                if (dart.hit) {
-                    const pullX = this.x - opponent.x;
-                    const pullY = this.y - opponent.y;
-                    const pullDistance = Math.hypot(pullX, pullY);
-                    const pullSpeed = 12 * dt * 60;
+            // The dart catches the first living fighter its line crosses, not only the one this class aimed at.
+            const pool = this.reachableVictims(opponent);
+            const hooked = dart.target;
+            if (dart.hit && hooked && !hooked.isDead) {
+                const pullX = this.x - hooked.x;
+                const pullY = this.y - hooked.y;
+                const pullDistance = Math.hypot(pullX, pullY);
+                const pullSpeed = 12 * dt * 60;
 
-                    if (pullDistance > this.radius + opponent.radius) {
-                        opponent.x += (pullX / pullDistance) * Math.min(pullSpeed, pullDistance);
-                        opponent.y += (pullY / pullDistance) * Math.min(pullSpeed, pullDistance);
-                    }
-                    opponent.vx = 0;
-                    opponent.vy = 0;
-                    dart.x = opponent.x;
-                    dart.y = opponent.y;
+                if (pullDistance > this.radius + hooked.radius) {
+                    hooked.x += (pullX / pullDistance) * Math.min(pullSpeed, pullDistance);
+                    hooked.y += (pullY / pullDistance) * Math.min(pullSpeed, pullDistance);
                 }
+                hooked.vx = 0;
+                hooked.vy = 0;
+                dart.x = hooked.x;
+                dart.y = hooked.y;
+            }
 
-                const dx = opponent.x - dart.x;
-                const dy = opponent.y - dart.y;
-                if (!dart.hit && Math.hypot(dx, dy) < opponent.radius + 8) {
+            if (!dart.hit) {
+                const struck = pool.find(f => Math.hypot(f.x - dart.x, f.y - dart.y) < f.radius + 8);
+                if (struck) {
+                    dart.target = struck;
                     dart.hit = true;
-                    dart.x = opponent.x;
-                    dart.y = opponent.y;
-                    dart.savedVx = opponent.vx;
-                    dart.savedVy = opponent.vy;
+                    dart.x = struck.x;
+                    dart.y = struck.y;
+                    dart.savedVx = struck.vx;
+                    dart.savedVy = struck.vy;
                     // 11 damage on impact, then a 4 damage punch when it is released.
                     // ignoreCooldown keeps this yank damage from consuming the
                     // fighter's own attack cooldown, so the rope's damage is paced
                     // by the rope.
-                    DamageSystem.applyDamage(this, opponent, 11, "Melee", { ignoreCooldown: true });
-                    if (opponent.particleSystem) opponent.particleSystem.emitImpact(opponent.x, opponent.y, "#d9d9d9", 18);
+                    DamageSystem.applyDamage(this, struck, 11, "Melee", { ignoreCooldown: true });
+                    if (struck.particleSystem) struck.particleSystem.emitImpact(struck.x, struck.y, "#d9d9d9", 18);
 
                     if (Math.random() < 0.33) {
                         const effectRoll = Math.random();
                         if (effectRoll < 0.33) {
-                            EffectSystem.addEffect(opponent, {
+                            EffectSystem.addEffect(struck, {
                                 name: "fire",
                                 duration: 5,
                                 tickTimer: 0,
@@ -113,26 +117,27 @@ export class Ninja extends FighterBase {
                                 }
                             });
                         } else if (effectRoll < 0.66) {
-                            EffectSystem.addEffect(opponent, {
+                            EffectSystem.addEffect(struck, {
                                 name: "electric",
                                 duration: 2.5,
                                 onEnd: (fighter) => { fighter.jitter = 0; }
                             });
-                            DamageSystem.applyDamage(this, opponent, 3, "Melee", { ignoreCooldown: true });
+                            DamageSystem.applyDamage(this, struck, 3, "Melee", { ignoreCooldown: true });
                         } else {
-                            const reducedMax = Math.max(1, opponent.maxHealth * 0.8);
-                            opponent.maxHealth = reducedMax;
-                            opponent.health = Math.min(opponent.health, opponent.maxHealth);
+                            const reducedMax = Math.max(1, struck.maxHealth * 0.8);
+                            struck.maxHealth = reducedMax;
+                            struck.health = Math.min(struck.health, struck.maxHealth);
                         }
                     }
                 }
             }
 
             if (dart.traveled >= dart.maxDistance || this.ropeTimer <= 0) {
-                if (dart.hit && opponent) {
+                const punched = dart.target;
+                if (dart.hit && punched && !punched.isDead) {
                     // The punch that follows the pull.
-                    DamageSystem.applyDamage(this, opponent, 4, "Melee", { ignoreCooldown: true });
-                    const angle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
+                    DamageSystem.applyDamage(this, punched, 4, "Melee", { ignoreCooldown: true });
+                    const angle = Math.atan2(punched.y - this.y, punched.x - this.x);
                     const dirX = Math.cos(angle);
                     const dirY = Math.sin(angle);
 
@@ -149,17 +154,17 @@ export class Ninja extends FighterBase {
 
                     const punch = 1.05;      // launch speed straight away from the ninja
                     const keepTangential = 0.7;
-                    opponent.vx = dirX * punch + tangentX * keepTangential;
-                    opponent.vy = dirY * punch + tangentY * keepTangential;
+                    punched.vx = dirX * punch + tangentX * keepTangential;
+                    punched.vy = dirY * punch + tangentY * keepTangential;
 
                     // Re-normalise so the victim never exceeds their own top speed.
-                    const magnitude = Math.hypot(opponent.vx, opponent.vy);
+                    const magnitude = Math.hypot(punched.vx, punched.vy);
                     if (magnitude > 1.4) {
-                        opponent.vx = (opponent.vx / magnitude) * 1.4;
-                        opponent.vy = (opponent.vy / magnitude) * 1.4;
+                        punched.vx = (punched.vx / magnitude) * 1.4;
+                        punched.vy = (punched.vy / magnitude) * 1.4;
                     }
 
-                    if (opponent.particleSystem) opponent.particleSystem.emitImpact(opponent.x, opponent.y, "#bfefff", 20);
+                    if (punched.particleSystem) punched.particleSystem.emitImpact(punched.x, punched.y, "#bfefff", 20);
                 }
                 this.ropeActive = false;
                 this.ropeDart = null;

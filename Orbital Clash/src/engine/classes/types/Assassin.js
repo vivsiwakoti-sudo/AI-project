@@ -56,17 +56,18 @@ export class Assassin extends FighterBase {
         // Contact damage is paced by the orbit so speed does not equal dps, and a
         // blade parked on a target only connects once per revolution.
         const [tip] = this.meleeSpinUpdate(dt);
-        const reaching = opponent && this.bladeTouches(tip.x, tip.y, opponent, 6);
+        const target = this.bladeTouchTarget(tip.x, tip.y, opponent, 6);
+        const reaching = target !== null;
         if (reaching && !this.weaponHot && this.cooldownTimer <= 0) {
             this.weaponHot = true;
             const isCrit = Math.random() < 0.25;
-            if (DamageSystem.applyDamage(this, opponent, isCrit ? 25 : this.damage, "Melee", { ignoreCooldown: true, crit: isCrit })) {
+            if (DamageSystem.applyDamage(this, target, isCrit ? 25 : this.damage, "Melee", { ignoreCooldown: true, crit: isCrit })) {
                 this.useAbility();
                 this.isRedirecting = true; // Re-aim after a landed strike.
                 this.hitColor = isCrit ? "#ffd166" : "#ffffff";
                 this.triggerSwing(tip.angle, { duration: 0.16, reach: 30, color: isCrit ? "#ffd166" : this.color });
-                if (opponent.particleSystem) {
-                    opponent.particleSystem.emitImpact(opponent.x, opponent.y, isCrit ? "#ffd166" : this.color, isCrit ? 26 : 12);
+                if (target.particleSystem) {
+                    target.particleSystem.emitImpact(target.x, target.y, isCrit ? "#ffd166" : this.color, isCrit ? 26 : 12);
                 }
             }
         } else if (!reaching) {

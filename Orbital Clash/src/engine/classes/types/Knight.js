@@ -119,15 +119,16 @@ export class Knight extends FighterBase {
         // The damage is the class's DEFINITION (15 for the Knight) rather than the
         // old hard-coded 5, which silently ignored the stat block entirely.
         const [tip] = this.meleeSpinUpdate(dt);
-        const reaching = opponent && this.bladeTouches(tip.x, tip.y, opponent, 8);
+        const target = this.bladeTouchTarget(tip.x, tip.y, opponent, 8);
+        const reaching = target !== null;
         if (reaching && !this.weaponHot && this.slashCooldown <= 0) {
             this.weaponHot = true;
             this.slashTimer = 0.3;
             this.slashCooldown = Math.min(this.cooldown || 0.25, 0.25);
-            if (DamageSystem.applyDamage(this, opponent, this.damage, "Melee", { ignoreCooldown: true })) {
+            if (DamageSystem.applyDamage(this, target, this.damage, "Melee", { ignoreCooldown: true })) {
                 this.slashFlash = 0.22;
                 this.triggerSwing(tip.angle, { duration: 0.24, reach: 42, color: "#e8f4ff" });
-                if (opponent.particleSystem) opponent.particleSystem.emitImpact(opponent.x, opponent.y, "#e8f4ff", 16);
+                if (target.particleSystem) target.particleSystem.emitImpact(target.x, target.y, "#e8f4ff", 16);
             }
         } else if (!reaching) {
             this.weaponHot = false;

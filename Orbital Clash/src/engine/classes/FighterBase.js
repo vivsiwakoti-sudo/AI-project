@@ -172,6 +172,16 @@ export class FighterBase {
         return Math.hypot(ax + bx * t - target.x, ay + by * t - target.y) < target.radius + edge;
     }
 
+    // Living fighters this attack can reach; `opponent` is the fallback outside the arena.
+    reachableVictims(opponent) {
+        return (this.victims?.length ? this.victims : (opponent ? [opponent] : [])).filter(f => f && !f.isDead);
+    }
+
+    // The first reachable fighter the blade touches, or null.
+    bladeTouchTarget(tipX, tipY, opponent, edge = 0) {
+        return this.reachableVictims(opponent).find(f => this.bladeTouches(tipX, tipY, f, edge)) || null;
+    }
+
     // Starts a quick melee swing arc. `angle` defaults to the facing direction;
     // pass a shorter duration/reach for snappier or longer weapons.
     triggerSwing(angle = this.lastAngle, { duration = 0.22, reach = 34, color = null } = {}) {

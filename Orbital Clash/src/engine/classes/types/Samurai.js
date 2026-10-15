@@ -30,17 +30,18 @@ export class Samurai extends FighterBase {
         // and cuts whoever it crosses, capped to one hit per revolution.
         const [tip] = this.meleeSpinUpdate(dt, { speed: this.weaponSpin });
         if (opponent && !opponent.isDead) {
-            const reaching = this.bladeTouches(tip.x, tip.y, opponent, 7);
+            const target = this.bladeTouchTarget(tip.x, tip.y, opponent, 7);
+            const reaching = target !== null;
             if (reaching && !this.weaponHot && this.comboTimer <= 0) {
                 this.weaponHot = true;
                 const isCrit = Math.random() < this.critChance;
                 // 6 damage for a normal katana cut (the class's defined damage), 15
                 // on a critical. The blade used to land a flat 5 and the crit 7.5,
                 // ignoring the stat block while every other class honoured it.
-                if (DamageSystem.applyDamage(this, opponent, isCrit ? 15 : this.damage, "Melee", { ignoreCooldown: true, crit: isCrit })) {
-                    opponent.pauseAttacks?.(Samurai.ATTACK_PAUSE);
+                if (DamageSystem.applyDamage(this, target, isCrit ? 15 : this.damage, "Melee", { ignoreCooldown: true, crit: isCrit })) {
+                    target.pauseAttacks?.(Samurai.ATTACK_PAUSE);
                     this.triggerSwing(tip.angle, { duration: 0.2, reach: 40, color: isCrit ? "#ffd166" : "#ff5050" });
-                    if (opponent.particleSystem) opponent.particleSystem.emitImpact(opponent.x, opponent.y, isCrit ? "#ffd166" : "#ff3232", isCrit ? 22 : 12);
+                    if (target.particleSystem) target.particleSystem.emitImpact(target.x, target.y, isCrit ? "#ffd166" : "#ff3232", isCrit ? 22 : 12);
                 }
             } else if (!reaching) {
                 this.weaponHot = false;
