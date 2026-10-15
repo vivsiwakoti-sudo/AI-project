@@ -14,11 +14,20 @@ export class Grappler extends FighterBase {
     update(dt, opponent) {
         super.update(dt, opponent);
 
-        if (!this.isHookActive && this.cooldownTimer <= 0 && opponent) {
-            const dx = opponent.x - this.x;
-            const dy = opponent.y - this.y;
-            if (Math.sqrt(dx*dx + dy*dy) < 100 + opponent.radius) {
+        if (!this.isHookActive && this.cooldownTimer <= 0) {
+            // The hook takes the nearest living fighter inside its reach, not only the one this class aimed at.
+            let nearest = null;
+            let nearestDistance = Infinity;
+            for (const f of this.reachableVictims(opponent)) {
+                const d = Math.hypot(f.x - this.x, f.y - this.y);
+                if (d < 100 + f.radius && d < nearestDistance) {
+                    nearest = f;
+                    nearestDistance = d;
+                }
+            }
+            if (nearest) {
                 this.isHookActive = true;
+                this.hookTarget = nearest;
                 this.hookTimer = 2; // Duration
                 this.latched = false;
                 this.useAbility();
@@ -30,47 +39,46 @@ export class Grappler extends FighterBase {
 
         if (this.isHookActive) {
             this.hookTimer -= dt;
+            const hooked = this.hookTarget;
             // A pin that has lost its victim (the target died to something else
-            // mid-spin) must release cleanly. Reading `opponent.x` unguarded threw
-            // a TypeError here, which aborted the whole fighter update and left the
-            // Grappler pinned to a fighter that no longer existed.
-            if (!opponent) {
+            // mid-spin) must release cleanly rather than read a dead fighter.
+            if (!hooked || hooked.isDead) {
                 this.isHookActive = false;
                 this.latched = false;
                 this.cooldownTimer = this.cooldownDuration;
                 return;
             }
             // Hook reaches out 100px and latches for 2 seconds while it spins the victim.
-            const hookDistance = Math.hypot(opponent.x - this.x, opponent.y - this.y);
-            if (hookDistance < 100 + opponent.radius) {
-                opponent.isPinned = true;
-                opponent.isStuck = true;
-                opponent.pinTimer = this.hookTimer;
-                opponent.x = this.x + Math.cos(this.hookTimer * 5) * Math.min(70, hookDistance);
-                opponent.y = this.y + Math.sin(this.hookTimer * 5) * Math.min(70, hookDistance);
+            const hookDistance = Math.hypot(hooked.x - this.x, hooked.y - this.y);
+            if (hookDistance < 100 + hooked.radius) {
+                hooked.isPinned = true;
+                hooked.isStuck = true;
+                hooked.pinTimer = this.hookTimer;
+                hooked.x = this.x + Math.cos(this.hookTimer * 5) * Math.min(70, hookDistance);
+                hooked.y = this.y + Math.sin(this.hookTimer * 5) * Math.min(70, hookDistance);
                 // A grappled victim is held fast, so its attacks are frozen for as
                 // long as the chain keeps it latched: spinning blades stop turning
                 // and ranged volleys stop firing. The pause is refreshed every frame
                 // so it lasts exactly as long as the pin and then lapses on its own.
-                opponent.pauseAttacks?.(0.1);
+                hooked.pauseAttacks?.(0.1);
                 if (!this.latched) {
                     this.latched = true;
-                    DamageSystem.applyDamage(this, opponent, this.damage, "Melee", { ignoreCooldown: true });
-                    if (opponent.particleSystem) opponent.particleSystem.emitImpact(opponent.x, opponent.y, "#c77dff", 16);
+                    DamageSystem.applyDamage(this, hooked, this.damage, "Melee", { ignoreCooldown: true });
+                    if (hooked.particleSystem) hooked.particleSystem.emitImpact(hooked.x, hooked.y, "#c77dff", 16);
                 }
             }
             if (this.hookTimer <= 0) {
                 this.isHookActive = false;
                 this.latched = false;
                 this.cooldownTimer = this.cooldownDuration;
-                if (opponent) {
-                    opponent.releasePin();
+                if (hooked) {
+                    hooked.releasePin();
                     // Released at double momentum, then decays back when the effect ends.
-                    opponent.vx *= 2;
-                    opponent.vy *= 2;
+                    hooked.vx *= 2;
+                    hooked.vy *= 2;
 
                     // Add MomentumBoost
-                    EffectSystem.addEffect(opponent, {
+                    EffectSystem.addEffect(hooked, {
                         name: "MomentumBoost",
                         duration: 2.5,
                         onEnd: (fighter) => {
