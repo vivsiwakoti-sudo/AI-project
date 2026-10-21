@@ -99,6 +99,8 @@ function TournamentScreenView({
   const [isPaused, setIsPaused] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isBracketMinimized, setIsBracketMinimized] = useState(false);
+  const [isArenaFullscreen, setIsArenaFullscreen] = useState(false);
 
   // Refs mirror the state the async match runner reads, so a run in flight never
   // sees a stale closure. This is what keeps "pause", "speed" and "next match"
@@ -111,9 +113,15 @@ function TournamentScreenView({
   // The live bout being watched, and the canvas it paints into.
   const boutRef = useRef(null);
   const canvasRef = useRef(null);
+  const arenaWrapRef = useRef(null);
 
   useEffect(() => { pausedRef.current = isPaused; }, [isPaused]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => {
+    const syncFullscreen = () => setIsArenaFullscreen(document.fullscreenElement === arenaWrapRef.current);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
   // StrictMode mounts, unmounts and remounts this screen once in development.
   // The mounted flag has to be re-armed on mount (leaving it false made every
   // wait() bail out instantly after the remount).
@@ -478,6 +486,20 @@ function TournamentScreenView({
     skipRef.current = "next";
   };
 
+  const handleToggleFullscreen = () => {
+    audioManager.playUiClick();
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+    arenaWrapRef.current?.requestFullscreen?.().catch(() => {});
+  };
+
+  const handleToggleBracket = () => {
+    audioManager.playUiClick();
+    setIsBracketMinimized(v => !v);
+  };
+
   const handleExit = () => {
     audioManager.playUiClick();
     setShowExitConfirm(true);
@@ -538,7 +560,7 @@ function TournamentScreenView({
         </div>
       </div>
 
-      <div className="tournament-body">
+      <div className={`tournament-body${isBracketMinimized ? " tournament-body-minimized" : ""}`}>
         <div className="tournament-stage">
           {phase === "error" ? (
             <div className="tournament-error" role="alert">
@@ -553,7 +575,7 @@ function TournamentScreenView({
             <div className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}`}>
               <HudColumn fighters={leftFighters} side="left" clock={clockLabel} suddenDeath={suddenDeath} />
 
-              <div className="tournament-canvas-wrap">
+              <div className="tournament-canvas-wrap" ref={arenaWrapRef}>
                 <canvas
                   ref={canvasRef}
                   width={TOURNAMENT_ARENA_SIZE}
@@ -561,6 +583,10 @@ function TournamentScreenView({
                   className="tournament-canvas"
                   aria-label={stageMatch ? `${stageMatch.first} versus ${stageMatch.second}` : "Tournament arena"}
                 />
+
+                <button className="tournament-arena-fullscreen" onClick={handleToggleFullscreen} aria-pressed={isArenaFullscreen}>
+                  {isArenaFullscreen ? "EXIT FULLSCREEN" : "FULLSCREEN"}
+                </button>
 
                 <div className="tournament-vs-strip">
                   <span style={{ color: fighterFor(stageMatch?.first).color }}>{stageMatch?.first ?? "—"}</span>
@@ -629,17 +655,24 @@ function TournamentScreenView({
           )}
         </div>
 
-        <aside className="tournament-side">
+        <aside className={`tournament-side${isBracketMinimized ? " tournament-side-minimized" : ""}`}>
           <div className="tournament-side-head">
             <h2>BRACKET</h2>
-            <span>{tournament.eliminated?.length || 0} ELIMINATED</span>
+            <div className="tournament-side-actions">
+              <span>{tournament.eliminated?.length || 0} ELIMINATED</span>
+              <button className="tournament-side-toggle" onClick={handleToggleBracket} aria-expanded={!isBracketMinimized}>
+                {isBracketMinimized ? "SHOW" : "HIDE"}
+              </button>
+            </div>
           </div>
-          <TournamentBracket
-            tournament={tournament}
-            currentMatchId={currentMatchId}
-            onSelectFighter={() => { }}
-            compact
-          />
+          {!isBracketMinimized && (
+            <TournamentBracket
+              tournament={tournament}
+              currentMatchId={currentMatchId}
+              onSelectFighter={() => { }}
+              compact
+            />
+          )}
         </aside>
       </div>
 
