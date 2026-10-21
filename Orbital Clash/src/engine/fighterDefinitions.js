@@ -178,7 +178,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Melee",
     cooldown: 0.25,
     description: "Fast, aggressive, high crit chance.",
-    description2: "The smallest and quickest fighter, steering its bounce angle toward the opponent. Daggers strike for 7 damage with a 25% chance of a 25-damage critical. Fragile at 60 HP, but dodges 60% of every incoming hit, so it has to keep moving.",
+    description2: "The smallest and quickest fighter, steering its bounce angle toward the opponent. Daggers strike for 7 damage with a 25% chance of a 25-damage critical. Fragile at 60 HP, but dodges 50% of every incoming hit, so it has to keep moving.",
     keywords: ["dagger", "crit", "fast", "ai"],
   },
   "Mutant": {

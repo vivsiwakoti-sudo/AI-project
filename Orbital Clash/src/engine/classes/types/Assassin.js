@@ -11,7 +11,7 @@ export class Assassin extends FighterBase {
         this.weaponSpin = 9;    // fast, jittery orbit
         this.weaponReach = (this.radius + 12) * 1.5;
         // DamageSystem rolls this against every damage source, so it dodges anything.
-        this.dodgeChance = 0.6;
+        this.dodgeChance = 0.5;
         this.dodgeEffects = [];
     }
 
