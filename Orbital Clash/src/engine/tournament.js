@@ -13,9 +13,9 @@
 import { FIGHTER_CLASSES } from "./fighterDefinitions.js";
 import { FighterFactory } from "./FighterFactory.js";
 import { DamageSystem } from "./systems/DamageSystem.js";
-import { CollisionSystem } from "./systems/CollisionSystem.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { spawnPositionFor, launchDirectionFor } from "./systems/SpawnSystem.js";
+import { stepBattle } from "./systems/BattleSimulation.js";
 
 // --- Tournament shape -------------------------------------------------------
 // 25 classes -> 9 preliminary matches (18 fighters) + 7 byes = 16 in the Round
@@ -38,35 +38,32 @@ export const ROUND_ORDER = ROUND_DEFINITIONS.map(round => round.key);
 // the same field a normal battle does (the default 800x800 map).
 export const TOURNAMENT_ARENA_SIZE = 800;
 
+// The arena's clock: a five minute bout, then sudden death drains every survivor
+// by SUDDEN_DEATH_DAMAGE once a second. Both the headless runner and the live
+// tournament bout use these numbers, so watching a match and simulating it give
+// the same fight.
+//
+// A tournament match runs on a SHORTER clock than a free-for-all. A tournament is
+// 24 bouts back to back, so at the arena's five-minute limit a single stubborn
+// pairing (two classes that cannot hurt each other) could hold up a spectator for
+// minutes. Ninety seconds is long enough for every normal matchup to resolve on
+// its own - measured across the roster, real fights end well inside it - after
+// which sudden death forces a decision so the bracket always advances.
+export const MATCH_CLOCK_SECONDS = 90;
+
 // Combat guard rails. The live arena ends a bout when the countdown expires and
 // keeps ticking until someone dies; a headless match cannot rely on a timer, so
 // it runs on a simulated clock instead. The seconds below are SIMULATION time,
 // so at 4x speed a match finishes four times sooner in real time but the
 // fighters still get exactly the same amount of combat time.
 const MATCH_DT = 1 / 60;               // fixed simulation step
-const MATCH_SIM_SECONDS = 300;         // hard ceiling (the arena's 5 minute timer)
-const SUDDEN_DEATH_FROM = 300;         // same threshold the arena uses
+const MATCH_SIM_SECONDS = 600;         // hard ceiling; sudden death always ends it first
+const SUDDEN_DEATH_FROM = MATCH_CLOCK_SECONDS; // drain starts when the match clock expires
 const SUDDEN_DEATH_DAMAGE = 2;         // same per-second drain the arena uses
 const SUDDEN_DEATH_STEP = 1;           // the arena ticks sudden death once a second
-const STALE_FRAMES = 60;               // ~1s of live fighter with nothing happening
 const MAX_FRAMES = 60000;              // absolute safety valve
 const PROGRESS_EPSILON = 0.5;          // HP total must move by this much to count as "live"
-
-// The simulated clock is handed to the fighter classes so a headless match can be
-// stepped deterministically. See syncFighterClocks() for why this is needed.
-const tournamentClock = { active: false, seconds: 0 };
-const realPerformanceNow = typeof performance !== "undefined" ? performance.now.bind(performance) : () => 0;
-
-// While a tournament match is stepping, every fighter reads this clock instead of
-// the wall clock. The live arena does not touch the flag at all, so it keeps using
-// the real clock exactly as before.
-function syncFighterClocks() {
-  if (typeof performance === "undefined") return;
-  const original = performance.now.bind(performance);
-  performance.now = tournamentClock.active
-    ? () => tournamentClock.seconds * 1000
-    : original;
-}
+const AFTERGLOW_SECONDS = 1.2;         // post-decision beat where particles finish on screen
 
 // A fighter's `update()` only ever reads one opponent, exactly like the arena
 // hands it. Here the two tournament fighters are each other's opponent.
@@ -109,15 +106,29 @@ function liveFighter(fighter) {
   return Boolean(fighter) && !fighter.isDead && fighter.health > 0;
 }
 
-function applySuddenDeathDrain(fighters) {
+function applySuddenDeathDrain(fighters, onDrained = null) {
   let landed = false;
   fighters.forEach(fighter => {
     if (!liveFighter(fighter)) return;
     // A null attacker means the drain hurts everyone equally and credits nobody.
     DamageSystem.applyDamage(null, fighter, SUDDEN_DEATH_DAMAGE, "AOE", { ignoreCooldown: true });
+    onDrained?.(fighter);
     landed = true;
   });
   return landed;
+}
+
+// Stamps the elimination sequence: a fighter that is dead or out of HP but has no
+// timestamp yet gets exactly one, so placement and "who lasted longer" are stable.
+function stampDeaths(fighters, elapsed) {
+  fighters.forEach(fighter => {
+    if (fighter && !fighter.eliminatedAt && (fighter.isDead || fighter.health <= 0)) {
+      fighter.health = Math.min(fighter.health, 0);
+      fighter.isDead = true;
+      fighter.eliminatedAt = elapsed;
+      fighter.survivalTime = elapsed;
+    }
+  });
 }
 
 function fighterHpTotal(fighters) {
@@ -138,194 +149,292 @@ function combatantSnapshot(fighter) {
   };
 }
 
-// Runs one tournament bout to a genuine conclusion. Returns the winner, or null
-// when the match could not produce a valid one (a missing fighter, an instant
-// double death). Nothing is invented here: if the simulation cannot decide the
-// fight, the caller is told so and can offer a recovery instead.
+// Both fighters fell in the same frame, so the match left no survivor. A bracket
+// slot cannot stay undecided - the player would be stuck forever - so the tie is
+// broken by what the bout actually produced, in this order:
+//  1. more damage dealt to the opponent wins (the aggressor prevailed);
+//  2. else the fighter with more health standing at the end wins;
+//  3. else the fighter the arena spawned first (stable, deterministic, and the
+//     same rule a referee's call would land on).
+// This never consults Math.random and never inspects class stats, so replaying the
+// same bout always yields the same champion.
+function resolveDraw(fighters, snapshots, durationSeconds, peakLiveFighters, cause) {
+  const [first, second] = fighters;
+  const deal = [first.totalDamageDealt || 0, second.totalDamageDealt || 0];
+  let winner = first;
+  let loser = second;
+  if (deal[1] > deal[0]) { winner = second; loser = first; }
+  else if (deal[1] === deal[0] && (second.health || 0) > (first.health || 0)) { winner = second; loser = first; }
+
+  return {
+    winner: snapshots[fighters.indexOf(winner)],
+    loser: snapshots[fighters.indexOf(loser)],
+    durationSeconds,
+    combatants: snapshots,
+    fighterInstances: fighters,
+    peakLiveFighters,
+    // Keep the fact that it was a draw for the result card and the history.
+    resolvedBy: "draw",
+    cause: cause || null,
+    error: null
+  };
+}
+
+// Turns whatever the fighters produced into the match result the bracket stores.
+// Returns the winner and loser snapshots, or null when nothing conclusive came
+// out of the bout. A same-frame double elimination is NOT a stuck match: it is
+// decided by resolveDraw so the bracket always advances.
+function matchOutcome(fighters, durationSeconds, peakLiveFighters) {
+  const snapshots = fighters.map(combatantSnapshot);
+  const survivors = fighters.filter(liveFighter);
+
+  const result = (winner, loser) => ({
+    winner: snapshots[fighters.indexOf(winner)],
+    loser: snapshots[fighters.indexOf(loser)],
+    durationSeconds,
+    combatants: snapshots,
+    // The raw instances are only useful to a caller that renders the match
+    // (the live screen); the bracket only ever needs the snapshots above.
+    fighterInstances: fighters,
+    peakLiveFighters,
+    error: null
+  });
+
+  if (survivors.length === 1) {
+    const winner = survivors[0];
+    return result(winner, fighters.find(fighter => fighter !== winner));
+  }
+
+  // No single survivor: both fighters fell. A draw still has to eliminate
+  // somebody, so the fighters' own death timestamps decide who lasted longer;
+  // only a true same-frame tie falls through to resolveDraw below.
+  const first = fighters[0];
+  const second = fighters[1];
+  const firstOut = first.survivalTime ?? durationSeconds;
+  const secondOut = second.survivalTime ?? durationSeconds;
+  if (firstOut !== secondOut) {
+    const winner = firstOut > secondOut ? first : second;
+    return result(winner, winner === first ? second : first);
+  }
+
+  // A true same-frame draw. The fight itself produced no survivor, so the tie is
+  // broken by the outcome the match actually earned (see resolveDraw). Returning
+  // no winner would strand the bracket with an unplayable match, and a
+  // single-elimination tournament has to eliminate somebody.
+  return resolveDraw(fighters, snapshots, durationSeconds, peakLiveFighters);
+}
+
+// Builds one live, fully watchable tournament bout. The caller advances it with
+// `step(seconds)` from its own animation loop, so the fight happens on screen at
+// whatever speed the player picked, using the same classes, targeting, damage and
+// collision code as a normal battle (see stepBattle).
+//
+// Returns null when the match cannot be built (a missing or repeated fighter).
+//
+// NOTE: this must never monkey-patch a global (it used to replace
+// `performance.now` with a simulated clock). Fighters are driven entirely by the
+// `dt` they are handed, so the simulation is already deterministic; hijacking the
+// global instead froze the browser's animation-frame scheduler and stopped the
+// watched match dead.
+export function createTournamentBout(firstName, secondName, options = {}) {
+  const { arenaSize = TOURNAMENT_ARENA_SIZE, performanceMode = false } = options;
+  if (!firstName || !secondName) return null;
+  if (firstName === secondName) return null;
+
+  let fighters;
+  try {
+    fighters = buildCombatants(firstName, secondName, arenaSize);
+  } catch (error) {
+    console.error(`Tournament bout ${firstName} vs ${secondName} could not start:`, error);
+    return null;
+  }
+
+  const particles = new ParticleSystem({ performanceMode });
+  fighters.forEach(fighter => { fighter.particleSystem = particles; });
+
+  // Seconds that actually elapsed in the fight (never the afterglow).
+  let elapsed = 0;
+  let finished = false;
+  let result = null;
+  let suddenDeath = false;
+  let suddenDeathAccumulator = 0;
+  let peakLiveFighters = fighters.filter(liveFighter).length;
+
+  // Unbreakable stand-off guard: if neither fighter's HP total moves for a full
+  // second during sudden death, the drain is applied immediately instead of
+  // waiting out the clock. A watched bout must not be able to hang on screen.
+  let staleSeconds = 0;
+  let lastHpTotal = fighterHpTotal(fighters);
+  // Simulated seconds played since the deciding blow landed. Drives the afterglow
+  // step below.
+  let afterglowSeconds = 0;
+
+  const liveCount = () => fighters.filter(liveFighter).length;
+
+  return {
+    firstName,
+    secondName,
+    fighters,
+    particles,
+    arenaSize,
+    get elapsedSeconds() { return elapsed; },
+    get remainingSeconds() { return Math.max(0, MATCH_CLOCK_SECONDS - elapsed); },
+    get suddenDeath() { return suddenDeath; },
+    get finished() { return finished; },
+    // Set once the bout was simulated to its end; null while it is still running.
+    get result() { return result; },
+
+    // Puts the bout back on its starting mark without rebuilding the fighters, so
+    // a rematch (or a re-run of the same match) is a genuinely new fight rather
+    // than a continuation of a finished one. The clock stays installed and keeps
+    // running from zero.
+    reset() {
+      finished = false;
+      result = null;
+      elapsed = 0;
+      suddenDeath = false;
+      suddenDeathAccumulator = 0;
+      staleSeconds = 0;
+      afterglowSeconds = 0;
+      peakLiveFighters = fighters.filter(liveFighter).length;
+      lastHpTotal = fighterHpTotal(fighters);
+      return this;
+    },
+
+    // Advances the bout by `seconds` of simulated time in fixed 1/60 s steps, so
+    // the simulation is identical at every playback speed. Returns true when this
+    // call ended the fight.
+    //
+    // `seconds` may be fractional (the screen hands over one frame's worth of
+    // time), so it must never be floored - that would throw away most of a
+    // sub-second frame and make the fight run in slow motion.
+    step(seconds) {
+      if (finished || !(seconds > 0)) return finished;
+      // The hard stop is MAX_FRAMES, NOT the match clock. Capping at the clock used
+      // to stop simulating the instant the bout reached 0:00, so sudden death could
+      // never drain anyone and the match sat on "0:00 SUDDEN DEATH" forever with no
+      // winner and no bracket advance. The clock keeps running past zero
+      // (remainingSeconds clamps at 0) while the drain decides the bout.
+      let budget = Math.min(seconds, MAX_FRAMES * MATCH_DT - elapsed);
+
+      try {
+        while (budget > 0 && !finished) {
+          const dt = Math.min(MATCH_DT, budget);
+          budget -= dt;
+          elapsed += dt;
+
+          // Sudden death: once the match clock expires every surviving fighter is
+          // drained once per second - the arena's rule, at the arena's rate.
+          let suddenDeathTick = false;
+          if (elapsed >= SUDDEN_DEATH_FROM && liveCount() > 0) {
+            suddenDeath = true;
+            suddenDeathAccumulator += dt;
+            if (suddenDeathAccumulator >= SUDDEN_DEATH_STEP) {
+              suddenDeathAccumulator -= SUDDEN_DEATH_STEP;
+              suddenDeathTick = true;
+            }
+          }
+
+          // The exact frame pass a normal battle runs.
+          stepBattle(fighters, { dt, arenaSize, suddenDeathTick });
+          stampDeaths(fighters, elapsed);
+          particles.update(dt);
+
+          const alive = liveCount();
+          peakLiveFighters = Math.max(peakLiveFighters, alive);
+          if (alive <= 1) { finished = true; break; }
+
+          const hpTotal = fighterHpTotal(fighters);
+          if (Math.abs(hpTotal - lastHpTotal) > PROGRESS_EPSILON) {
+            lastHpTotal = hpTotal;
+            staleSeconds = 0;
+          } else {
+            staleSeconds += dt;
+          }
+          if (suddenDeath && staleSeconds >= 1) {
+            applySuddenDeathDrain(fighters);
+            stampDeaths(fighters, elapsed);
+            staleSeconds = 0;
+            if (liveCount() <= 1) finished = true;
+          }
+        }
+      } catch (error) {
+        console.error(`Tournament bout ${firstName} vs ${secondName} failed:`, error);
+        finished = true;
+        result = { winner: null, loser: null, durationSeconds: elapsed, combatants: [], fighterInstances: fighters, error: "simulation-error", cause: error };
+        return true;
+      }
+
+      if (finished && !result) {
+        result = matchOutcome(fighters, Math.max(0, elapsed), peakLiveFighters);
+      }
+      return finished;
+    },
+
+    // Plays the post-decision beat WITHOUT running combat: particles and dead
+    // bodies keep animating, so the killing explosion finishes on screen instead
+    // of freezing the instant the winner is decided. The fighters' update() is
+    // deliberately not called - nobody may swing or fire after the whistle.
+    //
+    // Note this must be safe to call after the bout finished and handed the clock
+    // back: no fighter code runs here, so the restored real clock cannot make the
+    // fight time-travel.
+    stepAfterglow(seconds) {
+      if (!(seconds > 0) || afterglowSeconds >= AFTERGLOW_SECONDS) return false;
+      const dt = Math.min(seconds, AFTERGLOW_SECONDS - afterglowSeconds);
+      afterglowSeconds += dt;
+      // Bodies only: momentum carries the survivors on.
+      fighters.forEach(f => {
+        if (!f || f.isDead || f.health <= 0) return;
+        f.x += (f.vx || 0) * dt;
+        f.y += (f.vy || 0) * dt;
+        const min = 20 + f.radius;
+        const max = arenaSize - 20 - f.radius;
+        if (f.x < min) { f.x = min; f.vx = Math.abs(f.vx || 0); }
+        else if (f.x > max) { f.x = max; f.vx = -Math.abs(f.vx || 0); }
+        if (f.y < min) { f.y = min; f.vy = Math.abs(f.vy || 0); }
+        else if (f.y > max) { f.y = max; f.vy = -Math.abs(f.vy || 0); }
+      });
+      particles.update(dt);
+      return afterglowSeconds < AFTERGLOW_SECONDS;
+    },
+
+    // Stops the bout (the player exited or the screen unmounted).
+    destroy() {
+      finished = true;
+    }
+  };
+}
+
+// Runs one tournament bout to a genuine conclusion WITHOUT drawing it. Same
+// simulation as createTournamentBout (and the live arena), just stepped as fast
+// as the machine allows - used by tests and for regenerating a bracket's result.
+// Returns the winner, or null when the match could not produce a valid one (a
+// missing fighter, a simulation that threw).
 export function runTournamentMatch(firstName, secondName, options = {}) {
   const { arenaSize = TOURNAMENT_ARENA_SIZE } = options;
   if (!firstName || !secondName) return { winner: null, error: "missing-fighter" };
   if (firstName === secondName) return { winner: null, error: "duplicate-fighter" };
 
-  const particles = new ParticleSystem({ performanceMode: true });
-  const fighters = buildCombatants(firstName, secondName, arenaSize);
-  fighters.forEach(fighter => { fighter.particleSystem = particles; });
-
-  const previousNow = typeof performance !== "undefined" ? performance.now : null;
-  tournamentClock.active = true;
-  tournamentClock.seconds = 0;
-  syncFighterClocks();
+  const bout = createTournamentBout(firstName, secondName, { arenaSize, performanceMode: true });
+  if (!bout) return { winner: null, error: "missing-fighter" };
 
   try {
-    let frames = 0;
-    let suddenDeathAccumulator = 0;
-    let staleFrames = 0;
-    let lastHpTotal = fighterHpTotal(fighters);
-    let peakLiveFighters = fighters.filter(liveFighter).length;
-
-    while (frames < MAX_FRAMES) {
-      frames += 1;
-      const elapsed = frames * MATCH_DT;
-      tournamentClock.seconds = elapsed;
-
-      // The arena's death sweep runs AFTER all damage for a frame, so several
-      // simultaneous blows resolve in one pass and only the last one standing is
-      // counted. The same order is kept here.
-      fighters.forEach(fighter => {
-        const opponent = fighter === fighters[0] ? fighters[1] : fighters[0];
-        fighter.opponent = opponent;
-        fighter.victims = fighters.filter(other => other !== fighter && !other.isDead && other.health > 0);
-        fighter.touchVictims = DamageSystem.isBodyAttacker(fighter)
-          ? fighter.victims.filter(other => !other.isInvulnerable)
-          : [];
-        fighter.update(MATCH_DT, opponent);
-      });
-
-      // Sudden death only starts once the normal clock has expired, and only ever
-      // affects fighters that are still alive, so a dead fighter cannot be drained.
-      if (elapsed >= SUDDEN_DEATH_FROM && fighters.some(liveFighter)) {
-        suddenDeathAccumulator += MATCH_DT;
-        if (suddenDeathAccumulator >= SUDDEN_DEATH_STEP) {
-          suddenDeathAccumulator -= SUDDEN_DEATH_STEP;
-          applySuddenDeathDrain(fighters);
-        }
-      }
-
-      // Resolve deaths (mirrors the arena's two resolveDeaths sweeps, before and
-      // after the collision pass).
-      fighters.forEach(fighter => {
-        if (fighter && !fighter.eliminatedAt && (fighter.isDead || fighter.health <= 0)) {
-          fighter.health = Math.min(fighter.health, 0);
-          fighter.isDead = true;
-          fighter.eliminatedAt = elapsed;
-          fighter.survivalTime = elapsed;
-        }
-      });
-
-      // Physics: walls first, then the fighter-vs-fighter body check. This keeps
-      // touch damage, knockback and deflections identical to the live arena.
-      const alive = fighters.filter(liveFighter);
-      for (let i = 0; i < alive.length; i++) {
-        CollisionSystem.resolveFighterWall(alive[i], arenaSize);
-      }
-      if (alive.length === 2) {
-        const [a, b] = alive;
-        // Read the contact BEFORE separating the bodies, exactly as the arena does.
-        const overlapped = DamageSystem.checkHitbox(a, b, "Overlap");
-        const touching = CollisionSystem.resolveFighterFighter(a, b);
-        const bodyAttackers = [];
-        if ((overlapped || touching) && DamageSystem.isBodyAttacker(a) && a.damageCooldown <= 0) bodyAttackers.push(a);
-        if ((overlapped || touching) && DamageSystem.isBodyAttacker(b) && b.damageCooldown <= 0) bodyAttackers.push(b);
-        if (bodyAttackers.length > 0) {
-          const turn = bodyAttackers[0];
-          DamageSystem.applyDamage(turn, turn === a ? b : a, turn.damage, "Body");
-        }
-      }
-
-      fighters.forEach(fighter => {
-        if (fighter && !fighter.eliminatedAt && (fighter.isDead || fighter.health <= 0)) {
-          fighter.health = Math.min(fighter.health, 0);
-          fighter.isDead = true;
-          fighter.eliminatedAt = elapsed;
-          fighter.survivalTime = elapsed;
-        }
-      });
-
-      particles.update(MATCH_DT);
-
-      const liveCount = fighters.filter(liveFighter).length;
-      peakLiveFighters = Math.max(peakLiveFighters, liveCount);
-
-      // Someone is still fighting and time remains: keep going. A fighter cannot
-      // die and stay alive, so `liveCount === 1` is the normal end of a bout.
-      if (liveCount <= 1) break;
-
-      const hpTotal = fighterHpTotal(fighters);
-      if (Math.abs(hpTotal - lastHpTotal) > PROGRESS_EPSILON) {
-        lastHpTotal = hpTotal;
-        staleFrames = 0;
-      } else {
-        staleFrames += 1;
-      }
-
-      // An unbreakable stand-off (two fighters that cannot damage each other) is
-      // ended by the same sudden-death drain rather than by picking a winner, so
-      // the match still resolves through real combat.
-      if (elapsed >= SUDDEN_DEATH_FROM && staleFrames >= STALE_FRAMES) {
-        applySuddenDeathDrain(fighters);
-        fighters.forEach(fighter => {
-          if (fighter && !fighter.eliminatedAt && (fighter.isDead || fighter.health <= 0)) {
-            fighter.health = Math.min(fighter.health, 0);
-            fighter.isDead = true;
-            fighter.eliminatedAt = elapsed;
-            fighter.survivalTime = elapsed;
-          }
-        });
-        staleFrames = 0;
-        if (fighters.filter(liveFighter).length <= 1) break;
-      }
+    // Run the bout out; the bout stops the instant one fighter is eliminated. It
+    // keeps simulating through sudden death (which begins at the five-minute
+    // mark), so the budget must not be capped at the match clock.
+    bout.step(MAX_FRAMES * MATCH_DT);
+    const peakLiveFighters = bout.fighters.filter(liveFighter).length;
+    const result = bout.result || matchOutcome(bout.fighters, bout.elapsedSeconds, peakLiveFighters);
+    if (!result || !result.winner || !result.loser) {
+      return { winner: null, loser: null, durationSeconds: 0, combatants: [], fighterInstances: bout.fighters, peakLiveFighters: 0, error: result?.error || "no-decisive-winner" };
     }
-
-    const survivors = fighters.filter(liveFighter);
-    const snapshots = fighters.map(combatantSnapshot);
-    const durationSeconds = Math.max(0, tournamentClock.seconds);
-
-    if (survivors.length === 1) {
-      const winner = survivors[0];
-      const loser = fighters.find(fighter => fighter !== winner);
-      return {
-        winner: snapshots[fighters.indexOf(winner)],
-        loser: snapshots[fighters.indexOf(loser)],
-        durationSeconds,
-        combatants: snapshots,
-        // The raw instances are only useful to a caller that renders the match
-        // (the live screen); the bracket only ever needs the snapshots above.
-        fighterInstances: fighters,
-        peakLiveFighters,
-        error: null
-      };
-    }
-
-    // No single survivor: either both fighters died in the same frame (a genuine
-    // draw) or neither could be killed at all. Both are reported as an invalid
-    // match so the bracket can surface it instead of inventing a champion.
-    if (survivors.length === 0) {
-      // A draw still has to eliminate somebody. The fighters' own death timestamps
-      // decide who lasted longer, so a "both die in the same frame" tie goes to the
-      // fighter whose elimination was resolved first - never to a coin flip.
-      const first = fighters[0];
-      const second = fighters[1];
-      const firstOut = first.survivalTime ?? durationSeconds;
-      const secondOut = second.survivalTime ?? durationSeconds;
-      if (firstOut !== secondOut) {
-        const winner = firstOut > secondOut ? first : second;
-        const loser = winner === first ? second : first;
-        return {
-          winner: snapshots[fighters.indexOf(winner)],
-          loser: snapshots[fighters.indexOf(loser)],
-          durationSeconds,
-          combatants: snapshots,
-          fighterInstances: fighters,
-          peakLiveFighters,
-          error: null
-        };
-      }
-      return { winner: null, loser: null, durationSeconds, combatants: snapshots, fighterInstances: fighters, peakLiveFighters, error: "double-elimination" };
-    }
-
-    // Two fighters survived the entire clock without either dying. Nothing can
-    // eliminate one without inventing a result, so the match is reported invalid.
-    return { winner: null, loser: null, durationSeconds, combatants: snapshots, fighterInstances: fighters, peakLiveFighters, error: "no-decisive-winner" };
+    return result;
   } catch (error) {
     // A class throwing during a headless run must not take the tournament down.
-    // `peakLiveFighters` is declared outside the try, but a throw before the first
-    // frame would leave it undefined - fall back to the live count so the caller
-    // always receives a usable number.
-    return { winner: null, loser: null, durationSeconds: 0, combatants: [], fighterInstances: fighters, peakLiveFighters: fighters.filter(liveFighter).length, error: "simulation-error", cause: error };
+    return { winner: null, loser: null, durationSeconds: 0, combatants: [], fighterInstances: bout.fighters, peakLiveFighters: 0, error: "simulation-error", cause: error };
   } finally {
-    tournamentClock.active = false;
-    if (previousNow) performance.now = previousNow;
-    else syncFighterClocks();
+    bout.destroy();
   }
 }
 
@@ -477,7 +586,11 @@ export function nextPendingMatch(tournament) {
   if (!tournament || tournament.status === "complete") return null;
   for (const roundKey of ROUND_ORDER) {
     const round = tournament.rounds[roundKey];
-    const match = round?.matches.find(item => item.status === "pending" || item.status === "error");
+    const match = round?.matches.find(item => (item.status === "pending" || item.status === "error")
+      // A match without both fighters can never be played (a restore from an
+      // older/partial save). Skipping it means the UI is never handed a bout
+      // with an undefined side, which used to crash the whole screen.
+      && item.first && item.second);
     if (match) return match;
   }
   return null;
@@ -921,10 +1034,17 @@ export function championPath(tournament) {
 
 export const TOURNAMENT_SAVE_KEY = "orbital-clash-tournament-active";
 
-export function saveActiveTournament(tournament) {
+// A COMPLETE tournament is removed from the active save: it has been folded into
+// the stats and history, so keeping it here would make the next "TOURNAMENT MODE"
+// click resume the champion screen instead of starting a fresh bracket.
+// `keepComplete: true` overrides that for a caller that still needs the finished
+// bracket on disk (nothing does today - App hands it to the champion screen
+// directly - but the engine should not force that policy on a caller).
+export function saveActiveTournament(tournament, { keepComplete = false } = {}) {
   if (!storageAvailable()) return tournament;
   try {
-    if (!tournament) window.localStorage.removeItem(TOURNAMENT_SAVE_KEY);
+    const finished = tournament && tournament.status === "complete" && !keepComplete;
+    if (!tournament || finished) window.localStorage.removeItem(TOURNAMENT_SAVE_KEY);
     else window.localStorage.setItem(TOURNAMENT_SAVE_KEY, JSON.stringify(tournament));
   } catch {
     /* storage disabled or full */
@@ -932,12 +1052,26 @@ export function saveActiveTournament(tournament) {
   return tournament;
 }
 
+// True when a tournament exists on disk that can be picked up mid-bracket. The
+// menu uses this to label its entry point "RESUME" only when resuming is what
+// will actually happen.
+export function hasResumableTournament() {
+  return Boolean(loadActiveTournament());
+}
+
+const knownClass = name => typeof name === "string" && Boolean(FIGHTER_CLASSES[name]);
+
 function sanitizeMatch(raw, roundKey, index) {
   if (!raw || typeof raw !== "object") return null;
-  const first = typeof raw.first === "string" ? raw.first : null;
-  const second = typeof raw.second === "string" ? raw.second : null;
+  const first = knownClass(raw.first) ? raw.first : null;
+  const second = knownClass(raw.second) ? raw.second : null;
   if (!first || !second) return null;
+  // A resolved match is identified by its recorded winner, not by a `status`
+  // field. Older/partial saves omitted `status`, and treating those as pending
+  // would replay matches that were already decided - and could even hand the
+  // same class two matches in one round. The winner decides the status.
   const winner = typeof raw.winner === "string" && (raw.winner === first || raw.winner === second) ? raw.winner : null;
+  const status = winner ? "resolved" : (raw.status === "error" ? "error" : "pending");
   const loser = winner ? (winner === first ? second : first) : null;
   return {
     id: typeof raw.id === "string" ? raw.id : `${roundKey}-${index + 1}`,
@@ -949,7 +1083,7 @@ function sanitizeMatch(raw, roundKey, index) {
     winner,
     loser,
     durationSeconds: Number.isFinite(raw.durationSeconds) ? Math.max(0, raw.durationSeconds) : null,
-    status: winner ? "resolved" : "pending",
+    status,
     error: null
   };
 }
@@ -973,18 +1107,31 @@ export function loadActiveTournament() {
       };
     }
 
+    // Every round must have exactly the number of matches the format defines.
+    // A round that was never created is fine (it has not been reached yet), but a
+    // round that exists with the wrong size - or a match missing a fighter - is a
+    // corrupt save, and half of a bracket is worse than starting over.
     const all = ROUND_ORDER.flatMap(key => rounds[key].matches);
     if (all.length === 0) return null;
-    const resolvedMatchIds = all.filter(match => match.status === "resolved").map(match => match.id);
+    const shapeBroken = ROUND_ORDER.some(key => {
+      const expected = ROUND_DEFINITIONS.find(item => item.key === key)?.matches ?? 0;
+      const actual = rounds[key].matches.length;
+      return actual !== 0 && actual !== expected;
+    });
+    if (shapeBroken) return null;
 
-    const participants = Array.isArray(raw.participants) && raw.participants.length === TOURNAMENT_SIZE
-      ? raw.participants.filter(name => typeof name === "string")
-      : null;
-    if (!participants) return null;
+    // Only classes that still exist can be resumed. A save written by a longer
+    // roster would otherwise put a class the engine no longer knows into a match.
+    const participants = Array.isArray(raw.participants)
+      ? raw.participants.filter(name => typeof name === "string" && FIGHTER_CLASSES[name])
+      : [];
+    if (participants.length !== TOURNAMENT_SIZE) return null;
 
+    // Normalise a bye that was written as a bare string to the same object shape
+    // the live bracket uses, so every consumer can read `bye.name` safely.
     const byes = Array.isArray(raw.byes)
       ? raw.byes.map(bye => (typeof bye === "string" ? { name: bye, seed: 0 } : { name: bye?.name, seed: sanitizeNumber(bye?.seed) }))
-        .filter(bye => typeof bye.name === "string")
+        .filter(bye => knownClass(bye.name))
       : [];
     if (byes.length !== BYE_COUNT) return null;
 
@@ -1002,7 +1149,9 @@ export function loadActiveTournament() {
       runnerUp: typeof raw.runnerUp === "string" ? raw.runnerUp : null,
       completedAt: Number.isFinite(raw.completedAt) ? raw.completedAt : null,
       matchResults: Array.isArray(raw.matchResults) ? raw.matchResults : [],
-      resolvedMatchIds,
+      // Always rebuilt from the matches themselves so a save written without the
+      // field still resumes with every decided match marked as resolved.
+      resolvedMatchIds: all.filter(match => match.status === "resolved").map(match => match.id),
       error: null
     };
 
@@ -1087,12 +1236,19 @@ export function validateTournament(tournament, { requireComplete = false } = {})
     if (resolvedMatches(tournament).length !== TOTAL_MATCHES) {
       problems.push(`The tournament resolved ${resolvedMatches(tournament).length} matches, expected ${TOTAL_MATCHES}.`);
     }
-    // No eliminated class may appear in an unresolved match.
-    const eliminated = new Set(tournament.eliminated);
-    matches.forEach(match => {
-      if (match.status !== "resolved") return;
-      if (eliminated.has(match.winner)) problems.push(`Eliminated class "${match.winner}" won match "${match.id}".`);
-    });
+    // No class may win a match after it has been knocked out. Walk the bracket in
+    // order (preliminary -> final) and remember who has already lost: a winner that
+    // is already in that set means the bracket advanced a dead fighter. Note that
+    // `eliminated` itself is a running log of every loss so far, so membership in
+    // it is NOT an error - only winning after losing is.
+    const knockedOut = new Set();
+    for (const match of matches) {
+      if (match.status !== "resolved") continue;
+      if (knockedOut.has(match.winner)) {
+        problems.push(`Eliminated class "${match.winner}" won match "${match.id}".`);
+      }
+      if (match.winner) knockedOut.add(match.loser);
+    }
     const champions = new Set(matches.filter(match => match.round === "final" && match.winner).map(match => match.winner));
     if (champions.size > 1) problems.push("More than one champion was declared.");
   }
@@ -1116,6 +1272,3 @@ export const TOURNAMENT_INTERNALS = {
   liveFighter
 };
 
-// Kept for callers that want the raw wall clock the engine captured at import time
-// (used by the tests to prove the clock is restored after a headless match).
-export const REAL_NOW = realPerformanceNow;

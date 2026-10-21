@@ -3,6 +3,7 @@ import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory } from "../engine/battleHistory";
+import { hasResumableTournament } from "../engine/tournament";
 import ClassCard from "./MenuComponents/ClassCard";
 
 const RECORDS_KEY = "arena-battles-records";
@@ -43,7 +44,7 @@ function ordinal(n) {
   }
 }
 
-export default function Menu({ onStart }) {
+export default function Menu({ onStart, onStartTournament }) {
   const [selected, setSelected] = useState([]);
   const [info, setInfo] = useState(null);
   const [filter, setFilter] = useState("ALL");
@@ -54,6 +55,9 @@ export default function Menu({ onStart }) {
   const [history, setHistory] = useState(loadHistory);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
+  // Read once on mount: the menu only needs to know whether a partial bracket is
+  // waiting, and nothing on this screen can create or finish one.
+  const [canResumeTournament, setCanResumeTournament] = useState(hasResumableTournament);
 
   useEffect(() => {
     audioManager.playMenuMusic();
@@ -221,6 +225,17 @@ export default function Menu({ onStart }) {
             title="Wipe every class's stored wins and losses"
           >
             {confirmReset ? "CONFIRM RESET" : "RESET PROGRESS"}
+          </button>
+          {/* Primary entry to the autonomous 25-class bracket. It sits with the
+              roster actions because it starts a mode, not a single battle. */}
+          <button
+            className="tournament-mode-button"
+            onClick={() => { audioManager.playUiClick(); setCanResumeTournament(false); onStartTournament?.(); }}
+            title={canResumeTournament
+              ? "Continue the tournament you left unfinished"
+              : "Watch all 25 classes fight a single-elimination tournament"}
+          >
+            🏆 {canResumeTournament ? "RESUME TOURNAMENT" : "TOURNAMENT MODE"}
           </button>
         </div>
       </div>

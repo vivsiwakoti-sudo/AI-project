@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { FighterFactory } from "../engine/FighterFactory";
-import { CollisionSystem } from "../engine/systems/CollisionSystem";
-import { DamageSystem } from "../engine/systems/DamageSystem";
 import { ParticleSystem } from "../engine/systems/ParticleSystem";
 import { squashTransform } from "../engine/systems/Fx";
 import { audioManager } from "../engine/audio/AudioManager";
@@ -9,6 +7,7 @@ import StatsPanel from "./StatsPanel";
 import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSystem";
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
+import { countAlive, decayScreenShake, drawGridLines, stepBattle } from "../engine/systems/BattleSimulation";
 
 // Turns every shadowBlur write into a no-op, removing glow from all draw code at once.
 function disableGlow(ctx) {
@@ -53,113 +52,10 @@ function planSides(count) {
   };
 }
 
-// A fighter can only ever be a threat to someone else, so this is the single
-// definition of "valid target" used by every check in this file.
-//
-//   - never the fighter itself (a fighter must NEVER target itself)
-//   - never a corpse (dead fighters are removed from targeting immediately)
-//   - never something that cannot be reached or hit right now (an underground
-//     Tunneler is skipped, so a class cannot lock onto an invulnerable target)
-function isValidTarget(candidate, self) {
-  if (!candidate || candidate === self) return false;
-  if (candidate.isDead || candidate.health <= 0) return false;
-  if (candidate.isUntargetable) return false;
-  return true;
-}
-
-// Whether a class must keep attacking the fighter it is nearest to.
-//
-// A ranged fighter has to aim at whoever is closest, because anything else means
-// firing a bolt, dart or potion across the arena while an opponent stands in its
-// face. Nearest-target tracking is therefore DERIVED from the attack type rather
-// than listed class by class, so a future ranged class is covered automatically
-// and none of them can silently drift out of the rule.
-const RANGED_ATTACK_TYPES = new Set(["Projectile", "Bullet", "Spear", "Rope-dart", "Beam", "Potion"]);
-
-// Every ranged class's declared attack type, with a name fallback for anything
-// that reaches the arena without one. Kept explicit because the roster's own
-// labels are inconsistent ("Rope-dart" vs "Projectile", "Bullet" vs "Spear") and
-// a projectile class must never be missed.
-const RANGED_CLASS_NAMES = new Set([
-  "Spearman", "Gunner", "Fireball", "Alchemist", "Tunneler", "Solar Beam", "Black Hole", "Ninja"
-]);
-
-function usesNearestTarget(fighter) {
-  if (!fighter) return false;
-  if (RANGED_CLASS_NAMES.has(fighter.name)) return true;
-  const attackType = (fighter.attackType || "").toLowerCase();
-  return RANGED_ATTACK_TYPES.has(fighter.attackType) || attackType.includes("projectile");
-}
-
-// Chooses who a fighter should attack this frame.
-//
-// With four fighters in a free-for-all, pure nearest-enemy selection makes the
-// whole arena dogpile whoever happens to be closest, which reads as three
-// fighters ganging up rather than a brawl. Instead each fighter keeps the target
-// it already committed to until that target stops being valid, so attention
-// naturally spreads across the three opponents. Classes that hold their own
-// target internally (Mahoraga tracks through a wind-up, Assassin re-aims after a
-// strike) keep working, because they receive a stable opponent across frames.
-//
-// Ranged classes are the exception: they track the nearest opponent every frame
-// (see usesNearestTarget), so a shot never locks onto someone across the arena
-// while a closer enemy is right next to them.
-//
-// The first target is still the nearest one, so nobody opens by charging a
-// fighter on the far side of the arena, and `isUnderground` is treated as
-// unreachable rather than dead so a Tunneler is dropped while submerged and
-// re-acquired once it surfaces.
-function chooseTarget(fighters, index) {
-  const self = fighters[index];
-  if (!self) return null;
-
-  const current = self.target;
-  // Keep the committed target while it is still a legal, reachable opponent.
-  // Ranged classes skip this so their aim follows whoever is closest now.
-  if (!usesNearestTarget(self) && isValidTarget(current, self) && !current.isUnderground) {
-    return current;
-  }
-
-  let best = null;
-  let bestDistance = Infinity;
-  for (let i = 0; i < fighters.length; i++) {
-    const other = fighters[i];
-    if (!isValidTarget(other, self)) continue;
-    // Underground fighters are alive but cannot be interacted with, so they are
-    // not valid to acquire (or keep) as a target.
-    if (other.isUnderground) continue;
-    const distance = Math.hypot(other.x - self.x, other.y - self.y);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      best = other;
-    }
-  }
-
-  // Re-acquire immediately when the old target dies; `best` is the nearest
-  // living opponent, or null when this fighter is the last one standing.
-  self.target = best;
-  return best;
-}
-
-// A victim has to be a live, reachable target before anything may hit it, which
-// is the same rule chooseTarget() applies. It is repeated here because a class
-// only ever receives ONE opponent reference, so a free-for-all would otherwise
-// leave every other living fighter unable to be hit, targeted or even seen by
-// explosions and webs. `overlapOnly` keeps the "can this body be touched"
-// question (used by touch damage and mines) separate from "can this attack land".
-function canBeVictim(fighter, { overlapOnly = false } = {}) {
-  if (!fighter || fighter.isDead || fighter.health <= 0) return false;
-  if (fighter.isUntargetable) return false;
-  if (!overlapOnly && fighter.isInvulnerable) return false;
-  return true;
-}
-function countAlive(fighters) {
-  let alive = 0;
-  for (const f of fighters) {
-    if (f && !f.isDead && f.health > 0) alive++;
-  }
-  return alive;
-}
+// Targeting (chooseTarget / canBeVictim / countAlive) and the per-frame combat
+// pass (stepBattle) live in engine/systems/BattleSimulation so the live arena and
+// tournament battles run the exact same simulation. This file keeps only the
+// battle screen: countdown, HUD, replay capture, rendering and the hand-off.
 
 // Clock zero for one battle, in performance.now() milliseconds.
 //
@@ -581,131 +477,33 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
           audioManager.setBattleIntensity(Math.min(1, hurt * 0.7 + timePressure * 0.5));
         }
 
-        gameState.current.fighters.forEach((f, i) => {
-          f.particleSystem = gameState.current.particles;
-          // With up to four fighters in the arena, every class targets one valid
-          // living opponent (see chooseTarget). Each class's update() only ever
-          // reads a single opponent, so this keeps their AI unchanged while
-          // making free-for-alls work.
-          const opponent = chooseTarget(gameState.current.fighters, i);
-          f.opponent = opponent;
-          // Other classes' target selection will overwrite f.target below; keep
-          // the reference tally here so it stays an accurate "who is aiming at me".
-          const aimedAtMe = (f.incomingTargets || 0) + ((opponent && opponent.target === f) ? 1 : 0);
-          // The opponents THIS fighter may actually hit. A class only ever sees a
-          // single opponent, so anything that has to reach every fighter (touch
-          // damage, an explosion, a web) reads this list instead.
-          f.victims = gameState.current.fighters.filter(other => other !== f && canBeVictim(other));
-          // Who this fighter may body-check. Body attack type is the ONLY gate for
-          // touch damage, and it is read through DamageSystem.isBodyAttacker so the
-          // arena and the class-level contact hooks can never disagree about who is
-          // a body class. Mahoraga is one of them: its fists are attached to its
-          // body, so contact damage is its whole attack.
-          f.touchVictims = DamageSystem.isBodyAttacker(f)
-            ? f.victims.filter(other => !other.isInvulnerable)
-            : [];
-          if (suddenDeathTick) {
-            // A null attacker means it hurts everyone equally and credits nobody.
-            DamageSystem.applyDamage(null, f, 2, "AOE", { ignoreCooldown: true });
+        gameState.current.fighters.forEach(f => { f.particleSystem = gameState.current.particles; });
+
+        // The whole combat frame - targeting, class AI, sudden-death drain, wall
+        // and body collisions, touch damage - is the shared engine step, so this
+        // battle and a tournament bout run identical logic.
+        const { hardestImpact } = stepBattle(gameState.current.fighters, {
+          dt: simulationDt,
+          arenaSize: ARENA_SIZE,
+          suddenDeathTick,
+          onSuddenDeath: f => {
             gameState.current.particles.emit(f.x + (Math.random() - 0.5) * f.radius * 2, f.y, "#ff4d6d", 2, { speed: 60, size: 2.2, life: 0.6 });
+          },
+          onContact: ({ x, y }) => {
+            gameState.current.particles.ring(x, y, "#9fe8ff", { startRadius: 4, endRadius: 30, life: 0.22, lineWidth: 2 });
           }
-          f.update(simulationDt, opponent);
-          // The sponsored target pass below rewrites `target`, so add this
-          // fighter's contribution first and hand the count to the tally that
-          // survives it. Each body attack then uses it to spread its damage.
-          if (!f.isDead && f.health > 0) f.incomingTargets = aimedAtMe;
         });
 
-        // Commit this frame's target choices. `chooseTarget` writes `self.target`
-        // as a side effect, and every class reads its opponent from the VALUE it
-        // was handed, so the two can disagree for one frame without any class
-        // behaving differently. Writing the fresh target back here settles it.
-        gameState.current.fighters.forEach(f => {
-          if (!f.isDead && f.health > 0) f.target = f.opponent ?? null;
-        });
-
-        // Resolve deaths caused by class attacks / sudden death BEFORE the
-        // collision pass, so a fighter that just died cannot still shove or be
-        // shoved by a living one in the same frame.
+        // Resolve deaths caused by class attacks / sudden death / body contacts.
+        // Deaths are always settled before the victory check, so the battle can
+        // never end on a stale alive-count.
         resolveDeaths(gameState.current.fighters, gameState.current.particles);
 
-        // Dead fighters are skipped entirely: no wall collision, no body collision,
-        // no hitbox. A corpse cannot shove a living fighter around or be hit again.
-        gameState.current.fighters.forEach(f => { if (!f.isDead && f.health > 0) CollisionSystem.resolveFighterWall(f, ARENA_SIZE); });
-
-        // Fighter-vs-fighter physics runs for EVERY pair of LIVING fighters, so a
-        // 3 or 4-way brawl shoves and bounces exactly like a duel does. Corpses are
-        // excluded so nothing can become permanently wedged inside a dead body.
-        const alive = gameState.current.fighters.filter(f => !f.isDead && f.health > 0);
-        let hardestImpact = 0;
-        for (let i = 0; i < alive.length; i++) {
-          for (let j = i + 1; j < alive.length; j++) {
-            const f1 = alive[i];
-            const f2 = alive[j];
-
-            // Read the contact BEFORE resolving the physics. resolveFighterFighter
-            // separates overlapping bodies to EXACTLY radius1 + radius2, so a hitbox
-            // test run afterwards compares `dist < radius1 + radius2` against a
-            // distance it just pinned to that sum. The strict `<` then only passes on
-            // a floating-point rounding error, which is why a body class (Mutant,
-            // Ghost, Duplicator...) sometimes dealt no touch damage at all.
-            const overlapped = DamageSystem.checkHitbox(f1, f2, "Overlap");
-            const touching = CollisionSystem.resolveFighterFighter(f1, f2);
-
-            // Body contact only damages when the fighter's attack type is Body.
-            // (Previously every class dealt its full damage on any touch.)
-            //
-            // Contact is `overlapped` (the true pre-resolution geometry) OR
-            // `touching` (the resolver's own verdict, which also covers a resting
-            // contact whose distance already sits exactly on the boundary). Either
-            // signal is enough for a genuine touch, so no frame of contact is lost.
-            //
-            // The test is "Overlap", not "Body": same geometry, but it does not
-            // consult the attacker's `damageCooldown`, so a fighter that just
-            // landed a melee hit can still body-check someone in the same frame.
-            //
-            // In a 3 or 4-way brawl several body classes can be pressed against
-            // the same victim at once. The victim's damage cooldown deliberately
-            // paces contact to one hit per 0.5s, which used to mean whoever was
-            // checked first silently swallowed everyone else's touch damage. The
-            // eligible attackers are rotated by how many opponents are already
-            // aiming at the victim (`incomingTargets`), so the hit is shared
-            // round-robin while the total damage per victim stays exactly one
-            // touch per cooldown.
-            const contact = overlapped || touching;
-            const bodyAttackers = [];
-            if (contact && DamageSystem.isBodyAttacker(f1) && f1.damageCooldown <= 0) bodyAttackers.push(f1);
-            if (contact && DamageSystem.isBodyAttacker(f2) && f2.damageCooldown <= 0) bodyAttackers.push(f2);
-            if (bodyAttackers.length > 0) {
-                // Rotate which eligible attacker lands the touch, so three body
-                // classes crushing one victim all get credit over time instead of
-                // the first-checked pair always winning.
-                const turn = bodyAttackers[(f1.incomingTargets ?? 0) % bodyAttackers.length];
-                const target = turn === f1 ? f2 : f1;
-                if (DamageSystem.applyDamage(turn, target, turn.damage, "Body")) {
-                    gameState.current.particles.emitImpact(target.x, target.y, turn.color, 10, { angle: Math.atan2(target.y - turn.y, target.x - turn.x) });
-                }
-            }
-
-            if (touching) {
-              const mx = (f1.x + f2.x) / 2;
-              const my = (f1.y + f2.y) / 2;
-              gameState.current.particles.ring(mx, my, "#9fe8ff", { startRadius: 4, endRadius: 30, life: 0.22, lineWidth: 2 });
-            }
-
-            // Hard fighter-vs-fighter bounces jolt the camera; both applyDeflection
-            // calls already spawned sparks via the particle system.
-            hardestImpact = Math.max(hardestImpact, f1.impactStrength, f2.impactStrength);
-          }
-        }
+        // Hard fighter-vs-fighter bounces jolt the camera; both applyDeflection
+        // calls already spawned sparks via the particle system.
         if (hardestImpact > 0.65) {
           gameState.current.fighters.forEach(f => { f.screenShake = Math.max(f.screenShake || 0, 0.06 + hardestImpact * 0.05); });
         }
-
-        // Body collisions above are a damage source too, so any fighter they
-        // finished off is resolved here. Deaths are always settled before the
-        // victory check, so the battle can never end on a stale alive-count.
-        resolveDeaths(gameState.current.fighters, gameState.current.particles);
 
         gameState.current.particles.update(simulationDt);
 
@@ -782,6 +580,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       ctx.beginPath();
       ctx.rect(20, 20, ARENA_SIZE - 40, ARENA_SIZE - 40);
       ctx.clip();
+      drawGridLines(ctx, ARENA_SIZE);
 
       if (gameState.current.suddenDeath) {
         const pulse = 0.10 + 0.06 * Math.sin(renderTime * 6);
@@ -802,7 +601,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       }
 
       // Decay screen shake for every fighter.
-      gameState.current.fighters.forEach(f => { if (f.screenShake > 0) f.screenShake = Math.max(0, f.screenShake - simulationDt); });
+      decayScreenShake(gameState.current.fighters, simulationDt);
 
       // Draw Fighters & Particles
       // Each fighter is wrapped in its own save/restore pair, so a class whose
