@@ -111,7 +111,6 @@ function App() {
           }}
           onExit={() => {
             setTournament(null);
-            saveActiveTournament(null);
             setScreen("menu");
           }}
         />

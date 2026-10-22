@@ -101,6 +101,7 @@ function TournamentScreenView({
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isBracketMinimized, setIsBracketMinimized] = useState(false);
   const [isArenaFullscreen, setIsArenaFullscreen] = useState(false);
+  const [savedNotice, setSavedNotice] = useState(false);
 
   // Refs mirror the state the async match runner reads, so a run in flight never
   // sees a stale closure. This is what keeps "pause", "speed" and "next match"
@@ -181,6 +182,12 @@ function TournamentScreenView({
     saveActiveTournament(tournament);
     onTournamentChange?.(tournament);
   }, [tournament, onTournamentChange]);
+
+  useEffect(() => {
+    if (!savedNotice) return undefined;
+    const timer = setTimeout(() => setSavedNotice(false), 1600);
+    return () => clearTimeout(timer);
+  }, [savedNotice]);
 
   const wait = (ms, token) => new Promise(resolve => {
     const started = realNow();
@@ -500,6 +507,12 @@ function TournamentScreenView({
     setIsBracketMinimized(v => !v);
   };
 
+  const handleSave = () => {
+    audioManager.playUiClick();
+    saveActiveTournament(tournament);
+    setSavedNotice(true);
+  };
+
   const handleExit = () => {
     audioManager.playUiClick();
     setShowExitConfirm(true);
@@ -553,6 +566,9 @@ function TournamentScreenView({
           </button>
           <button className="tournament-control" onClick={handleNextMatch} disabled={!pending}>
             ⏭ NEXT MATCH
+          </button>
+          <button className="tournament-control" onClick={handleSave}>
+            {savedNotice ? "SAVED" : "SAVE"}
           </button>
           <button className="tournament-control tournament-control-exit" onClick={handleExit}>
             ✕ EXIT
