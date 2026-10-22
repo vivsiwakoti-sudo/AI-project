@@ -1,6 +1,6 @@
 import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
-import { drawKatana, weaponTrail } from "../../systems/Weapons.js";
+import { drawKatana } from "../../systems/Weapons.js";
 
 export class Samurai extends FighterBase {
     // Seconds an enemy's attacks stay frozen after one of this Samurai's hits.
@@ -18,8 +18,9 @@ export class Samurai extends FighterBase {
         this.comboPassTimer = 0;
         this.comboPassHit = false;
         this.redTrail = [];
-        // The katana orbits continuously; 50% longer than the old 30px.
-        this.weaponSpin = 6.4;
+        // The katana is held at a fixed angle beside him and does not rotate.
+        this.weaponSpin = 0;
+        this.weaponAngle = -Math.PI / 2;
         this.weaponReach = (this.radius + 18) * 1.5;
     }
 
@@ -179,7 +180,6 @@ export class Samurai extends FighterBase {
             super.draw(ctx);
             ctx.save();
             ctx.translate(this.x, this.y);
-            weaponTrail(ctx, this.weaponAngle, Math.sign(this.weaponSpin) || 1, this.radius + 6, this.weaponReach + 2, "#ff5a5a", { sweep: 1.2, alpha: 0.32 });
             ctx.rotate(this.weaponAngle);
             drawKatana(ctx, { start: this.radius, length: this.weaponReach - this.radius });
             ctx.restore();

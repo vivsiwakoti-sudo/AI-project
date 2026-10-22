@@ -572,10 +572,10 @@ function TournamentScreenView({
               </div>
             </div>
           ) : (
-            <div className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}`}>
+            <div className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}`} ref={arenaWrapRef}>
               <HudColumn fighters={leftFighters} side="left" clock={clockLabel} suddenDeath={suddenDeath} />
 
-              <div className="tournament-canvas-wrap" ref={arenaWrapRef}>
+              <div className="tournament-canvas-wrap">
                 <canvas
                   ref={canvasRef}
                   width={TOURNAMENT_ARENA_SIZE}
