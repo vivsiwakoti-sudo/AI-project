@@ -304,7 +304,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 7,
     description: "Creates black hole, pulls opponent.",
-    description2: "Tracks the opponent and opens a gravity well beside them, dragging them inward while dealing three ticks of 5 damage. The event horizon has a 100px radius and lasts about 1.5 seconds.",
+    description2: "Tracks the opponent and launches a singularity. Where it strikes a fighter or the arena wall, it opens an event horizon that pulls every fighter within 200px and deals 10 damage once to each one it drags in. The event horizon lasts about 1.8 seconds.",
     keywords: ["gravity", "pull", "dot", "zone"],
   },
   "Reaper": {

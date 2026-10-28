@@ -3,11 +3,16 @@ import { Projectile } from "../Projectile.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { audioManager } from "../../audio/AudioManager.js";
 
+// Same inset as the inner border in CollisionSystem.resolveFighterWall.
+const WALL_INSET = 20;
+const PULL_RANGE = 200;
+const PULL_DAMAGE = 10;
+
 export class BlackHole extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
         this.cooldownTimer = 0;
-        this.activeHole = null; // {x, y, duration, damageTicks}
+        this.activeHole = null; // {x, y, duration, damaged}
         this.projectiles = [];
         this.holeLoopStop = null; // stopper for the looped gravity rumble
     }
@@ -26,6 +31,20 @@ export class BlackHole extends FighterBase {
         this.holeLoopStop = null;
     }
 
+    // Opens an event horizon at (x, y). Used both when a singularity strikes a
+    // fighter and when it reaches the arena wall.
+    openHole(x, y, projectile) {
+        this.activeHole = { x, y, duration: 1.8, damaged: new Set() };
+        projectile.active = false;
+        // The event horizon tearing open: boom, then the sustained rumble.
+        audioManager.playBlackHoleOpen();
+        this.startHoleLoop();
+        if (this.particleSystem) {
+            this.particleSystem.emit(x, y, "#c77dff", 40, { speed: 420, size: 3.4 });
+            this.particleSystem.ring(x, y, "#8a2be2", { startRadius: 8, endRadius: PULL_RANGE, life: 0.6, lineWidth: 6 });
+        }
+    }
+
     update(dt, opponent) {
         super.update(dt, opponent);
 
@@ -33,20 +52,16 @@ export class BlackHole extends FighterBase {
             this.activeHole.duration -= dt;
 
             // Pull every living fighter near the event horizon, not just the one
-            // opponent reference handed over by the arena. The vector was also
-            // pointing the WRONG WAY: `hole -> fighter` added to the fighter's
-            // velocity pushes them away from the hole, so the "gravity well" was
-            // gently repelling its victims. It is now reversed, so they are dragged
-            // in as intended.
+            // opponent reference handed over by the arena. The vector is reversed
+            // from a repulsion (`hole -> fighter`), so victims are dragged in.
+            const hole = this.activeHole;
             const pulled = (this.victims?.length ? this.victims : (opponent ? [opponent] : []))
                 .filter(f => f && !f.isDead);
-            const ticksDue = this.holeTicksLeft > 0 && this.holeTickAccumulator + dt >= 0.5;
             pulled.forEach(victim => {
-                const dx = this.activeHole.x - victim.x;
-                const dy = this.activeHole.y - victim.y;
+                const dx = hole.x - victim.x;
+                const dy = hole.y - victim.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const reach = 100 + victim.radius;
-                if (dist < reach && dist > 5) {
+                if (dist < PULL_RANGE && dist > 5) {
                     victim.vx += (dx / dist) * 10 * dt;
                     victim.vy += (dy / dist) * 10 * dt;
                     victim.isPulledIn = true;
@@ -54,19 +69,15 @@ export class BlackHole extends FighterBase {
                     victim.isPulledIn = false;
                 }
 
-                // Damage ticks (3 ticks of 5 damage over the life of the hole).
-                // Any victim inside the horizon is crushed, whether or not it is
-                // the fighter this class happens to be aiming at.
-                if (dist < reach && ticksDue && this.holeTicksLeft > 0) {
-                    this.holeTicksLeft--;
+                // Each fighter is hit once per event horizon, the first time it is
+                // pulled in. It is recorded even if the hit is dodged or parried, so
+                // a fighter that stays in range is not re-rolled every frame.
+                if (dist < PULL_RANGE && !hole.damaged.has(victim)) {
+                    hole.damaged.add(victim);
                     audioManager.playBlackHoleTick();
-                    DamageSystem.applyDamage(this, victim, 5, "AOE", { ignoreCooldown: true });
+                    DamageSystem.applyDamage(this, victim, PULL_DAMAGE, "AOE", { ignoreCooldown: true });
                 }
             });
-            if (this.holeTicksLeft > 0) {
-                this.holeTickAccumulator = (this.holeTickAccumulator || 0) + dt;
-                if (this.holeTickAccumulator >= 0.5) this.holeTickAccumulator -= 0.5;
-            }
 
             if (this.activeHole.duration <= 0) {
                 this.activeHole = null;
@@ -75,6 +86,7 @@ export class BlackHole extends FighterBase {
             return;
         }
 
+        const arenaSize = this.arenaSize ?? 800;
         this.projectiles.forEach(projectile => {
             projectile.update(dt);
             if (opponent && DamageSystem.checkHitbox({ x: projectile.x, y: projectile.y, radius: 10 }, opponent, "Body")) {
@@ -85,17 +97,18 @@ export class BlackHole extends FighterBase {
                     if (opponent.onParried) opponent.onParried(this, "Projectile", projectile);
                     return;
                 }
-                this.activeHole = { x: projectile.x, y: projectile.y, duration: 1.8 };
-                this.holeTicksLeft = 3;
-                this.holeTickAccumulator = 0;
-                projectile.active = false;
-                // The event horizon tearing open: boom, then the sustained rumble.
-                audioManager.playBlackHoleOpen();
-                this.startHoleLoop();
-                if (this.particleSystem) {
-                    this.particleSystem.emit(projectile.x, projectile.y, "#c77dff", 40, { speed: 420, size: 3.4 });
-                    this.particleSystem.ring(projectile.x, projectile.y, "#8a2be2", { startRadius: 8, endRadius: 200, life: 0.6, lineWidth: 6 });
-                }
+                this.openHole(projectile.x, projectile.y, projectile);
+                return;
+            }
+            // A singularity that reaches the wall collapses there instead, so the
+            // hole is clamped to the inset edge. The <= / >= checks also catch a
+            // projectile that Projectile.update already deactivated past the edge.
+            const atWall = projectile.x <= WALL_INSET || projectile.x >= arenaSize - WALL_INSET
+                || projectile.y <= WALL_INSET || projectile.y >= arenaSize - WALL_INSET;
+            if (atWall) {
+                const x = Math.min(Math.max(projectile.x, WALL_INSET), arenaSize - WALL_INSET);
+                const y = Math.min(Math.max(projectile.y, WALL_INSET), arenaSize - WALL_INSET);
+                this.openHole(x, y, projectile);
             }
         });
         this.projectiles = this.projectiles.filter(projectile => projectile.active);
@@ -193,7 +206,7 @@ export class BlackHole extends FighterBase {
             ctx.lineWidth = 1.5;
             ctx.setLineDash([5, 7]);
             ctx.beginPath();
-            ctx.arc(0, 0, 100, 0, Math.PI * 2);
+            ctx.arc(0, 0, PULL_RANGE, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
 
