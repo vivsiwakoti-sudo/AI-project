@@ -3,6 +3,11 @@ import { Projectile } from "../Projectile.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 
+const BURN_DURATION = 5;
+const BURN_TICK_INTERVAL = 1 / 3;
+const BURN_TOTAL_DAMAGE = 5;
+const BURN_TICK_DAMAGE = BURN_TOTAL_DAMAGE / Math.round(BURN_DURATION / BURN_TICK_INTERVAL);
+
 export class Fireball extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -25,7 +30,10 @@ export class Fireball extends FighterBase {
                 const angle = baseAngle + (Math.random() - 0.5) * 0.5;
                 const vx = Math.cos(angle) * 6;
                 const vy = Math.sin(angle) * 6;
-                this.projectiles.push(new Projectile(this.x, this.y, vx, vy, 5, this));
+                // A fireball's impact deals no damage on its own: the 5 damage is
+                // spread across its burn. The hit still lands so it can be parried,
+                // dodged, or apply the burn.
+                this.projectiles.push(new Projectile(this.x, this.y, vx, vy, 0, this));
             }
             this.attackTimer = 3;
         }
@@ -49,15 +57,15 @@ export class Fireball extends FighterBase {
                 const burnName = burns.length >= MAX_BURNS ? burns[0].name : `burn-${this.fireballId++}`;
                 EffectSystem.addEffect(struck, {
                     name: burnName,
-                    duration: 5,
+                    duration: BURN_DURATION,
                     tickTimer: 0,
                     onUpdate: (fighter, effect, elapsed) => {
                         effect.tickTimer += elapsed;
-                        if (effect.tickTimer >= 1 / 3) {
+                        if (effect.tickTimer >= BURN_TICK_INTERVAL) {
                             // Burn ticks are a damage-over-time source, not the
                             // class's attack, so they must not put the Fireball's
                             // own touch damage on cooldown.
-                            DamageSystem.applyDamage(this, fighter, 1, "AOE", { ignoreCooldown: true });
+                            DamageSystem.applyDamage(this, fighter, BURN_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
                             effect.tickTimer = 0;
                         }
                     }

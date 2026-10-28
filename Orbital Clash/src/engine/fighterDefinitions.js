@@ -122,7 +122,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 3,
     description: "Fires increasing numbers of fireballs.",
-    description2: "Every attack fires one more fireball than the last, each dealing 5 impact damage and applying its own independent burn that ticks 1 damage every 0.33 seconds for 5 seconds. More hits mean more separate burn stacks.",
+    description2: "Every attack fires one more fireball than the last. Each fireball deals no impact damage, but applies its own independent burn that deals 5 damage in total over 5 seconds. More hits mean more separate burn stacks.",
     keywords: ["fire", "volley", "burn", "dot", "stacking"],
   },
   "Duplicator": {
