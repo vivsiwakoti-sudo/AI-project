@@ -142,15 +142,11 @@ export const FIGHTER_CLASSES = {
   "Ghost": {
     name: "Ghost",
     color: "#FFFFFF",
-    health: 80,
-    damage: 8,
-    speed: 5,
-    bodySize: 40,
-    shape: "wisp",
+    damage: 10,
     attackType: "Body",
     cooldown: 5,
     description: "Activates Ghost Mode for invulnerability.",
-    description2: "Fades into Ghost Mode for 5 seconds: untouchable, transparent and accelerated to 10 px/frame. Contact during Ghost Mode deals 8 damage and the phase ends when the timer runs out.",
+    description2: "Fades into Ghost Mode for 5 seconds: untouchable, transparent and accelerated to 10 px/frame. Contact during Ghost Mode deals 10 damage and the phase ends when the timer runs out.",
     keywords: ["ghost", "invulnerable", "phase", "fast"],
   },
   "Alchemist": {

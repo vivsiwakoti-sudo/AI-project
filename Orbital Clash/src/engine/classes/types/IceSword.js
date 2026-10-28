@@ -18,7 +18,7 @@ export class IceSword extends FighterBase {
 
     update(dt, opponent) {
         super.update(dt, opponent);
-        if (this.attackPauseTimer <= 0) this.swordAngle += dt * 5; // Rotate sword
+        if (this.attackPauseTimer <= 0) this.swordAngle += dt * 7.5; // Rotate sword
 
         // Sword collision logic
         if (opponent && !this.isDead && !opponent.isDead) {
