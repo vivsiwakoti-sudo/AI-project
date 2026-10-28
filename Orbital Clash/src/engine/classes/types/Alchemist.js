@@ -46,7 +46,7 @@ export class Alchemist extends FighterBase {
             // or on the arena wall if it gets there first.
             const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
             const struck = candidates.find(f => f && !f.isDead
-                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: 7 }, f, "Body")) || null;
+                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: 14 }, f, "Body")) || null; // matches the 2x flask in draw()
             if (!struck && !this.touchesWall(potion)) return;
 
             this.impactEffects.push({
@@ -196,6 +196,7 @@ export class Alchemist extends FighterBase {
             const color = potionColors[potion.effect.type] || "#8BE9FD";
             ctx.save();
             ctx.translate(potion.x, potion.y);
+            ctx.scale(2, 2);
             ctx.rotate((potion.age || Date.now() / 1000) * 8);
             // Glass flask with glowing liquid, neck and cork.
             ctx.shadowBlur = 16;
