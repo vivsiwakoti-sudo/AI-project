@@ -27,6 +27,7 @@ const {
   BYE_COUNT,
   ROUND_DEFINITIONS,
   TOTAL_MATCHES,
+  TOURNAMENT_SAVE_KEY,
   TOURNAMENT_SIZE,
   allMatches,
   applyMatchResult,
@@ -62,6 +63,28 @@ test('the bracket uses exactly the 25 existing classes, 9 prelim matches + 7 bye
   const entrants = [...prelim.flatMap(m => [m.first, m.second]), ...bracket.byes.map(b => b.name)];
   assert.equal(entrants.length, 25);
   assert.deepEqual([...entrants].sort(), [...roster].sort(), 'every class enters exactly once');
+});
+
+test('an active save records the bout on stage, its round, eliminations and who is still in', () => {
+  store.clear();
+  let tournament = buildTournamentBracket({ random: seeded(21) });
+  for (let i = 0; i < 2; i++) {
+    const match = nextPendingMatch(tournament);
+    tournament = applyMatchResult(tournament, match, runTournamentMatch(match.first, match.second)).tournament;
+  }
+  saveActiveTournament(tournament);
+
+  const next = nextPendingMatch(tournament);
+  const saved = JSON.parse(store.get(TOURNAMENT_SAVE_KEY));
+  assert.equal(saved.battle.matchId, next.id, 'the bout still to be fought is recorded');
+  assert.equal(saved.battle.round, next.round);
+  assert.equal(saved.battle.first, next.first);
+  assert.equal(saved.battle.second, next.second);
+  assert.equal(saved.battle.eliminatedBefore, 2);
+  assert.equal(saved.battle.stillIn.length, TOURNAMENT_SIZE - 2);
+  assert.ok(saved.battle.stillIn.every(name => !saved.battle.eliminated.includes(name)));
+
+  assert.equal(loadActiveTournament().currentMatchId, next.id, 'restoring resumes the same bout');
 });
 
 test('round sizes are 9 / 8 / 4 / 2 / 1 = 24 matches', () => {

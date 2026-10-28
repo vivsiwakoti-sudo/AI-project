@@ -1045,12 +1045,34 @@ export function saveActiveTournament(tournament, { keepComplete = false } = {}) 
   try {
     const finished = tournament && tournament.status === "complete" && !keepComplete;
     if (!tournament || finished) window.localStorage.removeItem(TOURNAMENT_SAVE_KEY);
-    else window.localStorage.setItem(TOURNAMENT_SAVE_KEY, JSON.stringify(tournament));
+    else window.localStorage.setItem(TOURNAMENT_SAVE_KEY, JSON.stringify({ ...tournament, battle: battleSnapshot(tournament) }));
   } catch {
     /* storage disabled or full */
   }
   return tournament;
 }
+
+// The bout on stage, written beside the bracket so a save reads as a record of
+// the fight: which match, which round, how many were eliminated before it and who
+// is still in. Loading rebuilds all of this from the matches, so the block is a
+// readable record and never the source of truth.
+export function battleSnapshot(tournament) {
+  if (!tournament || tournament.status === "complete") return null;
+  const match = nextPendingMatch(tournament);
+  const round = match?.round ?? tournament.currentRound;
+  const eliminated = [...tournament.eliminated];
+  return {
+    matchId: match?.id ?? null,
+    round,
+    roundLabel: ROUND_LABELS[round] ?? round,
+    first: match?.first ?? null,
+    second: match?.second ?? null,
+    eliminatedBefore: eliminated.length,
+    eliminated,
+    stillIn: (tournament.participants ?? []).filter(name => !eliminated.includes(name))
+  };
+}
+
 
 // True when a tournament exists on disk that can be picked up mid-bracket. The
 // menu uses this to label its entry point "RESUME" only when resuming is what

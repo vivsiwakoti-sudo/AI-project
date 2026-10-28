@@ -9,6 +9,7 @@ export class Tornado extends FighterBase {
         this.aoeTimer = 0;
         this.burstDuration = 0.4;
         this.radiusReach = 150;
+        this.burstVictims = new Set();
     }
 
     update(dt, opponent) {
@@ -29,9 +30,12 @@ export class Tornado extends FighterBase {
             // rather than only the single opponent reference handed over by the
             // arena - the other two fighters of a four-way brawl used to be able
             // to stand in the middle of the burst untouched.
+            // Each victim is resolved once per release, even if the hit was dodged or
+            // parried, so the frames of the window cannot re-roll or re-hit them.
             const inRange = (this.victims?.length ? this.victims : [opponent])
-                .filter(f => f && !f.isDead && Math.hypot(f.x - this.x, f.y - this.y) < this.radiusReach + f.radius);
+                .filter(f => f && !f.isDead && !this.burstVictims.has(f) && Math.hypot(f.x - this.x, f.y - this.y) < this.radiusReach + f.radius);
             for (const victim of inRange) {
+                this.burstVictims.add(victim);
                 if (!DamageSystem.applyDamage(this, victim, this.damage, "AOE", { ignoreCooldown: true })) continue;
                 const angle = Math.atan2(victim.y - this.y, victim.x - this.x);
                 victim.vx = Math.cos(angle);
@@ -60,6 +64,7 @@ export class Tornado extends FighterBase {
             this.aoeTimer = this.burstDuration;
             this.cooldownTimer = this.cooldown;
             this.burstHit = false;
+            this.burstVictims.clear();
             this.useAbility();
             this.emitBurst("#cdf6ff", 20, 420);
             if (this.particleSystem) {
