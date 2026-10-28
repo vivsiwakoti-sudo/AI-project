@@ -20,7 +20,7 @@ export class Ghost extends FighterBase {
             if (this.ghostTimer <= 0) {
                 this.isGhost = true;
                 this.isInvulnerable = true;
-                this.speed = 7; // Ghost speed
+                this.speed = 10; // Ghost speed
                 this.ghostDuration = 5;
                 this.ghostTimer = 5; // Reset
                 this.isCharging = false;
