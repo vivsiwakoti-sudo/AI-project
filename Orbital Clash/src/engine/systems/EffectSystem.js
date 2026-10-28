@@ -1,4 +1,6 @@
 const SLOW_MULTIPLIERS = { slow: 0.5, "web-slow": 0.4, "trail-slow": 0.5 };
+// Permanent slows that multiply on top of the strongest timed slow instead of competing with it.
+const COMPOUNDING_SLOWS = new Set(["web-weave"]);
 
 export class EffectSystem {
   static updateEffects(fighter, dt) {
@@ -49,8 +51,13 @@ export class EffectSystem {
   }
 
   static slowMultiplier(fighter) {
-    const slows = (fighter.statusEffects || []).filter(effect => SLOW_MULTIPLIERS[effect.name] != null);
-    if (!slows.length) return 1;
-    return slows.reduce((slowest, effect) => Math.min(slowest, effect.multiplier ?? SLOW_MULTIPLIERS[effect.name] ?? 1), 1);
+    const effects = fighter.statusEffects || [];
+    const timedSlow = effects
+      .filter(effect => SLOW_MULTIPLIERS[effect.name] != null)
+      .reduce((slowest, effect) => Math.min(slowest, effect.multiplier ?? SLOW_MULTIPLIERS[effect.name] ?? 1), 1);
+    const compounding = effects
+      .filter(effect => COMPOUNDING_SLOWS.has(effect.name))
+      .reduce((product, effect) => product * (effect.multiplier ?? 1), 1);
+    return timedSlow * compounding;
   }
 }

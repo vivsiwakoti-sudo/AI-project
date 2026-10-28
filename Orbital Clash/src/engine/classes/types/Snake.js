@@ -9,7 +9,7 @@ export class Snake extends FighterBase {
         this.trailLife = 15;
         this.dropTimer = 0;
         this.trailHitCooldown = 0;
-        this.dotAccumulator = 0;
+        this.dotAccumulators = new Map(); // victim -> seconds spent in venom since last hit
         this.hitColor = "#9dff6b";
     }
 
@@ -28,23 +28,27 @@ export class Snake extends FighterBase {
         this.trail.forEach(segment => { segment.age += dt; });
         this.trail = this.trail.filter(segment => segment.age < this.trailLife);
 
-        // Trail collision logic - slow 50% and deal 1 damage every half second.
+        // Trail collision logic - slow 50% and deal 2 damage every second of contact.
         // A trail is something anyone can run into, so every living fighter is
         // tested, not just the single opponent reference handed over by the arena.
-        // The DOT accumulator is per victim as well: sharing one between them made
-        // the tick rate depend on how many fighters happened to be standing in the
-        // venom at once.
+        // Each victim has its own accumulator so the tick rate doesn't depend on how
+        // many fighters are standing in the venom at once.
         const walkers = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead);
         if (walkers.length) {
             for (const victim of walkers) {
                 const touching = this.trail.some(segment => Math.hypot(segment.x - victim.x, segment.y - victim.y) < victim.radius + 8);
-                if (!touching) continue;
+                if (!touching) {
+                    this.dotAccumulators.delete(victim);
+                    continue;
+                }
                 EffectSystem.addEffect(victim, { name: "trail-slow", duration: 0.4, multiplier: 0.5 });
                 victim.slowVisual = true;
-                this.dotAccumulator += dt;
-                if (this.dotAccumulator >= 0.5) {
-                    this.dotAccumulator = 0;
-                    DamageSystem.applyDamage(this, victim, 1, "AOE", { ignoreCooldown: true });
+                const accumulated = (this.dotAccumulators.get(victim) ?? 0) + dt;
+                if (accumulated >= 1) {
+                    this.dotAccumulators.set(victim, 0);
+                    DamageSystem.applyDamage(this, victim, 2, "AOE", { ignoreCooldown: true });
+                } else {
+                    this.dotAccumulators.set(victim, accumulated);
                 }
             }
         }

@@ -3,7 +3,7 @@ import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory } from "../engine/battleHistory";
-import { hasResumableTournament } from "../engine/tournament";
+import { hasResumableTournament, loadTournamentStats } from "../engine/tournament";
 import ClassCard from "./MenuComponents/ClassCard";
 
 const RECORDS_KEY = "arena-battles-records";
@@ -58,6 +58,9 @@ export default function Menu({ onStart, onStartTournament }) {
   // Read once on mount: the menu only needs to know whether a partial bracket is
   // waiting, and nothing on this screen can create or finish one.
   const [canResumeTournament, setCanResumeTournament] = useState(hasResumableTournament);
+  // The reigning champion is the winner of the last completed tournament. Read
+  // once on mount: the menu is remounted after every tournament, so it is fresh.
+  const [champion] = useState(() => loadTournamentStats().lastChampion);
 
   useEffect(() => {
     audioManager.playMenuMusic();
@@ -248,6 +251,7 @@ export default function Menu({ onStart, onStartTournament }) {
               fighter={fighter}
               stats={stats}
               isSelected={selected.includes(name)}
+              isChampion={name === champion}
               onClick={() => toggleSelect(name)}
               onContextMenu={(e) => handleRightClick(e, name)}
             />
@@ -257,10 +261,16 @@ export default function Menu({ onStart, onStartTournament }) {
 
       {infoFighter && (
         <div className="fighter-info-overlay" role="dialog" aria-label={`${infoFighter.name} details`}>
-          <div className="fighter-info-panel" style={{ "--class-accent": infoFighter.color }}>
+          <div
+            className={`fighter-info-panel ${infoFighter.name === champion ? "fighter-info-panel-champion" : ""}`}
+            style={{ "--class-accent": infoFighter.color }}
+          >
             <header>
               <div>
-                <div className="roster-eyebrow">{infoFighter.attackType}</div>
+                <div className="roster-eyebrow">
+                  {infoFighter.attackType}
+                  {infoFighter.name === champion && <span className="champion-badge champion-badge-inline">👑 CURRENT CHAMPION</span>}
+                </div>
                 <h2>{infoFighter.name}</h2>
               </div>
               <button className="fighter-info-close" onClick={() => setInfo(null)} aria-label="Close fighter details">×</button>

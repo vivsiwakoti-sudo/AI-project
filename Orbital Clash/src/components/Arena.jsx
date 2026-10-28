@@ -628,7 +628,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
         ctx.clip();
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = "source-over";
-        const isSlowed = f.statusEffects?.some(e => ["slow", "web-slow", "trail-slow", "stun-slow"].includes(e.name));
+        const isSlowed = f.statusEffects?.some(e => ["slow", "web-slow", "web-weave", "trail-slow", "stun-slow"].includes(e.name));
         try {
           if (isSlowed) {
             // Consistent readable slow indicator: cyan frost shell around the body.

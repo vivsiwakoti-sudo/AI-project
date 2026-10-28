@@ -306,6 +306,60 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--class-accent) 55%, transparent), 0 0 24px color-mix(in srgb, var(--class-accent) 40%, transparent), inset 0 0 22px color-mix(in srgb, var(--class-accent) 12%, transparent) !important;
 }
 
+/* The reigning champion (winner of the last tournament) gets a bright gold
+   outline and glow on its roster card and in its detail popup. */
+.fighter-card-champion {
+  position: relative;
+  border: 2px solid #ffd700 !important;
+  border-left-width: 4px !important;
+  box-shadow: 0 0 0 1px rgba(255, 215, 0, 0.55), 0 0 22px rgba(255, 215, 0, 0.6), 0 0 46px rgba(255, 190, 40, 0.3), inset 0 0 20px rgba(255, 215, 0, 0.14) !important;
+  animation: champion-glow-pulse 2.4s ease-in-out infinite;
+}
+
+.fighter-card-champion:hover {
+  border-color: #ffe35c !important;
+  box-shadow: 0 0 0 1px rgba(255, 226, 92, 0.8), 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 190, 40, 0.45), inset 0 0 24px rgba(255, 215, 0, 0.2) !important;
+}
+
+.champion-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  padding: 3px 8px;
+  border-radius: 0 0 0 var(--radius);
+  background: linear-gradient(135deg, #ffe35c, #ffb300);
+  color: #2b1d00;
+  font: 800 0.58rem var(--font-data);
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+}
+
+.champion-badge-inline {
+  position: static;
+  display: inline-block;
+  margin-left: 10px;
+  border-radius: var(--radius);
+  vertical-align: middle;
+}
+
+.fighter-info-panel.fighter-info-panel-champion {
+  border: 2px solid #ffd700;
+  border-top: 3px solid #ffd700;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 215, 0, 0.5), 0 0 36px rgba(255, 215, 0, 0.55), 0 0 80px rgba(255, 190, 40, 0.28);
+  animation: modal-enter var(--dur-slow) var(--ease) both, champion-glow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes champion-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 215, 0, 0)); }
+  50% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.55)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fighter-card-champion,
+  .fighter-info-panel.fighter-info-panel-champion { animation: none; }
+}
+
 .fighter-card canvas {
   width: 42px;
   height: 42px;

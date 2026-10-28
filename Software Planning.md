@@ -195,14 +195,15 @@ node index.js
 
     
 
-* **\- Spider**: This class lays webs around the map with a 4-second cooldown, slows the person inside of it by 60%, and does 5 damage every 1.5 seconds.  
+* **\- Spider**: This class lays webs around the map with a 4-second cooldown, slows the person inside of it by 60%, and does 5 damage every 1.5 seconds. Each web touched adds a permanent 5% slow that stacks and lasts until the bout ends.  
   *   \- Health: 85  
   *   \- Damage: 5  
   *   \- Effect: Sticky web  
   *   \- Speed: 5 px/frame  
   *   \- Attack Type: Web projectile  
   *   \- Cooldown: 4 seconds  
-  *   \- Body Size: 36x36
+  *   \- Body Size: 36x36  
+  *   \- Web Lifetime: 25 seconds if untouched
 
     
 

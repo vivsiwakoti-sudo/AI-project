@@ -31,7 +31,7 @@ export function FighterCanvas({ fighter, size = 50, className = "" }) {
   return <canvas ref={canvasRef} width={size} height={size} className={className} aria-hidden="true" />;
 }
 
-export default function ClassCard({ fighter, isSelected, onClick, onContextMenu, stats }) {
+export default function ClassCard({ fighter, isSelected, isChampion = false, onClick, onContextMenu, stats }) {
   const canvasRef = useRef(null);
   // Defensive by design: the roster card is rendered from data that can come from
   // storage, so a missing entry must render as a plain card rather than throw and
@@ -55,8 +55,9 @@ export default function ClassCard({ fighter, isSelected, onClick, onContextMenu,
       onClick={onClick}
       onContextMenu={onContextMenu}
       title="Right-click for details"
-      className={`fighter-card ${isSelected ? "fighter-card-selected" : ""}`}
+      className={`fighter-card ${isSelected ? "fighter-card-selected" : ""} ${isChampion ? "fighter-card-champion" : ""}`}
     >
+      {isChampion && <span className="champion-badge" title="Winner of the last tournament">👑 CHAMPION</span>}
       <canvas ref={canvasRef} width={50} height={50} />
       <div className="fighter-card-copy"><h3>{fighter.name}</h3><strong>{fighter.attackType}</strong></div>
       <div className="fighter-card-stats">
