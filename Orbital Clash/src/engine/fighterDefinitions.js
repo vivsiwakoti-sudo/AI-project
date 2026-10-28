@@ -197,8 +197,7 @@ export const FIGHTER_CLASSES = {
     health: 150,
     damage: 15,
     speed: 3,
-    bodySize: 84,
-    shape: "shield",
+    bodySize: 60,
     attackType: "Melee",
     cooldown: 0.25,
     description: "Heavy armor, sword slash, shield parry.",
@@ -337,9 +336,9 @@ export const FIGHTER_CLASSES = {
     health: 130,
     damage: 8,
     speed: 4,
-    // 56px body: Mahoraga and the Knight are the two heavyweight bruisers, and
+    // 60px body: Mahoraga and the Knight are the two heavyweight bruisers, and
     // both now share one body size so neither reads as the smaller of the pair.
-    bodySize: 56,
+    bodySize: 60,
     shape: "wheel",
     attackType: "Body",
     cooldown: 0,

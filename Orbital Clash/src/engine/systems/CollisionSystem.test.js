@@ -30,8 +30,8 @@ test('a fighter with no wallMargin bounces with its BODY touching the border', (
 });
 
 test('a visualMargin holds back only the weapon overhang, not a whole weapon length', () => {
-  // Knight: bodySize 56 (radius 28) and a shield dome of radius + 10.
-  const knight = makeFighter({ x: 900, radius: 28, wallMargin: 10 });
+  // Knight: bodySize 60 (radius 30) and a shield dome of radius + 10.
+  const knight = makeFighter({ x: 900, radius: 30, wallMargin: 10 });
   CollisionSystem.resolveFighterWall(knight, ARENA_SIZE);
 
   // The body edge may reach inside the border by its margin, but no further: the
@@ -44,11 +44,11 @@ test('a visualMargin holds back only the weapon overhang, not a whole weapon len
 test('the margin a class reports never exceeds what its body can absorb', () => {
   // Guards the regression directly: a margin larger than the body radius means
   // the fighter deflects off empty space, a full body-width from the border.
-  const mahoraga = { radius: 23, wallMargin: 0 };
+  const mahoraga = { radius: 30, wallMargin: 0 };
   // Mahoraga's wheel overhang: radius + 22 + wheelRadius - radius, minus radius.
-  const wheelRadius = 23 * 0.72;
-  const wheelOverhang = 23 + 22 + wheelRadius - 23;
-  mahoraga.wallMargin = Math.max(0, wheelOverhang - 23);
+  const wheelRadius = 30 * 0.72;
+  const wheelOverhang = 30 + 22 + wheelRadius - 30;
+  mahoraga.wallMargin = Math.max(0, wheelOverhang - 30);
 
   assert.ok(
     mahoraga.wallMargin < mahoraga.radius,
