@@ -343,7 +343,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 0,
     description: "Adapts to enemy attacks.",
-    description2: "A heavy puncher that studies what hits it. The wheel over its head spins hard every time it adapts. After three hits from a category it adapts: melee becomes 30% resistant, projectiles become 50% resistant and unlock a 35% parry against further ranged shots, and body contact becomes 75% resistant. Its own body is a weapon too: slamming into an opponent deals its damage.",
+    description2: "A heavy puncher that studies what hits it. The wheel over its head spins hard every time it adapts. After three hits from a category it adapts: melee becomes 30% resistant and unlocks a 25% parry that stuns the attacker for 1 second, projectiles become 50% resistant and unlock a 35% parry against further ranged shots, and body contact becomes 75% resistant. Its own body is a weapon too: slamming into an opponent deals its damage.",
     keywords: ["adapt", "resist", "parry", "wheel", "tank"],
   }
 };

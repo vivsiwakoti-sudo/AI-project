@@ -128,3 +128,90 @@ test('Mahoraga keeps attacking (bodily) against an opponent adapted to melee', (
   );
   assert.ok(opponent.health < startHealth);
 });
+
+// A second Mahoraga serves as a real weapon-wielding-style attacker: it has the
+// full FighterBase status/pause machinery the parry stun relies on.
+const adaptedMahoraga = (...categories) => {
+  const mahoraga = makeMahoraga();
+  mahoraga.health = mahoraga.maxHealth = 1e9;
+  for (const category of categories) {
+    for (let i = 0; i < 3; i++) mahoraga.onHitTaken(category, 8);
+  }
+  return mahoraga;
+};
+
+const withRandom = (value, fn) => {
+  const original = Math.random;
+  Math.random = () => value;
+  try { return fn(); } finally { Math.random = original; }
+};
+
+test('Mahoraga only gains a melee parry once it has adapted to melee', () => {
+  const fresh = makeMahoraga();
+  assert.equal(fresh.getParryChance('Melee'), 0, 'no melee parry before adapting');
+
+  const adapted = adaptedMahoraga('Melee');
+  assert.equal(adapted.getParryChance('Melee'), 0.25, '25% melee parry once adapted');
+  assert.equal(adapted.getParryChance('Projectile'), 0, 'melee adaptation does not unlock a projectile parry');
+  for (const category of ['Body', 'Beam', 'AOE']) {
+    assert.equal(adapted.getParryChance(category), 0, `${category} is never parried`);
+  }
+  assert.equal(adaptedMahoraga('Projectile').getParryChance('Projectile'), 0.35);
+});
+
+test('a parried melee strike deals no damage and stuns the attacker', () => {
+  const mahoraga = adaptedMahoraga('Melee');
+  const attacker = makeMahoraga();
+  attacker.x = mahoraga.x + 36;
+  attacker.y = mahoraga.y;
+  const startHealth = mahoraga.health;
+
+  const landed = withRandom(0, () => DamageSystem.applyDamage(attacker, mahoraga, 10, 'Melee'));
+
+  assert.equal(landed, false, 'the parried strike must not land');
+  assert.equal(mahoraga.health, startHealth, 'no damage is taken');
+  assert.equal(attacker.isStuck, true, 'the attacker is frozen in place');
+  assert.ok(attacker.attackPauseTimer > 0, 'the attacker cannot attack while stunned');
+  assert.equal(
+    DamageSystem.applyDamage(attacker, mahoraga, 10, 'Melee'),
+    false,
+    'a stunned attacker cannot damage Mahoraga'
+  );
+
+  for (let i = 0; i < 75; i++) attacker.update(1 / 60, mahoraga);
+  assert.equal(attacker.isStuck, false, 'the stun ends after its duration');
+  assert.ok(attacker.attackPauseTimer <= 0, 'the attack pause ends too');
+});
+
+test('an unparried melee strike takes 30% less damage and is not stunned', () => {
+  const mahoraga = adaptedMahoraga('Melee');
+  const attacker = makeMahoraga();
+  attacker.x = mahoraga.x + 36;
+  attacker.y = mahoraga.y;
+  const startHealth = mahoraga.health;
+
+  const landed = withRandom(0.99, () => DamageSystem.applyDamage(attacker, mahoraga, 10, 'Melee'));
+
+  assert.equal(landed, true);
+  assert.ok(Math.abs(startHealth - mahoraga.health - 7) < 1e-6, 'melee damage is reduced by 30%');
+  assert.notEqual(attacker.isStuck, true, 'only a parry stuns');
+});
+
+test('resistances stay fixed through repeated hits: 30% melee, 50% projectile, 75% body', () => {
+  const mahoraga = adaptedMahoraga('Melee', 'Projectile', 'Body');
+  const attacker = makeMahoraga();
+  attacker.x = mahoraga.x + 36;
+  attacker.y = mahoraga.y;
+  const expected = { Melee: 7, Projectile: 5, Body: 2.5 };
+
+  // Far more hits than adaptation needs: damage must never collapse to a flat value.
+  for (let hit = 0; hit < 12; hit++) {
+    for (const [category, damage] of Object.entries(expected)) {
+      attacker.damageCooldown = 0;
+      attacker.attackPauseTimer = 0;
+      const before = mahoraga.health;
+      withRandom(0.99, () => DamageSystem.applyDamage(attacker, mahoraga, 10, category));
+      assert.ok(Math.abs(before - mahoraga.health - damage) < 1e-6, `${category} hit ${hit + 1} dealt ${before - mahoraga.health}`);
+    }
+  }
+});

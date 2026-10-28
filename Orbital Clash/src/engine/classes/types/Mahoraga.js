@@ -1,4 +1,8 @@
 import { FighterBase } from "../FighterBase.js";
+import { EffectSystem } from "../../systems/EffectSystem.js";
+
+const MELEE_PARRY_CHANCE = 0.25;
+const MELEE_PARRY_STUN_SECONDS = 1;
 
 export class Mahoraga extends FighterBase {
     constructor(data, x, y) {
@@ -51,22 +55,45 @@ export class Mahoraga extends FighterBase {
         this.wheelBurst = Math.PI * 6;
     }
 
-    // Mahoraga parries with the wheel over his head, but only against ranged
-    // fire: once he has adapted to Projectiles he starts swatting them away.
+    hasAdaptedTo(category) {
+        return this.adaptedCategories.some(c => c.category === category);
+    }
+
+    // Parries only unlock with the matching adaptation: once he has adapted to
+    // Projectiles he swats them away (35%), and once he has adapted to Melee he
+    // parries weapon strikes (25%) and stuns the attacker. Body slams, beams and
+    // AOE are never parried.
     getParryChance(category) {
-        if (category !== "Projectile") return 0;
-        return this.adaptedCategories.some(c => c.category === "Projectile") ? 0.35 : 0;
+        if (category === "Projectile") return this.hasAdaptedTo("Projectile") ? 0.35 : 0;
+        if (category === "Melee") return this.hasAdaptedTo("Melee") ? MELEE_PARRY_CHANCE : 0;
+        return 0;
+    }
+
+    // A parried weapon strike does no damage and leaves the attacker stunned:
+    // frozen in place with its weapon and attacks paused.
+    stunAttacker(attacker) {
+        if (!attacker || attacker === this || attacker.isDead) return;
+        EffectSystem.addEffect(attacker, {
+            name: "stun",
+            duration: MELEE_PARRY_STUN_SECONDS,
+            onUpdate: (fighter) => { fighter.isStuck = true; },
+            onEnd: (fighter) => { fighter.isStuck = false; }
+        });
+        attacker.isStuck = true;
+        attacker.pauseAttacks?.(MELEE_PARRY_STUN_SECONDS);
     }
 
     onParried(attacker, category, projectile) {
-        this.deflectProjectile(projectile);
+        if (category === "Melee") this.stunAttacker(attacker);
+        else this.deflectProjectile(projectile);
 
         // The wheel swats the shot aside and flares, then coasts back down. There
         // is no attack animation to interrupt any more - the deflect is the whole
         // response the class has to a ranged hit.
         this.parryFlash = 0.35;
-        this.parryAngle = projectile
-            ? Math.atan2(projectile.y - this.y, projectile.x - this.x)
+        const source = projectile || attacker;
+        this.parryAngle = source
+            ? Math.atan2(source.y - this.y, source.x - this.x)
             : this.lastAngle + Math.PI;
         this.parryRingRadius = 0;
         this.wheelGlow = 1;
@@ -106,8 +133,6 @@ export class Mahoraga extends FighterBase {
                     this.particleSystem.ring(this.x, this.y, "#ffffff", { startRadius: this.radius, endRadius: 150, life: 0.6, lineWidth: 5 });
                 }
             }
-
-            if (category !== "Body" && this.adaptation[category] >= 8) return 1;
         }
         return true;
     }
