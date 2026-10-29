@@ -2102,6 +2102,7 @@
     radial-gradient(ellipse at 50% 0%, rgba(47, 123, 255, 0.16), transparent 60%),
     #05070f;
   opacity: 1;
+  overflow-y: auto;
   transition: opacity 0.55s var(--ease);
 }
 
@@ -2128,8 +2129,8 @@
    fixed width and scaled/translated into it from JavaScript. */
 .tournament-overview-stage {
   position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 0 260px;
+  min-height: 260px;
   overflow: hidden;
 }
 
