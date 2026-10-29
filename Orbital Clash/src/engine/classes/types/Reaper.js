@@ -2,6 +2,9 @@ import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { drawScythe, weaponTrail } from "../../systems/Weapons.js";
 
+const DAMAGE_GROWTH = 1.25;
+const MAHORAGA_STACK_CAP = 5;
+
 export class Reaper extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -14,6 +17,12 @@ export class Reaper extends FighterBase {
         // a fighter can ever reach, so the snowball still lands as the one-hit
         // killer the class is built to be.
         this.maxDamage = 10000;
+        // Mahoraga adapts to whatever it is hit with, so a snowballing scythe is
+        // held to MAHORAGA_STACK_CAP multiplications against it: it never swings for
+        // more than that against Mahoraga, and hits on Mahoraga stop growing the
+        // stored damage once it reaches that level (so it cannot be banked for
+        // use on everyone else).
+        this.mahoragaDamageCap = data.damage * Math.pow(DAMAGE_GROWTH, MAHORAGA_STACK_CAP);
     }
 
     update(dt, opponent) {
@@ -33,13 +42,20 @@ export class Reaper extends FighterBase {
 
             const target = this.bladeTouchTarget(tipX, tipY, opponent, 12);
             if (target && this.cooldownTimer <= 0) {
-                const dealt = DamageSystem.applyDamage(this, target, this.currentDamage, "Melee", { ignoreCooldown: true });
+                const vsMahoraga = target.name === "Mahoraga";
+                const swingDamage = vsMahoraga ? Math.min(this.currentDamage, this.mahoragaDamageCap) : this.currentDamage;
+                const dealt = DamageSystem.applyDamage(this, target, swingDamage, "Melee", { ignoreCooldown: true });
                 // Only a *successful* hit scales the scythe, so a miss or dodge costs nothing.
                 if (dealt) {
                     this.useAbility();
                     // Multiply damage on hit, clamped so a long fight cannot push the
-                    // stored value to Infinity.
-                    this.currentDamage = Math.min(this.maxDamage, this.currentDamage * 1.25);
+                    // stored value to Infinity. Against Mahoraga the growth stops at
+                    // the 5-stack cap (and never pulls an already larger value down).
+                    const grown = this.currentDamage * DAMAGE_GROWTH;
+                    const next = vsMahoraga
+                        ? Math.max(this.currentDamage, Math.min(grown, this.mahoragaDamageCap))
+                        : grown;
+                    this.currentDamage = Math.min(this.maxDamage, next);
                     this.reapFlash = 1;
                     // Heavy scythe sweep arc, longer reach to match the bigger blade.
                     this.triggerSwing(this.scytheAngle, { duration: 0.28, reach: 54, color: "#d49aff" });

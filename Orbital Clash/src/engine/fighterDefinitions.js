@@ -250,7 +250,7 @@ export const FIGHTER_CLASSES = {
     name: "Tunneler",
     color: "#D2691E",
     health: 60,
-    damage: 7,
+    damage: 10,
     speed: 5,
     bodySize: 40,
     shape: "drill",
@@ -313,7 +313,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Melee",
     cooldown: 0.25,
     description: "Scythe, damage scales massively on hit.",
-    description2: "Swings a long scythe that reaches well past its body. Every landed hit multiplies its current damage by 1.25 with no cap, so an unanswered Reaper snowballs into a one-hit killer.",
+    description2: "Swings a long scythe that reaches well past its body. Every landed hit multiplies its current damage by 1.25 with no cap, so an unanswered Reaper snowballs into a one-hit killer - except against Mahoraga, where the snowball stops after 5 multiplications.",
     keywords: ["scythe", "scaling", "uncapped", "melee"],
   },
   "Vampire": {

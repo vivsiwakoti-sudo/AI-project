@@ -209,7 +209,7 @@ node index.js
 
 * **\- Tunneler:** This class has a 40% chance that when it hits the wall, it will tunnel through away from danger, preventing ranged fighters from automatically firing new targeted attacks until it reappears 3 seconds later from a random position on the edge of the wall. When it comes out of the wall, it shoots five spikes from the wall out in the direction it's facing.  
   *   \- Health: 60  
-  *   \- Damage: 7  
+  *   \- Damage: 10  
   *   \- Effect: Tunneling  
   *   \- Speed: 5 px/frame  
   *   \- Attack Type: Spikes  
@@ -251,7 +251,7 @@ node index.js
 
     
 
-* **\- Reaper**: Every time the Reaper's long scythe hits an enemy, its damage increases with no cap, multiplying its current damage by 1.5 after each successful hit. The scythe extends 20 pixels beyond the body.  
+* **\- Reaper**: Every time the Reaper's long scythe hits an enemy, its damage increases with no cap, multiplying its current damage by 1.5 after each successful hit. The scythe extends 20 pixels beyond the body. Against Mahoraga, this growth stops after 5 multiplications.  
   *   \- Health: 100  
   *   \- Damage: 5 \- Unlimited  
   *   \- Effect: Damage increase  
