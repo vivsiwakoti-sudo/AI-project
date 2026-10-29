@@ -2096,8 +2096,8 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 28px 18px;
+  gap: 8px;
+  padding: 12px 28px 14px;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(47, 123, 255, 0.16), transparent 60%),
     #05070f;
@@ -2121,9 +2121,9 @@
   gap: 16px;
 }
 
-.tournament-overview-title { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.tournament-overview-title h2 { margin: 0; color: var(--text-h); font: 900 1.5rem var(--font-title); letter-spacing: 0.1em; }
-.tournament-overview-title p { margin: 0; color: var(--text-secondary); font: 600 0.72rem var(--font-data); letter-spacing: 0.1em; }
+.tournament-overview-title { display: flex; flex-flow: row wrap; align-items: center; gap: 4px 14px; }
+.tournament-overview-title h2 { margin: 0; color: var(--text-h); font: 900 1.25rem var(--font-title); letter-spacing: 0.1em; }
+.tournament-overview-title p { flex-basis: 100%; margin: 0; color: var(--text-secondary); font: 600 0.7rem var(--font-data); letter-spacing: 0.1em; }
 
 /* The stage is exactly the room left for the bracket; the bracket is laid out at a
    fixed width and scaled/translated into it from JavaScript. */
@@ -2139,7 +2139,7 @@
   top: 0;
   left: 0;
   box-sizing: border-box;
-  width: 1600px;
+  width: var(--ov-width, 1600px);
   padding: 6px;
   transform-origin: 0 0;
 }
@@ -2167,14 +2167,14 @@
 
 .overview-bracket .tb-slot { cursor: default; }
 
-/* Preliminary and Round of 16 hold the most matches, so they get two columns each
-   and the whole bracket stays short enough to fit on screen. */
-.overview-bracket .tb-rounds { grid-template-columns: 2fr 2fr 1fr 1fr 1fr; gap: 16px; }
+/* The preliminary round holds the only real cards, so it gets as many columns as
+   the stage shape calls for (set from JavaScript); the rounds that are still
+   placeholders are kept narrow. */
+.overview-bracket .tb-rounds { grid-template-columns: var(--ov-tracks, 4fr 1.2fr 0.8fr 0.8fr 0.8fr); gap: 16px; }
 
-.overview-bracket [data-round="preliminary"] .tb-round-matches,
-.overview-bracket [data-round="round16"] .tb-round-matches {
+.overview-bracket [data-round="preliminary"] .tb-round-matches {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--ov-cols, 2), minmax(0, 1fr));
 }
 
 .overview-bracket .tb-round-pending { grid-column: 1 / -1; }

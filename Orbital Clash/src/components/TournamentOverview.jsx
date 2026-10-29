@@ -4,10 +4,42 @@ import { ROUND_LABELS, TOTAL_MATCHES, TOURNAMENT_SIZE, BYE_COUNT } from "../engi
 import { audioManager } from "../engine/audio/AudioManager";
 import TournamentBracket from "./TournamentBracket";
 
-// The bracket is laid out at a fixed width in CSS and then scaled to fit the
-// stage, so the whole thing is always on screen at once whatever the window size.
+// The bracket is laid out at a natural size and then scaled to fit the stage. The
+// preliminary round is the only one with real cards at this point (the rest are
+// "awaiting" placeholders), so it gets as many card columns as make the whole
+// bracket fit the stage best: a wide, short window wants a wide, short bracket.
+// These are the measured card/row sizes the estimate is built from.
+const CARD_WIDTH = 215;
+const ROW_HEIGHT = 125;
+const OVERHEAD_HEIGHT = 172;
+const COLUMN_GAP = 16;
+const SIDE_COLUMN_UNITS = [1.2, 0.8, 0.8, 0.8];
+const BRACKET_PADDING = 12;
+const PRELIM_MATCHES = 9;
+const MIN_COLS = 2;
+const MAX_COLS = 6;
 // This only caps how far a small bracket may be scaled UP on a very large window.
 const MAX_FIT_SCALE = 1.3;
+
+function layoutFor(cols) {
+  const units = SIDE_COLUMN_UNITS.reduce((sum, u) => sum + u, 0);
+  return {
+    cols,
+    width: Math.round(CARD_WIDTH * (cols + units) + COLUMN_GAP * SIDE_COLUMN_UNITS.length + BRACKET_PADDING),
+    height: Math.ceil(PRELIM_MATCHES / cols) * ROW_HEIGHT + OVERHEAD_HEIGHT,
+    tracks: [cols, ...SIDE_COLUMN_UNITS].map(u => `${u}fr`).join(" ")
+  };
+}
+
+function bestLayout(stageW, stageH) {
+  let best = null;
+  for (let cols = MIN_COLS; cols <= MAX_COLS; cols++) {
+    const layout = layoutFor(cols);
+    const scale = Math.min(stageW / layout.width, stageH / layout.height);
+    if (!best || scale > best.scale + 1e-6) best = { ...layout, scale };
+  }
+  return best;
+}
 // Timeline of the zoom (ms): the camera dives into the first match for the whole
 // ZOOM_MS; the overview starts fading, and the tournament starts, at FADE_AT_MS so
 // the arena's intro card is already waiting underneath when the card fills the screen.
@@ -24,12 +56,15 @@ export default function TournamentOverview({ tournament, arenaSize, focusMatch, 
   const stageRef = useRef(null);
   const bracketRef = useRef(null);
   const timersRef = useRef([]);
+  const [layout, setLayout] = useState(() => layoutFor(4));
   const [fit, setFit] = useState({ scale: 1, x: 0, y: 0 });
   const [zoomTransform, setZoomTransform] = useState(null);
   const [leaving, setLeaving] = useState(false);
   const [fading, setFading] = useState(false);
 
-  // Scale and centre the bracket so all of it fits inside the stage.
+  // Pick the column layout for the stage's shape, then scale and centre the
+  // bracket so all of it fits inside the stage. The layout depends on the stage
+  // size alone, so re-measuring after it changes settles instead of looping.
   useLayoutEffect(() => {
     const stage = stageRef.current;
     const bracket = bracketRef.current;
@@ -37,9 +72,12 @@ export default function TournamentOverview({ tournament, arenaSize, focusMatch, 
     const measure = () => {
       const stageW = stage.clientWidth;
       const stageH = stage.clientHeight;
+      if (!stageW || !stageH) return;
+      const best = bestLayout(stageW, stageH);
+      setLayout(prev => (prev.cols === best.cols ? prev : layoutFor(best.cols)));
       const bracketW = bracket.offsetWidth;
       const bracketH = bracket.offsetHeight;
-      if (!stageW || !stageH || !bracketW || !bracketH) return;
+      if (!bracketW || !bracketH) return;
       const scale = Math.min(stageW / bracketW, stageH / bracketH, MAX_FIT_SCALE);
       setFit({ scale, x: (stageW - bracketW * scale) / 2, y: (stageH - bracketH * scale) / 2 });
     };
@@ -109,7 +147,11 @@ export default function TournamentOverview({ tournament, arenaSize, focusMatch, 
       </div>
 
       <div className="tournament-overview-stage" ref={stageRef}>
-        <div className="overview-bracket" ref={bracketRef} style={{ transform }}>
+        <div
+          className="overview-bracket"
+          ref={bracketRef}
+          style={{ transform, "--ov-width": `${layout.width}px`, "--ov-cols": layout.cols, "--ov-tracks": layout.tracks }}
+        >
           <TournamentBracket tournament={tournament} currentMatchId={focusMatch?.id ?? null} onSelectFighter={() => { }} />
         </div>
       </div>
