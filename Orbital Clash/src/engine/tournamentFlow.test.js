@@ -35,6 +35,7 @@ const {
   createTournamentBout,
   hasResumableTournament,
   loadActiveTournament,
+  matchDetails,
   nextPendingMatch,
   resolvedMatches,
   runTournamentMatch,
@@ -147,6 +148,47 @@ test('playing every match produces a champion, and the save survives a "close an
   assert.equal(allMatches(tournament).length, 24);
   assert.equal(tournament.eliminated.length, 24, 'every class but the champion is eliminated');
   assert.ok(!tournament.eliminated.includes(tournament.champion), 'the champion is never eliminated');
+});
+
+test('a played match exposes its length, winner and each fighter\'s final numbers', () => {
+  store.clear();
+  let tournament = buildTournamentBracket({ random: seeded(12) });
+  const first = nextPendingMatch(tournament);
+  tournament = applyMatchResult(tournament, first, runTournamentMatch(first.first, first.second)).tournament;
+  const second = nextPendingMatch(tournament);
+
+  const details = matchDetails(tournament, first.id);
+  assert.equal(details.id, first.id);
+  assert.equal(details.roundLabel, 'Preliminary Round');
+  assert.ok(details.durationSeconds > 0, 'the length of the match is recorded');
+  assert.equal(details.hasStats, true);
+  assert.deepEqual(details.combatants.map(c => c.name), [first.first, first.second], 'fighters come back in bracket order');
+  assert.equal(details.combatants.filter(c => c.isWinner).length, 1, 'exactly one winner');
+
+  const winner = details.combatants.find(c => c.isWinner);
+  const loser = details.combatants.find(c => !c.isWinner);
+  assert.equal(winner.name, details.winner);
+  assert.ok(winner.stats.health > 0, 'the winner finished with health left');
+  assert.equal(loser.stats.health, 0, 'the loser finished at 0');
+  assert.ok(winner.stats.damageDealt > 0 && loser.stats.damageTaken > 0, 'damage totals are recorded');
+  assert.ok(winner.stats.maxHealth >= winner.stats.health);
+
+  assert.equal(matchDetails(tournament, second.id), null, 'a match that has not been played has no details');
+  assert.equal(matchDetails(tournament, 'nope-1'), null, 'an unknown match id has no details');
+});
+
+test('a match saved without per-fighter stats still shows its winner and length', () => {
+  store.clear();
+  let tournament = buildTournamentBracket({ random: seeded(13) });
+  const match = nextPendingMatch(tournament);
+  tournament = applyMatchResult(tournament, match, runTournamentMatch(match.first, match.second)).tournament;
+  const legacy = { ...tournament, matchResults: [] };
+
+  const details = matchDetails(legacy, match.id);
+  assert.equal(details.hasStats, false);
+  assert.equal(details.winner, tournament.rounds.preliminary.matches[0].winner);
+  assert.ok(details.durationSeconds > 0);
+  assert.ok(details.combatants.every(c => c.stats === null));
 });
 
 test('a hand-edited/broken save is discarded instead of resuming a corrupt bracket', () => {

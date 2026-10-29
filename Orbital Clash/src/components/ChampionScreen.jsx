@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
-import { ROUND_LABELS, TOTAL_MATCHES, allMatches } from "../engine/tournament";
+import { ROUND_LABELS, TOTAL_MATCHES, allMatches, matchDetails } from "../engine/tournament";
 import TournamentBracket from "./TournamentBracket";
+import MatchDetails from "./MatchDetails";
 import FighterCanvas from "./MenuComponents/ClassCard";
 
 function classColor(name) {
@@ -57,6 +58,7 @@ function headToHeadLines(stats, champion) {
 
 export default function ChampionScreen({ tournament, stats, onNewTournament, onMainMenu }) {
   const [revealed, setRevealed] = useState(false);
+  const [inspectedMatchId, setInspectedMatchId] = useState(null);
 
   useEffect(() => {
     audioManager.playVictorySound();
@@ -73,6 +75,10 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
   const path = useMemo(() => championPath(tournament, champion), [tournament, champion]);
   const h2h = useMemo(() => headToHeadLines(stats, champion), [stats, champion]);
   const record = stats?.classes?.[champion];
+  const inspected = useMemo(
+    () => (inspectedMatchId ? matchDetails(tournament, inspectedMatchId) : null),
+    [tournament, inspectedMatchId]
+  );
 
   if (!tournament || !champion) return null;
 
@@ -128,7 +134,13 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
 
       <section className="champion-bracket-section">
         <h2>FULL BRACKET · {TOTAL_MATCHES} MATCHES</h2>
-        <TournamentBracket tournament={tournament} currentMatchId={null} onSelectFighter={() => { }} />
+        <p className="champion-bracket-hint">Right-click any match for its details</p>
+        <TournamentBracket
+          tournament={tournament}
+          currentMatchId={null}
+          onSelectFighter={() => { }}
+          onInspectMatch={matchId => { audioManager.playUiClick(); setInspectedMatchId(matchId); }}
+        />
       </section>
 
       <section className="champion-matches">
@@ -157,6 +169,8 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
           ← MAIN MENU
         </button>
       </div>
+
+      {inspected && <MatchDetails details={inspected} onClose={() => setInspectedMatchId(null)} />}
     </main>
   );
 }

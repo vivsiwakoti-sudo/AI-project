@@ -626,6 +626,32 @@ export function resolvedMatches(tournament) {
   return allMatches(tournament).filter(match => match.status === "resolved");
 }
 
+// Everything the tournament recorded about one decided match, shaped for a details
+// popup: the two fighters in bracket order with their final numbers. Returns null
+// for a match that does not exist or has not been played. The per-fighter numbers
+// come from the stored match result; a match from an older save that never kept
+// them still returns the winner, loser and length, with `hasStats` false.
+export function matchDetails(tournament, matchId) {
+  const match = allMatches(tournament).find(item => item.id === matchId);
+  if (!match || match.status !== "resolved") return null;
+  const record = (tournament.matchResults || []).find(item => item.id === matchId);
+  const combatants = [match.first, match.second].map(name => {
+    const snapshot = record?.combatants?.find(item => item?.name === name) ?? null;
+    return { name, isWinner: name === match.winner, stats: snapshot };
+  });
+  return {
+    id: match.id,
+    round: match.round,
+    roundLabel: ROUND_LABELS[match.round] ?? match.round,
+    winner: match.winner,
+    loser: match.loser,
+    durationSeconds: match.durationSeconds,
+    resolvedBy: record?.resolvedBy ?? null,
+    hasStats: combatants.every(item => item.stats),
+    combatants
+  };
+}
+
 // Where a class finished in the tournament. The champion is 1st, the runner-up
 // 2nd, and every other class is ranked by the round it was eliminated in (its
 // "best placement" in a single-elimination bracket).
@@ -882,6 +908,8 @@ export function applyMatchResult(tournament, match, result) {
         winner: winnerName,
         loser: loserName,
         durationSeconds,
+        // "draw" when both fighters fell together and the tiebreak decided it.
+        resolvedBy: result.resolvedBy ?? null,
         combatants: Array.isArray(result.combatants) ? result.combatants : []
       }
     ]

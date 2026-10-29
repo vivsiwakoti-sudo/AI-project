@@ -2094,6 +2094,142 @@
 
 .tournament-confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 
+/* --- Match details popup (right-click a played match in the final bracket) --- */
+.tb-match-inspectable { cursor: context-menu; }
+.tb-match-inspectable:hover { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan-glow), 0 0 14px rgba(0, 242, 255, 0.14); }
+
+.champion-bracket-hint {
+  margin: -4px 0 10px;
+  color: var(--text-muted);
+  font: 600 0.62rem var(--font-data);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.match-details-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 3, 10, 0.78);
+  backdrop-filter: blur(4px);
+  animation: fade-in var(--dur) var(--ease) both;
+}
+
+.match-details {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 20px 24px 22px;
+  border: 1px solid var(--border-strong);
+  border-top: 3px solid var(--cyan);
+  border-radius: var(--radius-lg);
+  background: var(--grad-elevated);
+  box-shadow: var(--shadow-lg);
+  animation: modal-enter var(--dur-slow) var(--ease) both;
+}
+
+.match-details-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font: 700 0.62rem var(--font-data);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.match-details-close {
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.match-details-close:hover { color: var(--danger); border-color: var(--danger); }
+
+.match-details-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 10px 0 14px;
+  font: 800 1.35rem var(--font-title);
+  letter-spacing: 0.04em;
+}
+
+.match-details-title em { color: var(--text-muted); font: 600 0.8rem var(--font-ui); font-style: normal; }
+
+.match-details-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.match-details-summary > div { display: flex; flex-direction: column; gap: 3px; }
+.match-details-summary span { color: var(--text-muted); font: 700 0.56rem var(--font-data); letter-spacing: 0.14em; }
+.match-details-summary b { color: var(--text-h); font: 700 1.05rem var(--font-mono); }
+
+.match-details-note { margin: 12px 0 0; color: var(--text-secondary); font-size: 0.78rem; line-height: 1.45; }
+
+.match-details-fighters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.match-details-fighter {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--fighter-color) 35%, var(--border));
+  border-left: 3px solid var(--fighter-color);
+  border-radius: var(--radius);
+  background: rgba(5, 7, 15, 0.55);
+}
+
+.match-details-fighter-winner {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--fighter-color) 22%, transparent);
+  background: color-mix(in srgb, var(--fighter-color) 8%, rgba(5, 7, 15, 0.55));
+}
+
+.match-details-fighter-head { display: flex; flex-direction: column; gap: 3px; }
+.match-details-fighter-head b { font: 800 1rem var(--font-ui); overflow-wrap: anywhere; }
+.match-details-fighter-head span { color: var(--text-muted); font: 700 0.56rem var(--font-data); letter-spacing: 0.14em; }
+.match-details-fighter-winner .match-details-fighter-head span { color: var(--success); }
+
+.match-details-hp-label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; color: var(--text-muted); font: 700 0.56rem var(--font-data); letter-spacing: 0.14em; }
+.match-details-hp-label b { color: var(--text-h); font-family: var(--font-mono); }
+.match-details-hp-track { height: 6px; overflow: hidden; border-radius: 3px; background: rgba(255, 255, 255, 0.08); }
+.match-details-hp-track i { display: block; height: 100%; border-radius: 3px; background: var(--fighter-color); }
+
+.match-details-rows { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.match-details-rows > div { display: flex; justify-content: space-between; gap: 8px; }
+.match-details-rows dt { color: var(--text-muted); font: 700 0.56rem var(--font-data); letter-spacing: 0.12em; }
+.match-details-rows dd { margin: 0; color: var(--text-h); font: 700 0.82rem var(--font-mono); }
+
+.match-details-missing { margin: 0; color: var(--text-muted); font-size: 0.75rem; }
+
+@media (max-width: 520px) {
+  .match-details-fighters { grid-template-columns: 1fr; }
+  .match-details-summary { grid-template-columns: 1fr 1fr; }
+}
+
 /* --- Tournament overview: the whole bracket, then a zoom into the first match --- */
 .tournament-overview {
   position: fixed;

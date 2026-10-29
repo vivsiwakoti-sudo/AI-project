@@ -39,11 +39,13 @@ function Slot({ name, state, isWinner, isLoser, isChampion, onClick }) {
 
 // A single match card. `match` is the engine's own match object, so this view
 // never invents state - it only renders what the bracket already decided.
-function MatchCard({ match, currentMatchId, champion, onSelectFighter }) {
+function MatchCard({ match, currentMatchId, champion, onSelectFighter, onInspectMatch }) {
   const isCurrent = match.id === currentMatchId && match.status !== "resolved";
   const resolved = match.status === "resolved";
   const errored = match.status === "error";
   const state = resolved ? "done" : isCurrent ? "current" : errored ? "error" : "upcoming";
+  // Only a played match has anything to show, so only it answers a right-click.
+  const inspectable = resolved && Boolean(onInspectMatch);
 
   const slotState = (name) => {
     if (champion && champion === name) return "champion";
@@ -52,7 +54,12 @@ function MatchCard({ match, currentMatchId, champion, onSelectFighter }) {
   };
 
   return (
-    <article className={`tb-match tb-match-${state}`} data-match-id={match.id}>
+    <article
+      className={`tb-match tb-match-${state}${inspectable ? " tb-match-inspectable" : ""}`}
+      data-match-id={match.id}
+      title={inspectable ? "Right-click for match details" : undefined}
+      onContextMenu={inspectable ? (event) => { event.preventDefault(); onInspectMatch(match.id); } : undefined}
+    >
       <header className="tb-match-head">
         <span className="tb-match-id">{match.id.toUpperCase()}</span>
         {resolved && Number.isFinite(match.durationSeconds)
@@ -93,7 +100,7 @@ function MatchCard({ match, currentMatchId, champion, onSelectFighter }) {
 // The full single-elimination bracket: byes first, then every round in order.
 // It renders whichever rounds the engine has created so far, so an in-progress
 // tournament shows real matches and later rounds simply do not exist yet.
-export default function TournamentBracket({ tournament, currentMatchId, onSelectFighter, compact = false }) {
+export default function TournamentBracket({ tournament, currentMatchId, onSelectFighter, onInspectMatch, compact = false }) {
   if (!tournament) return null;
 
   const byes = tournament.byes || [];
@@ -141,6 +148,7 @@ export default function TournamentBracket({ tournament, currentMatchId, onSelect
                       currentMatchId={currentMatchId}
                       champion={champion}
                       onSelectFighter={onSelectFighter}
+                      onInspectMatch={onInspectMatch}
                     />
                   ))
                 ) : (
