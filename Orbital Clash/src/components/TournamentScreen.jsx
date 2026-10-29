@@ -667,6 +667,7 @@ function TournamentScreenView({
                       <span style={{ color: fighterFor(stageMatch?.second).color }}>{stageMatch?.second}</span>
                     </h2>
                     <p className="tournament-announce-sub">{pending ? "HERE WE GO" : "TOURNAMENT COMPLETE"}</p>
+                    {pending && <span className="tournament-announce-trace" aria-hidden="true" />}
                   </div>
                 )}
                 {phase === "intro" && (
@@ -678,6 +679,7 @@ function TournamentScreenView({
                       <span style={{ color: fighterFor(stageMatch?.second).color }}>{stageMatch?.second}</span>
                     </h2>
                     <p className="tournament-announce-sub">FIGHT</p>
+                    <span className="tournament-announce-trace" aria-hidden="true" />
                   </div>
                 )}
                 {phase === "countdown" && countdown !== null && (

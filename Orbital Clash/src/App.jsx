@@ -5,6 +5,7 @@ import EndScreen from "./components/EndScreen";
 import SettingsPanel from "./components/SettingsPanel";
 import TournamentScreen from "./components/TournamentScreen";
 import ChampionScreen from "./components/ChampionScreen";
+import ScreenTransition from "./components/ScreenTransition";
 import { audioManager } from "./engine/audio/AudioManager";
 import { DEFAULT_ARENA_SIZE } from "./engine/config";
 import {
@@ -75,6 +76,61 @@ function App() {
 
   const toggleMute = () => setIsMuted(audioManager.toggleMuted());
 
+  // Every screen is built here rather than as a list of `screen === …` siblings,
+  // so the transition wrapper can keep showing the old one for the length of its
+  // exit animation. `screen` still drives it exactly as before.
+  const screens = {
+    menu: <Menu onStart={(f, size) => { setSelectedFighters(f); setArenaSize(size); setScreen("game"); }} onStartTournament={startTournament} />,
+    game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => { setBattleResults(res); setBattleAborted(Boolean(meta?.aborted)); setReplayFrames(meta?.replayFrames || []); setScreen("end"); }} />,
+    end: <EndScreen results={battleResults} aborted={battleAborted} replayFrames={replayFrames} onReturn={returnToRoster} />,
+    tournament: (
+      <TournamentScreen
+        key={tournamentRunId}
+        tournament={tournament}
+        onTournamentChange={next => {
+          setTournament(next);
+          saveActiveTournament(next);
+        }}
+        onComplete={next => {
+          setTournament(next);
+          saveActiveTournament(next);
+          // Fold the whole tournament into the persistent stats + history once.
+          // The engine guards against counting the same tournament twice.
+          setStats(recordTournamentResult(next));
+          setChampion(next);
+          setScreen("champion");
+        }}
+        onExit={() => {
+          setTournament(null);
+          setScreen("menu");
+        }}
+      />
+    ),
+    champion: (
+      <ChampionScreen
+        tournament={champion || tournament}
+        stats={stats}
+        onNewTournament={() => {
+          // The next tournament starts on the map the last one used; the overview
+          // lets the player change it before the first match.
+          const next = buildTournamentBracket({ arenaSize: (champion || tournament)?.arenaSize });
+          saveActiveTournament(next);
+          setTournament(next);
+          setTournamentRunId(id => id + 1);
+          setChampion(null);
+          setStats(loadTournamentStats());
+          setScreen("tournament");
+        }}
+        onMainMenu={() => {
+          setTournament(null);
+          setChampion(null);
+          saveActiveTournament(null);
+          setScreen("menu");
+        }}
+      />
+    )
+  };
+
   return (
     <div className="App">
       <div className="screen-frame"></div>
@@ -88,56 +144,8 @@ function App() {
         </div>
       </header>
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
-      {screen === "menu" && <Menu onStart={(f, size) => { setSelectedFighters(f); setArenaSize(size); setScreen("game"); }} onStartTournament={startTournament} />}
-      {screen === "game" && <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => { setBattleResults(res); setBattleAborted(Boolean(meta?.aborted)); setReplayFrames(meta?.replayFrames || []); setScreen("end"); }} />}
-      {screen === "end" && <EndScreen results={battleResults} aborted={battleAborted} replayFrames={replayFrames} onReturn={returnToRoster} />}
 
-      {screen === "tournament" && (
-        <TournamentScreen
-          key={tournamentRunId}
-          tournament={tournament}
-          onTournamentChange={next => {
-            setTournament(next);
-            saveActiveTournament(next);
-          }}
-          onComplete={next => {
-            setTournament(next);
-            saveActiveTournament(next);
-            // Fold the whole tournament into the persistent stats + history once.
-            // The engine guards against counting the same tournament twice.
-            setStats(recordTournamentResult(next));
-            setChampion(next);
-            setScreen("champion");
-          }}
-          onExit={() => {
-            setTournament(null);
-            setScreen("menu");
-          }}
-        />
-      )}
-      {screen === "champion" && (
-        <ChampionScreen
-          tournament={champion || tournament}
-          stats={stats}
-          onNewTournament={() => {
-            // The next tournament starts on the map the last one used; the overview
-            // lets the player change it before the first match.
-            const next = buildTournamentBracket({ arenaSize: (champion || tournament)?.arenaSize });
-            saveActiveTournament(next);
-            setTournament(next);
-            setTournamentRunId(id => id + 1);
-            setChampion(null);
-            setStats(loadTournamentStats());
-            setScreen("tournament");
-          }}
-          onMainMenu={() => {
-            setTournament(null);
-            setChampion(null);
-            saveActiveTournament(null);
-            setScreen("menu");
-          }}
-        />
-      )}
+      <ScreenTransition screenKey={screen} render={key => <div className="app-screen">{screens[key]}</div>} />
     </div>
   );
 }

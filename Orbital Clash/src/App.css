@@ -1292,10 +1292,111 @@
   to { opacity: 1; }
 }
 
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @keyframes modal-enter {
   from { opacity: 0; transform: translateY(16px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* ==========================================================================
+   SCREEN TRANSITIONS
+   --------------------------------------------------------------------------
+   Every change of screen shares one beat: the old screen sinks and blurs out,
+   a glitch bar sweeps the viewport, and the new screen rises out of it. The
+   timings here are mirrored by the constants in components/ScreenTransition.jsx.
+   ========================================================================== */
+
+.screen-transition {
+  --xf-out: 340ms;
+  --xf-in: 520ms;
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.screen-transition-stage {
+  width: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 38%;
+}
+
+/* The arriving screen is a freshly mounted node, so its entrance always plays
+   from the start without any JS having to trigger it. */
+.screen-transition-stage:not(.screen-transition-leaving) {
+  animation: screen-in var(--xf-in) cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+/* The leaving screen stays over the arriving one, dissolving in place, and
+   never intercepts a click on its way out. */
+.screen-transition-leaving {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  animation: screen-out var(--xf-out) cubic-bezier(0.55, 0, 0.85, 0.4) both;
+}
+
+/* The glitch bar: a thin scanline band that snaps across the screen between the
+   two screens, with a bloom that dies away as the new screen settles. */
+.screen-transition-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(180deg,
+      transparent 0%,
+      rgba(0, 242, 255, 0.07) 34%,
+      rgba(120, 245, 255, 0.5) 47%,
+      rgba(255, 255, 255, 0.85) 50%,
+      rgba(0, 242, 255, 0.45) 53%,
+      rgba(0, 242, 255, 0.06) 66%,
+      transparent 100%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 242, 255, 0.22), transparent 62%);
+  mix-blend-mode: screen;
+}
+
+/* Each transition mounts a fresh flash node, so this animation runs once per
+   screen change - never on the idle wrapper. */
+.screen-transition-flash {
+  animation: screen-flash 720ms cubic-bezier(0.3, 0.6, 0.2, 1) both;
+}
+
+@keyframes screen-out {
+  0% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0) brightness(1); }
+  35% { opacity: 1; transform: translateY(-4px) scale(0.997); filter: blur(0) brightness(1.25); }
+  to { opacity: 0; transform: translateY(-22px) scale(0.982); filter: blur(7px) brightness(0.6); }
+}
+
+@keyframes screen-in {
+  0% { opacity: 0; transform: translateY(30px) scale(0.985); filter: blur(6px); }
+  55% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes screen-flash {
+  0% { opacity: 0; transform: translateY(8vh) scaleY(0.7); }
+  30% { opacity: 1; transform: translateY(0) scaleY(1); }
+  60% { opacity: 0.6; transform: translateY(-3vh) scaleY(0.14); }
+  100% { opacity: 0; transform: translateY(-12vh) scaleY(0.04); }
+}
+
+/* Reduced motion: a plain short crossfade, no travel, no blur, no flash. */
+@media (prefers-reduced-motion: reduce) {
+  .screen-transition-stage:not(.screen-transition-leaving) { animation: fade-in 150ms linear both; }
+  .screen-transition-leaving { animation: fade-out 120ms linear both; }
+  .screen-transition-flash { display: none; }
+}
+
 /* ==========================================================================
    TOURNAMENT MODE
    --------------------------------------------------------------------------
@@ -1627,6 +1728,15 @@
   flex-direction: column;
   z-index: 3;
   animation: fade-in var(--dur-slow) var(--ease) both;
+  /* Same dissolve the leaving fight uses, so the cut from fight to card matches
+     the cut from one screen to the next. */
+  backdrop-filter: blur(0);
+  animation: fade-in var(--dur-slow) var(--ease) both, result-dissolve 460ms cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+@keyframes result-dissolve {
+  0% { backdrop-filter: blur(8px); background: rgba(3, 5, 12, 0.6); }
+  100% { backdrop-filter: blur(0); background: transparent; }
 }
 
 .tournament-result-still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.42; filter: saturate(0.9); }
@@ -1679,6 +1789,7 @@
 
 /* --- Match announcements --------------------------------------------- */
 .tournament-announce {
+  animation: announcer-enter 420ms cubic-bezier(0.16, 0.84, 0.24, 1) both;
   position: absolute;
   inset: 0;
   display: flex;
@@ -1688,8 +1799,33 @@
   gap: 8px;
   padding: 20px;
   background: radial-gradient(circle at 50% 50%, rgba(3, 5, 12, 0.55), rgba(3, 5, 12, 0.85));
-  animation: fade-in var(--dur-slow) var(--ease) both;
+  animation: announcer-enter 420ms cubic-bezier(0.16, 0.84, 0.24, 1) both;
   text-align: center;
+}
+
+/* A light streak under the VS card that snaps in, then pulses away: the same
+   "cut" the screen transitions use, shrunk down to the arena. */
+.tournament-announce-trace {
+  display: block;
+  width: min(70%, 320px);
+  height: 2px;
+  margin-top: 4px;
+  background: linear-gradient(90deg, transparent, var(--cyan), #ffffff, var(--cyan), transparent);
+  box-shadow: 0 0 14px var(--cyan-glow);
+  transform-origin: 50% 50%;
+  animation: announce-trace 900ms var(--ease) both;
+}
+
+@keyframes announcer-enter {
+  0% { opacity: 0; transform: scale(1.04); filter: blur(4px); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+@keyframes announce-trace {
+  0% { opacity: 0; transform: scaleX(0.1); }
+  30% { opacity: 1; transform: scaleX(1); }
+  70% { opacity: 0.8; }
+  100% { opacity: 0.35; transform: scaleX(1.08); }
 }
 
 .tournament-announce-eyebrow {
