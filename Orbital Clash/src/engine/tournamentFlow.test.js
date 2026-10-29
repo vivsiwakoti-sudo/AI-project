@@ -32,13 +32,16 @@ const {
   allMatches,
   applyMatchResult,
   buildTournamentBracket,
+  createTournamentBout,
   hasResumableTournament,
   loadActiveTournament,
   nextPendingMatch,
   resolvedMatches,
   runTournamentMatch,
+  sanitizeArenaSize,
   saveActiveTournament,
-  validateTournament
+  validateTournament,
+  withArenaSize
 } = await import('./tournament.js');
 
 // Deterministic RNG so the bracket shape assertions are repeatable.
@@ -204,4 +207,57 @@ test('a finished tournament is cleared from the active save, so the next click s
   // An explicit keepComplete keeps the finished bracket on disk.
   saveActiveTournament(tournament, { keepComplete: true });
   assert.equal(loadActiveTournament()?.champion, tournament.champion);
+});
+
+test('a tournament defaults to the 800 map and only accepts the offered sizes', () => {
+  assert.equal(buildTournamentBracket({ random: seeded(2) }).arenaSize, 800);
+  assert.equal(buildTournamentBracket({ random: seeded(2), arenaSize: 1000 }).arenaSize, 1000);
+  assert.equal(buildTournamentBracket({ random: seeded(2), arenaSize: 123 }).arenaSize, 800, 'an unlisted size falls back');
+  assert.equal(sanitizeArenaSize('900'), 800, 'a string is not a valid size');
+  assert.equal(sanitizeArenaSize(700), 700);
+});
+
+test('changing the arena size leaves the bracket itself untouched', () => {
+  const bracket = buildTournamentBracket({ random: seeded(4) });
+  const resized = withArenaSize(bracket, 900);
+  assert.equal(resized.arenaSize, 900);
+  assert.deepEqual(resized.rounds, bracket.rounds);
+  assert.deepEqual(resized.byes, bracket.byes);
+  assert.equal(bracket.arenaSize, 800, 'the original object is not mutated');
+  assert.equal(withArenaSize(bracket, 5).arenaSize, 800);
+});
+
+test('the chosen arena size is saved, restored, and kept as matches are played', () => {
+  store.clear();
+  let tournament = withArenaSize(buildTournamentBracket({ random: seeded(8) }), 1000);
+  saveActiveTournament(tournament);
+  assert.equal(loadActiveTournament().arenaSize, 1000);
+  assert.equal(JSON.parse(store.get(TOURNAMENT_SAVE_KEY)).battle.arenaSize, 1000, 'the save record names the map too');
+
+  const match = nextPendingMatch(tournament);
+  tournament = applyMatchResult(tournament, match, runTournamentMatch(match.first, match.second)).tournament;
+  assert.equal(tournament.arenaSize, 1000, 'applying a result keeps the map');
+  saveActiveTournament(tournament);
+  assert.equal(loadActiveTournament().arenaSize, 1000);
+});
+
+test('a save from before arena sizes existed (or with a bad size) resumes on the 800 map', () => {
+  store.clear();
+  const bracket = buildTournamentBracket({ random: seeded(6) });
+  const { arenaSize: _omitted, ...legacy } = bracket;
+  store.set(TOURNAMENT_SAVE_KEY, JSON.stringify(legacy));
+  assert.equal(loadActiveTournament().arenaSize, 800);
+
+  store.set(TOURNAMENT_SAVE_KEY, JSON.stringify({ ...bracket, arenaSize: 99999 }));
+  assert.equal(loadActiveTournament().arenaSize, 800);
+});
+
+test('a bout is built on the tournament arena size it is given', () => {
+  for (const size of [700, 1000]) {
+    const bout = createTournamentBout('Knight', 'Ninja', { arenaSize: size, performanceMode: true });
+    assert.equal(bout.arenaSize, size);
+    const inside = bout.fighters.every(f => f.x > 0 && f.x < size && f.y > 0 && f.y < size);
+    assert.ok(inside, `both fighters spawn inside a ${size} map`);
+    bout.destroy();
+  }
 });

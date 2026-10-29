@@ -2137,9 +2137,26 @@
   position: absolute;
   top: 0;
   left: 0;
+  box-sizing: border-box;
   width: 1600px;
+  padding: 6px;
   transform-origin: 0 0;
 }
+
+/* The bracket is scaled down to fit the screen, so the type inside it is set a
+   notch larger than the sidebar's to stay legible after the shrink. */
+.overview-bracket .tb-match { padding: 10px 12px; gap: 9px; }
+.overview-bracket .tb-match-head { font-size: 0.66rem; }
+.overview-bracket .tb-match-vs { font-size: 0.62rem; }
+.overview-bracket .tb-slot { padding: 8px 9px; font-size: 0.86rem; gap: 7px; }
+.overview-bracket .tb-match-winner-label { font-size: 0.62rem; }
+.overview-bracket .tb-match-winner { font-size: 0.86rem; }
+.overview-bracket .tb-round-head h3 { font-size: 0.9rem; }
+.overview-bracket .tb-round-count { font-size: 0.7rem; }
+.overview-bracket .tb-round-pending { font-size: 0.74rem; }
+.overview-bracket .tb-bye-label { font-size: 0.78rem; }
+.overview-bracket .tb-bye-chip { font-size: 0.82rem; padding: 4px 12px 4px 8px; }
+.overview-bracket .tb-entrant-count { font-size: 0.74rem; }
 
 /* The dive into the first match. Only while leaving, so a window resize on the
    overview still re-fits instantly. */
