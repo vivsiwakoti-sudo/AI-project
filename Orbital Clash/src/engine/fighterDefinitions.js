@@ -299,7 +299,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 7,
     description: "Creates black hole, pulls opponent.",
-    description2: "Tracks the opponent and launches a singularity. Where it strikes a fighter or the arena wall, it opens an event horizon that pulls every fighter within 200px and deals 10 damage once to each one it drags in. The event horizon lasts about 1.8 seconds.",
+    description2: "Tracks the opponent and launches a singularity. Where it strikes a fighter or the arena wall, it opens an event horizon that pulls every fighter within 200px for about 1.8 seconds. Anyone caught in the opening 0.3 seconds always takes 3 ticks of 5 damage (15 total). Anyone who is caught after that takes 10 damage once and is thrown outwards.",
     keywords: ["gravity", "pull", "dot", "zone"],
   },
   "Reaper": {

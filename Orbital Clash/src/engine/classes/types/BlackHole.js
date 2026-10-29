@@ -6,13 +6,23 @@ import { audioManager } from "../../audio/AudioManager.js";
 // Same inset as the inner border in CollisionSystem.resolveFighterWall.
 const WALL_INSET = 20;
 const PULL_RANGE = 200;
-const PULL_DAMAGE = 10;
+// The opening blast: anyone caught inside the hole during its first
+// INITIAL_BURST_SECONDS takes INITIAL_TICKS ticks of INITIAL_TICK_DAMAGE, spaced
+// INITIAL_TICK_INTERVAL apart - always three ticks, however long they stay in.
+const INITIAL_BURST_SECONDS = 0.3;
+const INITIAL_TICKS = 3;
+const INITIAL_TICK_DAMAGE = 5;
+const INITIAL_TICK_INTERVAL = 0.1;
+// Anyone caught after that blast takes one heavy hit and is flung out of the hole.
+const LATE_CATCH_DAMAGE = 10;
 
 export class BlackHole extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
         this.cooldownTimer = 0;
-        this.activeHole = null; // {x, y, duration, damaged}
+        // {x, y, duration, age, struck, ejected}
+        // struck: victim -> pending blast ticks; ejected: victims already flung out.
+        this.activeHole = null;
         this.projectiles = [];
         this.holeLoopStop = null; // stopper for the looped gravity rumble
     }
@@ -34,7 +44,7 @@ export class BlackHole extends FighterBase {
     // Opens an event horizon at (x, y). Used both when a singularity strikes a
     // fighter and when it reaches the arena wall.
     openHole(x, y, projectile) {
-        this.activeHole = { x, y, duration: 1.8, damaged: new Set() };
+        this.activeHole = { x, y, duration: 1.8, age: 0, struck: new Map(), ejected: new Set() };
         projectile.active = false;
         // The event horizon tearing open: boom, then the sustained rumble.
         audioManager.playBlackHoleOpen();
@@ -45,41 +55,76 @@ export class BlackHole extends FighterBase {
         }
     }
 
+    // A fighter that wanders into the hole after the opening blast takes one heavy
+    // hit and is thrown straight out of it. AOE damage deliberately has no
+    // knockback of its own (see DamageSystem), so the shove is done here: the
+    // victim's heading points away from the hole, and it is exempt from the pull
+    // for the rest of this hole so it is not simply dragged back in. The throw
+    // happens whether or not the damage was dodged - it is the blast, not the hit.
+    flingOut(hole, victim, dx, dy, dist) {
+        hole.ejected.add(victim);
+        audioManager.playBlackHoleTick();
+        DamageSystem.applyDamage(this, victim, LATE_CATCH_DAMAGE, "AOE", { ignoreCooldown: true });
+        victim.vx = dist > 0 ? -dx / dist : 1;
+        victim.vy = dist > 0 ? -dy / dist : 0;
+        if (victim.particleSystem) victim.particleSystem.emitImpact(victim.x, victim.y, "#c77dff", 14);
+    }
+
     update(dt, opponent) {
         super.update(dt, opponent);
 
         if (this.activeHole) {
-            this.activeHole.duration -= dt;
+            const hole = this.activeHole;
+            hole.duration -= dt;
+            hole.age += dt;
+            const inOpeningBlast = hole.age <= INITIAL_BURST_SECONDS;
 
             // Pull every living fighter near the event horizon, not just the one
             // opponent reference handed over by the arena. The vector is reversed
             // from a repulsion (`hole -> fighter`), so victims are dragged in.
-            const hole = this.activeHole;
             const pulled = (this.victims?.length ? this.victims : (opponent ? [opponent] : []))
                 .filter(f => f && !f.isDead);
             pulled.forEach(victim => {
                 const dx = hole.x - victim.x;
                 const dy = hole.y - victim.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < PULL_RANGE && dist > 5) {
+                const inRange = dist < PULL_RANGE;
+
+                // Each fighter is dealt with once per event horizon, the first time
+                // it is inside it. It is recorded even if the hit is dodged or
+                // parried, so a fighter that stays in range is never re-rolled.
+                if (inRange && !hole.struck.has(victim) && !hole.ejected.has(victim)) {
+                    if (inOpeningBlast) {
+                        // Caught by the opening blast: three ticks of 5, first one now.
+                        hole.struck.set(victim, { ticksLeft: INITIAL_TICKS, timer: 0 });
+                    } else {
+                        this.flingOut(hole, victim, dx, dy, dist);
+                    }
+                }
+
+                if (inRange && dist > 5 && !hole.ejected.has(victim)) {
                     victim.vx += (dx / dist) * 10 * dt;
                     victim.vy += (dy / dist) * 10 * dt;
                     victim.isPulledIn = true;
                 } else {
                     victim.isPulledIn = false;
                 }
-
-                // Each fighter is hit once per event horizon, the first time it is
-                // pulled in. It is recorded even if the hit is dodged or parried, so
-                // a fighter that stays in range is not re-rolled every frame.
-                if (dist < PULL_RANGE && !hole.damaged.has(victim)) {
-                    hole.damaged.add(victim);
-                    audioManager.playBlackHoleTick();
-                    DamageSystem.applyDamage(this, victim, PULL_DAMAGE, "AOE", { ignoreCooldown: true });
-                }
             });
 
+            // Opening-blast ticks. They finish even if the victim is dragged or
+            // flung out of range meanwhile - that is what makes it always three.
+            for (const [victim, blast] of hole.struck) {
+                if (blast.ticksLeft <= 0 || victim.isDead) continue;
+                blast.timer -= dt;
+                if (blast.timer > 0) continue;
+                blast.timer += INITIAL_TICK_INTERVAL;
+                blast.ticksLeft -= 1;
+                audioManager.playBlackHoleTick();
+                DamageSystem.applyDamage(this, victim, INITIAL_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
+            }
+
             if (this.activeHole.duration <= 0) {
+                pulled.forEach(victim => { victim.isPulledIn = false; });
                 this.activeHole = null;
                 this.stopHoleLoop();
             }
