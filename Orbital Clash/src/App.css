@@ -1439,6 +1439,12 @@
   box-shadow: 0 0 12px rgba(255, 77, 109, 0.4);
 }
 
+.tournament-control-save {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: var(--cyan-soft);
+}
+
 /* --- Body: stage + bracket ------------------------------------------- */
 .tournament-body {
   width: 100%;
@@ -2086,7 +2092,7 @@
 
 .tournament-confirm p { margin: 0 0 16px; color: var(--text-secondary); font-size: 0.85rem; }
 
-.tournament-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.tournament-confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 
 /* --- Tournament overview: the whole bracket, then a zoom into the first match --- */
 .tournament-overview {

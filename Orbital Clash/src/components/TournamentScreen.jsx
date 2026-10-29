@@ -548,16 +548,29 @@ function TournamentScreenView({
     setShowExitConfirm(true);
   };
 
-  const confirmExit = () => {
-    audioManager.playUiClick();
+  // Leaving the tournament screen. Every exit tears the watched bout down first
+  // (it owns the simulated clock); `save` decides what happens to the bracket:
+  // kept on disk so the menu offers RESUME, or removed so the next TOURNAMENT
+  // MODE click starts a fresh one. Discarding never touches the career stats,
+  // which are only written when a tournament is actually completed.
+  const leaveTournament = save => {
     setShowExitConfirm(false);
     runTokenRef.current += 1;
-    // Tear down the watched bout first: it owns the simulated clock.
     boutRef.current?.destroy();
     boutRef.current = null;
     audioManager.stopMusic();
-    saveActiveTournament(tournament);
+    saveActiveTournament(save ? tournament : null);
     onExit?.();
+  };
+
+  const confirmExit = () => {
+    audioManager.playUiClick();
+    leaveTournament(true);
+  };
+
+  const confirmExitWithoutSaving = () => {
+    audioManager.playUiClick();
+    leaveTournament(false);
   };
 
   const handleRetry = () => {
@@ -743,10 +756,11 @@ function TournamentScreenView({
         <div className="tournament-confirm-overlay" role="dialog" aria-label="Exit tournament">
           <div className="tournament-confirm">
             <h3>EXIT TOURNAMENT?</h3>
-            <p>Your bracket is saved. You can resume it later from the main menu.</p>
+            <p>Save your bracket to resume it later from the main menu, or exit without saving to discard it.</p>
             <div className="tournament-confirm-actions">
               <button className="tournament-control" onClick={() => setShowExitConfirm(false)}>CANCEL</button>
-              <button className="tournament-control tournament-control-exit" onClick={confirmExit}>EXIT</button>
+              <button className="tournament-control tournament-control-exit" onClick={confirmExitWithoutSaving}>EXIT WITHOUT SAVING</button>
+              <button className="tournament-control tournament-control-save" onClick={confirmExit} autoFocus>SAVE &amp; EXIT</button>
             </div>
           </div>
         </div>
