@@ -16,6 +16,7 @@ import { DamageSystem } from "./systems/DamageSystem.js";
 import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { spawnPositionFor, launchDirectionFor } from "./systems/SpawnSystem.js";
 import { stepBattle } from "./systems/BattleSimulation.js";
+import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE } from "./config.js";
 
 // --- Tournament shape -------------------------------------------------------
 // 25 classes -> 9 preliminary matches (18 fighters) + 7 byes = 16 in the Round
@@ -34,9 +35,22 @@ export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + roun
 export const ROUND_LABELS = Object.fromEntries(ROUND_DEFINITIONS.map(round => [round.key, round.label]));
 export const ROUND_ORDER = ROUND_DEFINITIONS.map(round => round.key);
 
-// The arena is always the same size for tournament bouts so a duel plays out on
-// the same field a normal battle does (the default 800x800 map).
-export const TOURNAMENT_ARENA_SIZE = 800;
+// Every bout of ONE tournament is fought on the same square map, chosen before
+// the first match and stored on the tournament (`tournament.arenaSize`) so a
+// resumed bracket keeps it. The sizes on offer are the same ones the free-for-all
+// picker uses; anything else (a hand-edited or older save) falls back to the
+// default 800x800 map.
+export const TOURNAMENT_ARENA_SIZE = DEFAULT_ARENA_SIZE;
+
+export function sanitizeArenaSize(value) {
+  return ARENA_SIZE_OPTIONS.includes(value) ? value : TOURNAMENT_ARENA_SIZE;
+}
+
+// Returns the tournament with a different map size. The bracket itself is
+// untouched, so this is only meaningful before the first match is played.
+export function withArenaSize(tournament, size) {
+  return { ...tournament, arenaSize: sanitizeArenaSize(size) };
+}
 
 // The arena's clock: a five minute bout, then sudden death drains every survivor
 // by SUDDEN_DEATH_DAMAGE once a second. Both the headless runner and the live
@@ -455,7 +469,7 @@ function shuffle(list, random) {
 // list. Seven classes are drawn for byes first, then the remaining 18 are paired
 // into the 9 preliminary matches. No strength, seed or win rate is consulted -
 // byes are random by design.
-export function buildTournamentBracket({ random = Math.random, timestamp = Date.now() } = {}) {
+export function buildTournamentBracket({ random = Math.random, timestamp = Date.now(), arenaSize = TOURNAMENT_ARENA_SIZE } = {}) {
   const allNames = Object.keys(FIGHTER_CLASSES);
   if (allNames.length !== TOURNAMENT_SIZE) {
     // The tournament format is defined for 25 classes. A changed roster should be
@@ -487,6 +501,7 @@ export function buildTournamentBracket({ random = Math.random, timestamp = Date.
   const tournament = {
     id: `tournament-${timestamp}`,
     createdAt: timestamp,
+    arenaSize: sanitizeArenaSize(arenaSize),
     random: typeof random === "function",
     byes: byes.map((name, index) => ({ name, seed: index })),
     rounds: {
@@ -1067,6 +1082,7 @@ export function battleSnapshot(tournament) {
     roundLabel: ROUND_LABELS[round] ?? round,
     first: match?.first ?? null,
     second: match?.second ?? null,
+    arenaSize: sanitizeArenaSize(tournament.arenaSize),
     eliminatedBefore: eliminated.length,
     eliminated,
     stillIn: (tournament.participants ?? []).filter(name => !eliminated.includes(name))
@@ -1160,6 +1176,7 @@ export function loadActiveTournament() {
     const tournament = {
       id: typeof raw.id === "string" ? raw.id : `tournament-${Date.now()}`,
       createdAt: sanitizeNumber(raw.createdAt, Date.now()),
+      arenaSize: sanitizeArenaSize(raw.arenaSize),
       byes,
       rounds,
       participants,

@@ -120,7 +120,9 @@ function App() {
           tournament={champion || tournament}
           stats={stats}
           onNewTournament={() => {
-            const next = buildTournamentBracket();
+            // The next tournament starts on the map the last one used; the overview
+            // lets the player change it before the first match.
+            const next = buildTournamentBracket({ arenaSize: (champion || tournament)?.arenaSize });
             saveActiveTournament(next);
             setTournament(next);
             setTournamentRunId(id => id + 1);

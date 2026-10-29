@@ -1488,10 +1488,11 @@
    tournament match is fought on screen exactly like a normal battle. */
 .tournament-arena-live {
   display: grid;
-  /* Canvas in the middle, fighter HUDs on either side. The canvas track is fixed
-     to the world's native 800px wherever there is room, so the fight reads at the
-     same scale as a normal battle; the HUD tracks give up width first. */
-  grid-template-columns: minmax(170px, 1fr) minmax(0, 800px) minmax(170px, 1fr);
+  /* Canvas in the middle, fighter HUDs on either side. The canvas track is the
+     world's native size (--arena-px, set from the tournament's chosen map)
+     wherever there is room, so the fight reads at the same scale as a normal
+     battle; the HUD tracks give up width first. */
+  grid-template-columns: minmax(170px, 1fr) minmax(0, var(--arena-px, 800px)) minmax(170px, 1fr);
   gap: 12px;
   align-items: start;
   justify-items: center;
@@ -1528,11 +1529,11 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  /* The 800px track is the world size, so fill it. Capping by viewport height
+  /* The track is the world size, so fill it. Capping by viewport height
      shrank the canvas far below its column and made every fighter read as a speck
      in a mostly-empty square. The arena is the point of this screen: it gets the
      full world scale, and the page scrolls if the window is short. */
-  max-width: 800px;
+  max-width: var(--arena-px, 800px);
   justify-self: center;
   border: 1px solid color-mix(in srgb, var(--cyan) 55%, var(--border));
   border-radius: var(--radius);
@@ -1607,7 +1608,7 @@
 }
 
 .tournament-arena-live:fullscreen .tournament-canvas-wrap {
-  max-width: min(800px, calc(100vh - 80px));
+  max-width: min(var(--arena-px, 800px), calc(100vh - 80px));
 }
 
 .tournament-announce-compact { background: radial-gradient(circle at 50% 50%, rgba(3, 5, 12, 0.5), rgba(3, 5, 12, 0.82)); }
@@ -2086,6 +2087,101 @@
 .tournament-confirm p { margin: 0 0 16px; color: var(--text-secondary); font-size: 0.85rem; }
 
 .tournament-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* --- Tournament overview: the whole bracket, then a zoom into the first match --- */
+.tournament-overview {
+  position: fixed;
+  inset: 58px 0 0 0;
+  z-index: 30;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 28px 18px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(47, 123, 255, 0.16), transparent 60%),
+    #05070f;
+  opacity: 1;
+  transition: opacity 0.55s var(--ease);
+}
+
+.tournament-overview-fading { opacity: 0; pointer-events: none; }
+
+.tournament-overview-head,
+.tournament-overview-foot { transition: opacity 0.3s var(--ease); }
+
+.tournament-overview-leaving .tournament-overview-head,
+.tournament-overview-leaving .tournament-overview-foot { opacity: 0; pointer-events: none; }
+
+.tournament-overview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tournament-overview-title { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.tournament-overview-title h2 { margin: 0; color: var(--text-h); font: 900 1.5rem var(--font-title); letter-spacing: 0.1em; }
+.tournament-overview-title p { margin: 0; color: var(--text-secondary); font: 600 0.72rem var(--font-data); letter-spacing: 0.1em; }
+
+/* The stage is exactly the room left for the bracket; the bracket is laid out at a
+   fixed width and scaled/translated into it from JavaScript. */
+.tournament-overview-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.overview-bracket {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1600px;
+  transform-origin: 0 0;
+}
+
+/* The dive into the first match. Only while leaving, so a window resize on the
+   overview still re-fits instantly. */
+.tournament-overview-leaving .overview-bracket { transition: transform 1.5s cubic-bezier(0.65, 0, 0.25, 1); }
+
+.overview-bracket .tb-slot { cursor: default; }
+
+/* Preliminary and Round of 16 hold the most matches, so they get two columns each
+   and the whole bracket stays short enough to fit on screen. */
+.overview-bracket .tb-rounds { grid-template-columns: 2fr 2fr 1fr 1fr 1fr; gap: 16px; }
+
+.overview-bracket [data-round="preliminary"] .tb-round-matches,
+.overview-bracket [data-round="round16"] .tb-round-matches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.overview-bracket .tb-round-pending { grid-column: 1 / -1; }
+
+.tournament-overview-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 22px;
+}
+
+.tournament-overview-next { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tournament-overview-next span { color: var(--text-muted); font: 700 0.6rem var(--font-data); letter-spacing: 0.16em; }
+.tournament-overview-next b { color: var(--text-h); font: 700 1rem var(--font-ui); letter-spacing: 0.04em; }
+.tournament-overview-next em { color: var(--text-muted); font-style: normal; font-size: 0.7rem; }
+
+.tournament-overview-sizes { gap: 8px; }
+.tournament-overview-sizes button { min-height: 34px; padding: 0 14px; font-size: 0.7rem; }
+.tournament-overview-sizes button:disabled { cursor: default; }
+
+.tournament-overview-begin { min-height: 46px; padding: 0 28px; font-size: 0.82rem; }
+
+@media (max-width: 900px) {
+  .tournament-overview { padding: 12px 14px 14px; }
+  .tournament-overview-foot { grid-template-columns: 1fr; justify-items: stretch; gap: 10px; }
+  .tournament-overview-sizes { justify-content: center; flex-wrap: wrap; }
+}
 
 /* --- Champion screen -------------------------------------------------- */
 .champion-hero {

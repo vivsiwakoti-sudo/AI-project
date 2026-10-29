@@ -4,18 +4,20 @@ import {
   MATCH_CLOCK_SECONDS,
   ROUND_LABELS,
   TOTAL_MATCHES,
-  TOURNAMENT_ARENA_SIZE,
   applyMatchResult,
   createTournamentBout,
   nextPendingMatch,
+  sanitizeArenaSize,
   saveActiveTournament,
   tournamentProgress,
-  validateTournament
+  validateTournament,
+  withArenaSize
 } from "../engine/tournament";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { drawBattleFrame } from "../engine/systems/BattleSimulation";
 import { getSettings } from "../engine/settings";
 import TournamentBracket from "./TournamentBracket";
+import TournamentOverview from "./TournamentOverview";
 import StatsPanel from "./StatsPanel";
 
 const SPEEDS = [1, 2, 4, 8];
@@ -79,13 +81,20 @@ function TournamentScreenView({
   onExit
 }) {
   const [tournament, setTournament] = useState(initialTournament);
+  // A bracket with no decided match has not really started: it opens on the
+  // full-bracket overview (arena size picker + BEGIN). `begun` gates the match
+  // driver; `overviewVisible` outlives it by the length of the zoom-out so the
+  // overview can finish fading while the first match's intro is already playing.
+  const [begun, setBegun] = useState(() => initialTournament.resolvedMatchIds.length > 0);
+  const [overviewVisible, setOverviewVisible] = useState(() => initialTournament.resolvedMatchIds.length === 0);
   // bracket    - between matches: the upcoming bout stands on the stage
+  // overview   - before the first match: the whole bracket, then the zoom in
   // intro      - "A VS B" card over the arena
   // countdown  - 3, 2, 1, GO, exactly like the arena
   // fighting   - the real bout is being simulated and drawn on the canvas
   // result     - winner card over the deciding frame
   // error      - the match could not be resolved
-  const [phase, setPhase] = useState("bracket");
+  const [phase, setPhase] = useState(() => (initialTournament.resolvedMatchIds.length > 0 ? "bracket" : "overview"));
   const [countdown, setCountdown] = useState(3);
   const [matchResult, setMatchResult] = useState(null);
   const [activeMatch, setActiveMatch] = useState(null);
@@ -118,6 +127,11 @@ function TournamentScreenView({
 
   useEffect(() => { pausedRef.current = isPaused; }, [isPaused]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
+  // The map size this tournament is fought on. `playMatch` is a stable callback,
+  // so it reads the size through a ref rather than closing over a stale value.
+  const arenaSize = sanitizeArenaSize(tournament.arenaSize);
+  const arenaSizeRef = useRef(arenaSize);
+  useEffect(() => { arenaSizeRef.current = arenaSize; }, [arenaSize]);
   useEffect(() => {
     const syncFullscreen = () => setIsArenaFullscreen(document.fullscreenElement === arenaWrapRef.current);
     document.addEventListener("fullscreenchange", syncFullscreen);
@@ -220,7 +234,7 @@ function TournamentScreenView({
     // Build the bout after the intro so its fighters are fresh when the bell
     // rings - the same way the arena creates them on mount.
     const bout = createTournamentBout(match.first, match.second, {
-      arenaSize: TOURNAMENT_ARENA_SIZE,
+      arenaSize: arenaSizeRef.current,
       performanceMode: getSettings().performanceMode
     });
     if (!bout) {
@@ -392,6 +406,8 @@ function TournamentScreenView({
   // applied, so each bracket state starts exactly one run.
   const drivenMatchRef = useRef(null);
   useEffect(() => {
+    // Nothing is fought until the overview's BEGIN has been pressed.
+    if (!begun) return undefined;
     if (phase === "error") return undefined;
     if (tournament.status === "complete") return undefined;
     const next = nextPendingMatch(tournament);
@@ -422,7 +438,7 @@ function TournamentScreenView({
     return undefined;
     // Keyed on the bracket only: re-running on every render would relaunch the battle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournament.currentMatchId, tournament.resolvedMatchIds.length]);
+  }, [tournament.currentMatchId, tournament.resolvedMatchIds.length, begun]);
 
   // When a match result is ready, wait for the player to acknowledge it (or the
   // hold timer to expire), then fold it into the bracket exactly once.
@@ -513,6 +529,20 @@ function TournamentScreenView({
     setSavedNotice(true);
   };
 
+  // The picker only exists on the overview, i.e. before any match is decided, so
+  // changing the map here can never affect a bout that has already been played.
+  const handleArenaSize = size => {
+    if (begun) return;
+    setTournament(prev => withArenaSize(prev, size));
+  };
+
+  // Called by the overview partway through its zoom: the tournament starts under
+  // the fading overlay, so the first match's intro is already on stage.
+  const handleBegin = () => {
+    setBegun(true);
+    setPhase("bracket");
+  };
+
   const handleExit = () => {
     audioManager.playUiClick();
     setShowExitConfirm(true);
@@ -556,6 +586,7 @@ function TournamentScreenView({
           <span className="tournament-badge">TOURNAMENT</span>
           <strong>{roundLabel}</strong>
           <span className="tournament-progress">{progressLabel} MATCHES</span>
+          <span className="tournament-progress">ARENA {arenaSize}×{arenaSize}</span>
         </div>
         <div className="tournament-controls">
           <button className="tournament-control" onClick={handleTogglePause} aria-pressed={isPaused} disabled={phase !== "fighting"}>
@@ -564,7 +595,7 @@ function TournamentScreenView({
           <button className="tournament-control" onClick={handleSpeed}>
             ⏩ {speed}x
           </button>
-          <button className="tournament-control" onClick={handleNextMatch} disabled={!pending}>
+          <button className="tournament-control" onClick={handleNextMatch} disabled={!pending || !begun}>
             ⏭ NEXT MATCH
           </button>
           <button className="tournament-control" onClick={handleSave}>
@@ -588,14 +619,18 @@ function TournamentScreenView({
               </div>
             </div>
           ) : (
-            <div className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}`} ref={arenaWrapRef}>
+            <div
+              className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}`}
+              ref={arenaWrapRef}
+              style={{ "--arena-px": `${arenaSize}px` }}
+            >
               <HudColumn fighters={leftFighters} side="left" clock={clockLabel} suddenDeath={suddenDeath} />
 
               <div className="tournament-canvas-wrap">
                 <canvas
                   ref={canvasRef}
-                  width={TOURNAMENT_ARENA_SIZE}
-                  height={TOURNAMENT_ARENA_SIZE}
+                  width={arenaSize}
+                  height={arenaSize}
                   className="tournament-canvas"
                   aria-label={stageMatch ? `${stageMatch.first} versus ${stageMatch.second}` : "Tournament arena"}
                 />
@@ -610,7 +645,7 @@ function TournamentScreenView({
                   <span style={{ color: fighterFor(stageMatch?.second).color }}>{stageMatch?.second ?? "—"}</span>
                 </div>
 
-                {phase === "bracket" && (
+                {phase === "bracket" && begun && (
                   <div className="tournament-announce tournament-announce-compact">
                     <div className="tournament-announce-eyebrow">{roundLabel}</div>
                     <h2 className="tournament-announce-title">
@@ -691,6 +726,18 @@ function TournamentScreenView({
           )}
         </aside>
       </div>
+
+      {overviewVisible && (
+        <TournamentOverview
+          tournament={tournament}
+          arenaSize={arenaSize}
+          focusMatch={pending}
+          onArenaSize={handleArenaSize}
+          onBegin={handleBegin}
+          onFinished={() => setOverviewVisible(false)}
+          onExit={handleExit}
+        />
+      )}
 
       {showExitConfirm && (
         <div className="tournament-confirm-overlay" role="dialog" aria-label="Exit tournament">
