@@ -2146,9 +2146,11 @@
 
 /* The bracket is scaled down to fit the screen, so the type inside it is set a
    notch larger than the sidebar's to stay legible after the shrink. */
-.overview-bracket .tb-match { padding: 10px 12px; gap: 9px; }
+.overview-bracket .tb-match { padding: 10px 12px; gap: 8px; }
 .overview-bracket .tb-match-head { font-size: 0.66rem; }
-.overview-bracket .tb-match-vs { font-size: 0.62rem; }
+/* One fighter per line, so a full class name fits instead of truncating. */
+.overview-bracket .tb-match-body { flex-direction: column; align-items: stretch; gap: 4px; }
+.overview-bracket .tb-match-vs { display: none; }
 .overview-bracket .tb-slot { padding: 8px 9px; font-size: 0.86rem; gap: 7px; }
 .overview-bracket .tb-match-winner-label { font-size: 0.62rem; }
 .overview-bracket .tb-match-winner { font-size: 0.86rem; }
