@@ -81,7 +81,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
       <div className={`champion-hero ${revealed ? "champion-hero-in" : ""}`}>
         <div className="champion-rays" aria-hidden="true" />
         <div className="champion-crown" aria-hidden="true">🏆</div>
-        <div className="champion-canvas" aria-hidden="true">
+        <div className="champion-card-slot">
           <FighterCanvas fighter={FIGHTER_CLASSES[champion]} />
         </div>
         <p className="champion-eyebrow">TOURNAMENT CHAMPION</p>

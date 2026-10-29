@@ -220,7 +220,7 @@ node index.js
 
 * **\- Tornado:** This class sends a burst of wind in all directions, but only in a small area around the fighter.  
   *   \- Health: 100  
-  *   \- Damage: 10  
+  *   \- Damage: 5  
   *   \- Effect: AOE damage  
   *   \- Speed: 6 px/frame  
   *   \- Attack Type: Wind AOE  

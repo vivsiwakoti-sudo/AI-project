@@ -2095,7 +2095,7 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 28px 24px 24px;
+  padding: 44px 28px 32px;
   border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
   border-radius: var(--radius-lg);
   background:
@@ -2129,40 +2129,70 @@
   mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9), transparent 62%);
 }
 
-.champion-crown { position: relative; font-size: 2.4rem; filter: drop-shadow(0 0 14px rgba(255, 179, 71, 0.65)); }
+.champion-crown { position: relative; font-size: 4.6rem; line-height: 1; filter: drop-shadow(0 0 20px rgba(255, 179, 71, 0.7)); }
 
-.champion-canvas {
+/* The champion's card gets its own roomy slot. The roster card is sized for a
+   5-column grid (200px tall, 42px emblem, tiny type), so it is opened up here
+   instead of being squeezed into a small circle. */
+.champion-card-slot {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 128px;
-  height: 128px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 179, 71, 0.45);
-  background: radial-gradient(circle, rgba(255, 179, 71, 0.16), transparent 70%);
-  box-shadow: 0 0 30px rgba(255, 179, 71, 0.28);
+  width: min(100%, 360px);
+  margin: 22px 0 30px;
 }
 
-.champion-canvas canvas { width: 88px; height: 88px; }
+.champion-card-slot .fighter-card {
+  height: auto;
+  min-height: 270px;
+  grid-template-columns: 72px 1fr;
+  grid-template-rows: 72px auto auto;
+  gap: 0 18px;
+  padding: 26px !important;
+  cursor: default;
+}
+
+.champion-card-slot .fighter-card:hover { transform: none; }
+
+.champion-card-slot .fighter-card canvas { width: 72px; height: 72px; }
+
+.champion-card-slot .fighter-card-copy { align-self: center; }
+.champion-card-slot .fighter-card-copy h3 { margin: 0 0 6px; font-size: 1.4rem !important; }
+.champion-card-slot .fighter-card-copy strong { font-size: 0.8rem; }
+
+.champion-card-slot .fighter-card-stats {
+  margin-top: 22px;
+  padding: 14px 0;
+  gap: 10px;
+  font-size: 0.7rem;
+}
+
+.champion-card-slot .fighter-card-stats span { gap: 6px; }
+.champion-card-slot .fighter-card-stats b { font-size: 1.15rem; }
+
+.champion-card-slot .fighter-card-ability {
+  margin-top: 16px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
 
 .champion-eyebrow {
   position: relative;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--text-secondary);
-  font: 700 0.65rem var(--font-title);
-  letter-spacing: 0.32em;
+  font: 700 1.05rem var(--font-title);
+  letter-spacing: 0.42em;
 }
 
 .champion-name {
   position: relative;
-  margin: 0;
-  font: 900 clamp(1.9rem, 5vw, 3.4rem) var(--font-title);
+  margin: 4px 0 6px;
+  font: 900 clamp(3.2rem, 11vw, 7rem) var(--font-title);
+  line-height: 1.05;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 24px color-mix(in srgb, currentColor 55%, transparent);
+  text-shadow: 0 0 36px color-mix(in srgb, currentColor 60%, transparent);
   overflow-wrap: anywhere;
 }
 
-.champion-runner-up { position: relative; color: var(--text-secondary); font-size: 0.9rem; }
+.champion-runner-up { position: relative; color: var(--text-secondary); font-size: 1.2rem; }
 
 .champion-final-stats {
   position: relative;
@@ -2171,8 +2201,8 @@
   gap: 10px 16px;
   width: 100%;
   max-width: 720px;
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 26px;
+  padding-top: 20px;
   border-top: 1px solid var(--border-soft);
 }
 
