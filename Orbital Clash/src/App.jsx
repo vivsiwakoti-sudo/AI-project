@@ -145,7 +145,10 @@ function App() {
       </header>
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
-      <ScreenTransition screenKey={screen} render={key => <div className="app-screen">{screens[key]}</div>} />
+      {/* The `.app-screen` node is keyed on the screen so the arriving screen is
+          a fresh mount and its entrance animation always plays from the start;
+          the transition wrapper itself stays mounted (see ScreenTransition). */}
+      <ScreenTransition screenKey={screen} render={key => <div className="app-screen" key={key}>{screens[key]}</div>} />
     </div>
   );
 }

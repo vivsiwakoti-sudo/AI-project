@@ -316,4 +316,17 @@ code {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+
+  /* The exception: the screen transition is still played, just collapsed into a
+     short crossfade. Screens are swapped by JavaScript after the leaving stage's
+     exit animation, so removing that animation here would leave every screen
+     change invisible until it finished. components/ScreenTransition.jsx uses the
+     matching 120ms / 150ms timings. */
+  .screen-transition-stage {
+    animation-duration: 150ms !important;
+  }
+
+  .screen-transition-leaving {
+    animation-duration: 120ms !important;
+  }
 }
