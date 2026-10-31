@@ -143,7 +143,12 @@ function BattleReplay({ frames, playing, onEnded }) {
   return <canvas ref={canvasRef} className="battle-replay-canvas" width={800} height={800} aria-label="Replay of the final seconds of the battle" />;
 }
 
-export default function EndScreen({ results, aborted = false, replayFrames = [], onReturn }) {
+export default function EndScreen({ results: rawResults, aborted = false, replayFrames = [], onReturn }) {
+  // Guard *inside* the body, not via a destructuring default: StrictMode remounts
+  // a mount that exactly filled the root, and that rebuild passes the props the
+  // error handler saw (undefined) straight through. A parameter default is not
+  // re-applied when a render is replayed with those saved props; this is.
+  const results = Array.isArray(rawResults) ? rawResults : [];
   const [records, setRecords] = useState(null);
   const [showReplay, setShowReplay] = useState(false);
   const [replayPlaying, setReplayPlaying] = useState(false);
@@ -174,7 +179,7 @@ export default function EndScreen({ results, aborted = false, replayFrames = [],
     })
     .map(entry => entry.fighter);
 
-  const winner = aborted ? null : ordered[0];
+  const winner = aborted ? null : ordered[0] ?? null;
   // Everyone who is not the winner lost this battle. With four fighters that is
   // three losers, not one, so the record is applied per fighter rather than to a
   // single "loser" slot.
@@ -248,7 +253,7 @@ export default function EndScreen({ results, aborted = false, replayFrames = [],
 
   return (
     <main className="results-screen">
-      {aborted ? (
+      {aborted || !winner ? (
         <>
           <div className="roster-eyebrow">NO CONTEST</div>
           <h1>BATTLE ABANDONED</h1>
