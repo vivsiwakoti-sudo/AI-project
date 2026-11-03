@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
+import BackgroundBattles from "./BackgroundBattles";
 
 // Length of the zoom into the logo. Must match --title-zoom in App.css.
 const ZOOM_MS = 700;
@@ -16,6 +17,8 @@ export default function TitleScreen({ onStart }) {
   const start = useCallback(() => {
     if (startedRef.current) return;
     startedRef.current = true;
+    // The background battles mute SFX while they run; the start click must still sound.
+    audioManager.setSfxSilenced(false);
     audioManager.playUiClick();
     setZooming(true);
     window.setTimeout(onStart, ZOOM_MS);
@@ -30,7 +33,9 @@ export default function TitleScreen({ onStart }) {
   return (
     <main className={`title-screen${zooming ? " is-zooming" : ""}`}>
       <div className="title-stars" aria-hidden="true" />
+      <BackgroundBattles />
       <div className="title-frame" aria-hidden="true" />
+
 
       <div className="title-content">
         <div className="title-logo">

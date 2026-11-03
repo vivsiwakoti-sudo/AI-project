@@ -400,6 +400,7 @@ class AudioManager {
     this.currentMusicType = null;
     this.activeStoppers = [];
     this.muted = false;
+    this.sfxSilenced = false;
     this.lastHitTime = -Infinity;
     this.battleIntensity = 0;
     this.pausedMusicType = null;
@@ -446,13 +447,20 @@ class AudioManager {
     return this.muted;
   }
 
+  // Mutes only the sound-effect bus (music keeps playing), e.g. for background scenery.
+  setSfxSilenced(silenced) {
+    this.sfxSilenced = silenced;
+    this.applyVolumes();
+  }
+
   // Pushes the saved music and sound-effect volumes onto their buses.
   applyVolumes() {
     if (!this.ctx) return;
     const { musicVolume, sfxVolume } = getSettings();
     const now = this.ctx.currentTime;
     this.musicLevel.gain.setTargetAtTime(musicVolume, now, 0.02);
-    this.sfxGain.gain.setTargetAtTime(SFX_BUS_GAIN * sfxVolume, now, 0.02);
+    const sfxLevel = this.sfxSilenced ? 0 : SFX_BUS_GAIN * sfxVolume;
+    this.sfxGain.gain.setTargetAtTime(sfxLevel, now, 0.02);
   }
 
   // Hard-cuts the music: stops the scheduler AND mutes the music bus at once, so

@@ -240,6 +240,34 @@
   opacity: 0.85;
 }
 
+/* Three live bouts drifting behind the menu, dimmed and softly faded at the edges. */
+.title-battles {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3vw;
+  padding: 0 4vw;
+  pointer-events: none;
+  transition: opacity var(--title-zoom) ease-in;
+}
+
+.title-battle {
+  width: min(26vw, 380px);
+  height: auto;
+  aspect-ratio: 1;
+  opacity: 0.42;
+  border: 1px solid rgba(0, 242, 255, 0.18);
+  box-shadow: 0 0 40px rgba(0, 242, 255, 0.08);
+  mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+}
+
+.title-screen.is-zooming .title-battles {
+  opacity: 0;
+}
+
 /* Thin chamfered frame with a cyan-to-purple edge, echoing the reference art. */
 .title-frame {
   position: absolute;
@@ -393,6 +421,8 @@
 @media (max-width: 720px) {
   .title-word { font-size: clamp(2.4rem, 13vw, 4rem); }
   .title-start > span { padding: 14px 32px; font-size: 0.9rem; }
+  .title-battle { width: 70vw; }
+  .title-battle:nth-child(n + 2) { display: none; }
 }
 
 
