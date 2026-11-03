@@ -247,21 +247,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3vw;
-  padding: 0 4vw;
+  gap: 1.5vw;
+  padding: 0 2vw;
   pointer-events: none;
   transition: opacity var(--title-zoom) ease-in;
 }
 
+/* Soft dark scrim in the middle so the logo and button stay readable over the fights. */
+.title-battles::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 45% 40% at 50% 50%, rgba(2, 3, 10, 0.75), transparent 100%);
+}
+
 .title-battle {
-  width: min(26vw, 380px);
+  width: min(30vw, 80vh);
   height: auto;
   aspect-ratio: 1;
-  opacity: 0.42;
-  border: 1px solid rgba(0, 242, 255, 0.18);
-  box-shadow: 0 0 40px rgba(0, 242, 255, 0.08);
-  mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
-  -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+  opacity: 0.6;
+  border: 1px solid rgba(0, 242, 255, 0.22);
+  box-shadow: 0 0 50px rgba(0, 242, 255, 0.1);
+  mask-image: radial-gradient(closest-side, #000 70%, transparent 100%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 70%, transparent 100%);
 }
 
 .title-screen.is-zooming .title-battles {
