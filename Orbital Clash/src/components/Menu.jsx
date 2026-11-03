@@ -70,8 +70,10 @@ function statsFromRecords(records, name) {
   };
 }
 
-export default function Menu({ onStart, onStartTournament }) {
+export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [selected, setSelected] = useState([]);
+  // Captured on mount: the zoom-in plays once when the roster opens from the title.
+  const [playIntro] = useState(intro);
   const [info, setInfo] = useState(null);
   const [filter, setFilter] = useState("ALL");
   const [sortKey, setSortKey] = useState("name");
@@ -229,7 +231,7 @@ export default function Menu({ onStart, onStartTournament }) {
   const infoStats = info ? statFor(info) : null;
 
   return (
-    <main className="roster-screen">
+    <main className={`roster-screen${playIntro ? " roster-intro" : ""}`}>
       <div className="roster-heading">
         <div className="roster-eyebrow">ROSTER <span>•</span> {Object.keys(FIGHTER_CLASSES).length} FIGHTERS</div>
         <h1 className="menu-header">PICK YOUR FIGHTERS</h1>

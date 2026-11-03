@@ -199,6 +199,203 @@
 
 .roster-eyebrow span { color: var(--text-muted); margin: 0 7px; }
 
+/* Roster zoom-in: plays once when the roster opens from the title. `backwards`
+   fill keeps no transform afterwards, so fixed-position overlays still work. */
+.roster-screen.roster-intro {
+  animation: roster-zoom-in 0.85s var(--ease) backwards;
+}
+
+@keyframes roster-zoom-in {
+  from { transform: scale(0.5); opacity: 0; filter: blur(10px); }
+  to { transform: scale(1); opacity: 1; filter: blur(0); }
+}
+
+/* --- Title screen ----------------------------------------------------- */
+.title-screen {
+  --title-zoom: 700ms;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, rgba(30, 60, 150, 0.45), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 88% 92%, rgba(120, 50, 200, 0.28), transparent 70%),
+    linear-gradient(180deg, #060a1c 0%, #02030a 100%);
+}
+
+/* Layered star specks that tile across the viewport. */
+.title-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 20px 30px, #fff, transparent),
+    radial-gradient(1px 1px at 90px 120px, #cfe9ff, transparent),
+    radial-gradient(1.6px 1.6px at 160px 60px, #fff, transparent),
+    radial-gradient(1px 1px at 230px 180px, #9fdcff, transparent),
+    radial-gradient(1.4px 1.4px at 300px 110px, #fff, transparent);
+  background-size: 340px 240px;
+  opacity: 0.85;
+}
+
+/* Thin chamfered frame with a cyan-to-purple edge, echoing the reference art. */
+.title-frame {
+  position: absolute;
+  inset: 22px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.85), rgba(0, 242, 255, 0.1) 45%, rgba(168, 85, 247, 0.8));
+  clip-path: polygon(48px 0, calc(100% - 48px) 0, 100% 48px, 100% calc(100% - 48px), calc(100% - 48px) 100%, 48px 100%, 0 calc(100% - 48px), 0 48px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.title-frame::after {
+  content: "";
+  position: absolute;
+  inset: 1.5px;
+  background: rgba(3, 6, 16, 0.6);
+  clip-path: inherit;
+}
+
+.title-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  transform-origin: 50% 50%;
+}
+
+.title-logo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 40px;
+}
+
+.title-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 118%;
+  height: 210%;
+  transform: translate(-50%, -50%) rotate(-6deg);
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.7)) drop-shadow(0 0 22px rgba(0, 242, 255, 0.35));
+}
+
+.title-word {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: clamp(3.2rem, 9.5vw, 7.4rem);
+  line-height: 0.92;
+  letter-spacing: 0.04em;
+  transform: skewX(-12deg);
+  white-space: nowrap;
+}
+
+.title-word-top {
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.45), 0 0 40px rgba(0, 242, 255, 0.25);
+}
+
+.title-word-bottom {
+  color: var(--cyan);
+  text-shadow: 0 0 10px rgba(0, 242, 255, 0.9), 0 0 30px rgba(0, 242, 255, 0.6), 0 0 80px rgba(0, 242, 255, 0.35);
+}
+
+.title-start {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #ffffff;
+  font: 600 1.05rem var(--font-ui);
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.45));
+  transition: filter var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+/* Chamfered outline: a glowing cyan shell with a dark fill inset inside it. */
+.title-start::before,
+.title-start::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(24px 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 24px 100%, 0 50%);
+}
+
+.title-start::before {
+  background: linear-gradient(90deg, rgba(0, 242, 255, 0.35), var(--cyan) 50%, rgba(0, 242, 255, 0.35));
+}
+
+.title-start::after {
+  inset: 2px;
+  background: linear-gradient(180deg, #0b1f3d 0%, #050c1c 100%);
+}
+
+.title-start > span {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 58px;
+  text-shadow: 0 0 8px rgba(0, 242, 255, 0.7);
+}
+
+.title-start-icon {
+  width: 0;
+  height: 0;
+  border-left: 16px solid var(--cyan);
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  filter: drop-shadow(0 0 6px var(--cyan));
+}
+
+.title-start:hover:not(:disabled) {
+  filter: drop-shadow(0 0 16px rgba(0, 242, 255, 0.85));
+  transform: translateY(-2px);
+}
+
+.title-start:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 6px;
+}
+
+/* Zoom into the logo: content rushes toward the viewer and fades, while the
+   star field streaks outward behind it. The roster then zooms in from the centre. */
+.title-screen.is-zooming .title-content {
+  animation: title-zoom var(--title-zoom) cubic-bezier(0.55, 0, 0.9, 0.4) forwards;
+  pointer-events: none;
+}
+
+.title-screen.is-zooming .title-stars {
+  animation: title-rush var(--title-zoom) ease-in forwards;
+}
+
+@keyframes title-zoom {
+  to { transform: scale(7); opacity: 0; filter: blur(6px); }
+}
+
+@keyframes title-rush {
+  to { transform: scale(1.8); opacity: 0; }
+}
+
+@media (max-width: 720px) {
+  .title-word { font-size: clamp(2.4rem, 13vw, 4rem); }
+  .title-start > span { padding: 14px 32px; font-size: 0.9rem; }
+}
+
+
 .roster-heading h1,
 .results-screen h1 {
   margin: 10px 0 0;

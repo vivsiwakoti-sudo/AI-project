@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Menu from "./components/Menu";
+import TitleScreen from "./components/TitleScreen";
 import Arena from "./components/Arena";
 import EndScreen from "./components/EndScreen";
 import SettingsPanel from "./components/SettingsPanel";
@@ -26,6 +27,10 @@ function App() {
   const [replayFrames, setReplayFrames] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // The title screen opens the app. Its zoom hands off to the roster, which zooms
+  // in from the centre once; the flag is cleared as soon as the player leaves it.
+  const [showTitle, setShowTitle] = useState(true);
+  const [rosterIntro, setRosterIntro] = useState(false);
 
   // --- Tournament Mode -------------------------------------------------------
   // `tournament` is the live bracket driven by the engine; `tournamentRunId`
@@ -48,6 +53,7 @@ function App() {
     setTournament(next);
     setStats(loadTournamentStats());
     setTournamentRunId(id => id + 1);
+    setRosterIntro(false);
     if (next.status === "complete" && next.champion) {
       setChampion(next);
       setScreen("champion");
@@ -80,7 +86,7 @@ function App() {
   // so the transition wrapper can keep showing the old one for the length of its
   // exit animation. `screen` still drives it exactly as before.
   const screens = {
-    menu: <Menu onStart={(f, size) => { setSelectedFighters(f); setArenaSize(size); setScreen("game"); }} onStartTournament={startTournament} />,
+    menu: <Menu intro={rosterIntro} onStart={(f, size) => { setSelectedFighters(f); setArenaSize(size); setRosterIntro(false); setScreen("game"); }} onStartTournament={startTournament} />,
     game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => { setBattleResults(res); setBattleAborted(Boolean(meta?.aborted)); setReplayFrames(meta?.replayFrames || []); setScreen("end"); }} />,
     end: <EndScreen results={battleResults} aborted={battleAborted} replayFrames={replayFrames} onReturn={returnToRoster} />,
     tournament: (
@@ -134,23 +140,30 @@ function App() {
   return (
     <div className="App">
       <div className="screen-frame"></div>
-      <header className={`app-topbar app-topbar-${screen}`}>
-        <div className="app-brand"><span className="app-brand-dot" />ORBITAL CLASH</div>
-        <div className="app-topbar-actions">
-          {screen === "game" && <div className="app-live-label">LIVE COMBAT</div>}
-          {screen === "end" && <div className="app-live-label">BATTLE REPORT</div>}
-          <button className="audio-toggle-button" onClick={toggleMute} aria-pressed={isMuted}>{isMuted ? "🔇 MUTED" : "🔊 SOUND"}</button>
-          <button className="audio-toggle-button" onClick={() => setShowSettings(true)} aria-haspopup="dialog">SETTINGS</button>
-        </div>
-      </header>
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+      {showTitle ? (
+        <TitleScreen onStart={() => { setRosterIntro(true); setShowTitle(false); }} />
+      ) : (
+        <>
+          <header className={`app-topbar app-topbar-${screen}`}>
+            <div className="app-brand"><span className="app-brand-dot" />ORBITAL CLASH</div>
+            <div className="app-topbar-actions">
+              {screen === "game" && <div className="app-live-label">LIVE COMBAT</div>}
+              {screen === "end" && <div className="app-live-label">BATTLE REPORT</div>}
+              <button className="audio-toggle-button" onClick={toggleMute} aria-pressed={isMuted}>{isMuted ? "🔇 MUTED" : "🔊 SOUND"}</button>
+              <button className="audio-toggle-button" onClick={() => setShowSettings(true)} aria-haspopup="dialog">SETTINGS</button>
+            </div>
+          </header>
+          {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
-      {/* The `.app-screen` node is keyed on the screen so the arriving screen is
-          a fresh mount and its entrance animation always plays from the start;
-          the transition wrapper itself stays mounted (see ScreenTransition). */}
-      <ScreenTransition screenKey={screen} render={key => <div className="app-screen" key={key}>{screens[key]}</div>} />
+          {/* The `.app-screen` node is keyed on the screen so the arriving screen is
+              a fresh mount and its entrance animation always plays from the start;
+              the transition wrapper itself stays mounted (see ScreenTransition). */}
+          <ScreenTransition screenKey={screen} render={key => <div className="app-screen" key={key}>{screens[key]}</div>} />
+        </>
+      )}
     </div>
   );
+
 }
 
 export default App;
