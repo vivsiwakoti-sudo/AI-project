@@ -255,7 +255,7 @@
   letter-spacing: 0.14em;
 }
 
-.roster-filters .sort-select option { background: var(--surface); color: var(--text-primary); }
+.roster-filters .sort-select option { background: var(--surface); color: var(--text-h); }
 
 /* Destructive action, so it reads in danger red rather than the cyan accent. */
 .roster-filters .reset-progress-button { color: #c1748a; border-color: #3d1f2b; }

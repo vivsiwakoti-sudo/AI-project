@@ -53,6 +53,23 @@ function ordinal(n) {
   }
 }
 
+// Derives a class's display and sort stats from its stored record.
+function statsFromRecords(records, name) {
+  const record = records[name] || {};
+  const wins = record.wins || 0;
+  const losses = record.losses || 0;
+  const appearances = wins + losses;
+  return {
+    wins,
+    losses,
+    // Career eliminations, accumulated by the end screen after each battle.
+    kills: record.kills || 0,
+    appearances,
+    orientation: wins / Math.max(1, losses),
+    winRate: appearances ? wins / appearances : 0
+  };
+}
+
 export default function Menu({ onStart, onStartTournament }) {
   const [selected, setSelected] = useState([]);
   const [info, setInfo] = useState(null);
@@ -166,21 +183,7 @@ export default function Menu({ onStart, onStartTournament }) {
     setSelected(names.slice(0, count));
   };
 
-  const statFor = (name) => {
-    const record = records[name] || {};
-    const wins = record.wins || 0;
-    const losses = record.losses || 0;
-    const appearances = wins + losses;
-    return {
-      wins,
-      losses,
-      // Career eliminations, accumulated by the end screen after each battle.
-      kills: record.kills || 0,
-      appearances,
-      orientation: wins / Math.max(1, losses),
-      winRate: appearances ? wins / appearances : 0
-    };
-  };
+  const statFor = (name) => statsFromRecords(records, name);
 
   const filterOptions = ["ALL", "MELEE", "PROJECTILE", "BEAM", "AOE", "BODY", "TRAIL"];
   // Every attackType used in fighterDefinitions.js maps to one filter bucket.
@@ -207,7 +210,7 @@ export default function Menu({ onStart, onStartTournament }) {
 
   const visibleFighters = useMemo(() => {
     const metricFor = (name) => {
-      const stats = statFor(name);
+      const stats = statsFromRecords(records, name);
       if (sortKey === "wins") return stats.wins;
       if (sortKey === "winRate") return stats.winRate;
       if (sortKey === "ratio") return stats.orientation;
