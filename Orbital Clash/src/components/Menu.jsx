@@ -8,6 +8,15 @@ import ClassCard from "./MenuComponents/ClassCard";
 
 const RECORDS_KEY = "arena-battles-records";
 
+// Roster sort categories. Names default to A-Z; every stat defaults to highest first.
+const SORT_OPTIONS = [
+  { key: "name", label: "A-Z" },
+  { key: "wins", label: "TOTAL WINS" },
+  { key: "winRate", label: "WIN %" },
+  { key: "ratio", label: "W/L RATIO" },
+  { key: "appearances", label: "APPEARANCES" },
+];
+
 // Persistent win/loss records for every class (the +1 shown on the end screen).
 function loadRecords() {
   if (typeof window === "undefined") return {};
@@ -48,7 +57,8 @@ export default function Menu({ onStart, onStartTournament }) {
   const [selected, setSelected] = useState([]);
   const [info, setInfo] = useState(null);
   const [filter, setFilter] = useState("ALL");
-  const [sortDescending, setSortDescending] = useState(false);
+  const [sortKey, setSortKey] = useState("name");
+  const [sortReversed, setSortReversed] = useState(false);
   const [records, setRecords] = useState(loadRecords);
   const [confirmReset, setConfirmReset] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -193,14 +203,24 @@ export default function Menu({ onStart, onStartTournament }) {
     return categoryMap[attackType] || attackType.toUpperCase();
   };
 
+  const sortAscending = sortKey === "name" ? !sortReversed : sortReversed;
+
   const visibleFighters = useMemo(() => {
+    const metricFor = (name) => {
+      const stats = statFor(name);
+      if (sortKey === "wins") return stats.wins;
+      if (sortKey === "winRate") return stats.winRate;
+      if (sortKey === "ratio") return stats.orientation;
+      return stats.appearances;
+    };
     return Object.entries(FIGHTER_CLASSES)
       .filter(([, fighter]) => filter === "ALL" || getFilterCategory(fighter.attackType) === filter)
       .sort(([nameA], [nameB]) => {
-        const comparison = nameA.localeCompare(nameB);
-        return sortDescending ? -comparison : comparison;
+        const byName = nameA.localeCompare(nameB);
+        const comparison = sortKey === "name" ? byName : (metricFor(nameA) - metricFor(nameB)) || byName;
+        return sortAscending ? comparison : -comparison;
       });
-  }, [filter, sortDescending]);
+  }, [filter, sortKey, sortAscending, records]);
 
   const infoFighter = info ? FIGHTER_CLASSES[info] : null;
   const infoStats = info ? statFor(info) : null;
@@ -212,7 +232,10 @@ export default function Menu({ onStart, onStartTournament }) {
         <h1 className="menu-header">PICK YOUR FIGHTERS</h1>
         <div className="roster-filters">
           {filterOptions.map(option => <button key={option} className={filter === option ? "filter-active" : ""} onClick={() => setFilter(option)}>{option}</button>)}
-          <button className="sort-button" onClick={() => setSortDescending(value => !value)}>A-Z <span>{sortDescending ? "↓" : "↑"}</span></button>
+          <select className="sort-select" value={sortKey} onChange={(e) => setSortKey(e.target.value)} title="Sort fighters by">
+            {SORT_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
+          </select>
+          <button className="sort-button" onClick={() => setSortReversed(value => !value)} title="Reverse sort order">{sortAscending ? "↑ ASC" : "↓ DESC"}</button>
           <button className="random-selection-button" onClick={handleRandomSelection} title="Select 2 to 4 random fighters">RANDOM</button>
           <button
             className="battle-history-button"

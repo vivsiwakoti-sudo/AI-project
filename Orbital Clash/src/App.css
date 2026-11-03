@@ -242,6 +242,21 @@
 
 .roster-filters button:active { transform: translateY(1px); }
 
+/* Sort category dropdown, styled to match the pill buttons beside it. */
+.roster-filters .sort-select {
+  min-height: 30px;
+  padding: 0 14px;
+  cursor: pointer;
+  color: var(--cyan);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font: 600 0.65rem var(--font-data);
+  letter-spacing: 0.14em;
+}
+
+.roster-filters .sort-select option { background: var(--surface); color: var(--text-primary); }
+
 /* Destructive action, so it reads in danger red rather than the cyan accent. */
 .roster-filters .reset-progress-button { color: #c1748a; border-color: #3d1f2b; }
 
