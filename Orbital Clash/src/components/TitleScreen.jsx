@@ -48,6 +48,13 @@ export default function TitleScreen({ onStart }) {
               </linearGradient>
             </defs>
             <ellipse cx="200" cy="100" rx="186" ry="66" transform="rotate(-16 200 100)" fill="none" stroke="url(#title-orbit-grad)" strokeWidth="5" />
+            <g transform="rotate(-16 200 100)">
+              <g>
+                <circle r="9" fill="#00f2ff" opacity="0.35" />
+                <circle r="4" fill="#e8feff" />
+                <animateMotion dur="7s" repeatCount="indefinite" path="M 14 100 A 186 66 0 1 0 386 100 A 186 66 0 1 0 14 100" />
+              </g>
+            </g>
           </svg>
           <h1 className="title-word title-word-top">ORBITAL</h1>
           <h1 className="title-word title-word-bottom">CLASH</h1>
