@@ -853,6 +853,15 @@ class AudioManager {
     const now = ctx.currentTime;
     playTone(ctx, this.sfxGain, 720, now, 0.06, { type: "square", gain: 0.16, attack: 0.002, release: 0.05 });
   }
+
+  // A fighter slips out of a hit: a quick air whoosh sweeping downward with a
+  // bright tick on top so it reads as evasion rather than impact.
+  playDodgeSfx() {
+    const ctx = this.ensureContext();
+    const now = ctx.currentTime;
+    playNoiseBurst(ctx, this.sfxGain, now, 0.2, { filterType: "bandpass", filterFreq: 3200, sweepTo: 500, q: 1.4, gain: 0.22 });
+    playTone(ctx, this.sfxGain, 1560, now, 0.03, { type: "sine", gain: 0.07, attack: 0.002, release: 0.06 });
+  }
 }
 
 export const audioManager = new AudioManager();

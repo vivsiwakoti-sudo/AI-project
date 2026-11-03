@@ -147,6 +147,7 @@ export class DamageSystem {
         if ((avoidance > 0 && Math.random() < avoidance) ||
             (victim.dodgeChance > 0 && Math.random() < victim.dodgeChance)) {
             if (victim.onAvoidedHit) victim.onAvoidedHit(attacker, category);
+            audioManager.playDodgeSfx();
             return false;
         }
 
