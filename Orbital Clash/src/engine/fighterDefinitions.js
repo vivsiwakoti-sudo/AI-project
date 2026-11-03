@@ -334,7 +334,7 @@ export const FIGHTER_CLASSES = {
     name: "Mahoraga",
     color: "#FFFFFF",
     health: 130,
-    damage: 8,
+    damage: 10,
     speed: 4,
     // 60px body: Mahoraga and the Knight are the two heavyweight bruisers, and
     // both now share one body size so neither reads as the smaller of the pair.
