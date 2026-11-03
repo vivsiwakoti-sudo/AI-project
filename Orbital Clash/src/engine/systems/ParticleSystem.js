@@ -3,7 +3,9 @@ import { expandingRing, TAU } from "./Fx.js";
 // Performance mode thins every burst and lowers the live particle cap.
 const PERFORMANCE_DENSITY = 0.4;
 const PERFORMANCE_MAX_PARTICLES = 300;
-const DEFAULT_MAX_PARTICLES = 900;
+const DEFAULT_MAX_PARTICLES = 1400;
+// Normal mode bursts are denser than the base counts so impacts read bigger.
+const DEFAULT_DENSITY = 1.35;
 
 function pushParticle(system, particle) {
     // Hard cap keeps long stalemate fights from degrading the frame rate.
@@ -15,7 +17,7 @@ export class ParticleSystem {
     constructor({ performanceMode = false } = {}) {
         this.particles = [];
         this.rings = [];
-        this.densityScale = performanceMode ? PERFORMANCE_DENSITY : 1;
+        this.densityScale = performanceMode ? PERFORMANCE_DENSITY : DEFAULT_DENSITY;
         this.maxParticles = performanceMode ? PERFORMANCE_MAX_PARTICLES : DEFAULT_MAX_PARTICLES;
     }
 
@@ -66,16 +68,40 @@ export class ParticleSystem {
     }
 
     draw(ctx) {
+        // Additive blending makes overlapping sparks flare into bright hot spots.
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
         this.particles.forEach(p => {
             const alpha = Math.max(0, Math.min(1, p.life / (p.maxLife || 1)));
+            const radius = p.size * (0.4 + alpha * 0.6);
             ctx.globalAlpha = alpha;
-            ctx.fillStyle = p.color;
-            ctx.shadowBlur = 6;
+            ctx.strokeStyle = p.color;
+            ctx.lineCap = "round";
+            ctx.lineWidth = radius * 1.4;
+            ctx.shadowBlur = 10;
             ctx.shadowColor = p.color;
+            // Short streak along velocity gives sparks a sense of motion.
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size * (0.4 + alpha * 0.6), 0, TAU);
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035);
+            ctx.stroke();
+
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, radius, 0, TAU);
             ctx.fill();
+
+            // White-hot core on the brightest part of each particle's life.
+            if (alpha > 0.5) {
+                ctx.globalAlpha = (alpha - 0.5) * 1.2;
+                ctx.fillStyle = "#ffffff";
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, radius * 0.45, 0, TAU);
+                ctx.fill();
+            }
         });
+        ctx.restore();
 
         this.rings.forEach(ring => {
             const progress = 1 - ring.life / ring.maxLife;

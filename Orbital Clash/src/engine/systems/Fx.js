@@ -139,13 +139,26 @@ export function motionTrail(ctx, points, color, opts = {}) {
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+  ctx.globalCompositeOperation = "lighter";
   ctx.shadowBlur = blur;
   ctx.shadowColor = color;
   for (let i = 1; i < points.length; i++) {
     const t = i / points.length; // 0 (old) -> 1 (newest)
     ctx.globalAlpha = alpha * t;
     ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth * (0.35 + t * 0.65);
+    ctx.lineWidth = lineWidth * (0.2 + t * 0.8);
+    ctx.beginPath();
+    ctx.moveTo(points[i - 1].x, points[i - 1].y);
+    ctx.lineTo(points[i].x, points[i].y);
+    ctx.stroke();
+  }
+  // Thin white-hot core running down the middle of the streak.
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "#ffffff";
+  for (let i = 1; i < points.length; i++) {
+    const t = i / points.length;
+    ctx.globalAlpha = alpha * t * 0.6;
+    ctx.lineWidth = Math.max(1, lineWidth * 0.2 * t);
     ctx.beginPath();
     ctx.moveTo(points[i - 1].x, points[i - 1].y);
     ctx.lineTo(points[i].x, points[i].y);

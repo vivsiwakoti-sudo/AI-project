@@ -604,7 +604,7 @@ export class FighterBase {
         ctx.translate(this.x, this.y);
         squashTransform(ctx, this.squashX, this.squashY, this.squashAngle);
 
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 18;
         ctx.shadowColor = this.color;
 
         // Body silhouette: every class gets its own outline (see Shapes.js) so
@@ -623,6 +623,18 @@ export class FighterBase {
             ctx.fillStyle = grad;
         }
         ctx.fill();
+
+        // Glossy specular highlight on the upper-left, so bodies read as lit 3D forms.
+        if (!this.slowVisual) {
+            ctx.save();
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.ellipse(-this.radius * 0.32, -this.radius * 0.36, this.radius * 0.3, this.radius * 0.16, -Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
 
         // Thin outline so even low-contrast shapes keep a readable edge.
         traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle });

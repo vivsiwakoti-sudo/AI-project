@@ -16,11 +16,12 @@ function steelGradient(ctx, halfWidth, light, mid, dark) {
 
 // Fading wedge behind a spinning weapon. Drawn in fighter space BEFORE the
 // weapon rotation. `direction` is +1 for clockwise spin, -1 for counter-clockwise.
-export function weaponTrail(ctx, angle, direction, innerR, outerR, color, { sweep = 1, alpha = 0.45, steps = 6 } = {}) {
+export function weaponTrail(ctx, angle, direction, innerR, outerR, color, { sweep = 1, alpha = 0.5, steps = 12 } = {}) {
   ctx.save();
   ctx.fillStyle = color;
-  ctx.shadowBlur = 6;
+  ctx.shadowBlur = 12;
   ctx.shadowColor = color;
+  ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < steps; i++) {
     const a0 = angle - direction * sweep * (i / steps);
     const a1 = angle - direction * sweep * ((i + 1) / steps);
