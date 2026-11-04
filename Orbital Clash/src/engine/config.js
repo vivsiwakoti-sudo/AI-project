@@ -8,7 +8,7 @@ export const MAX_FIGHTERS = 4;
 export const MIN_FIGHTERS = 2;
 
 // Selectable square map sizes, in world units. The pre-match picker offers these.
-export const ARENA_SIZE_OPTIONS = [700, 800, 900, 1000];
+export const ARENA_SIZE_OPTIONS = [600, 700, 800, 900, 1000];
 export const DEFAULT_ARENA_SIZE = 800;
 
 export const FIGHTER_CONFIG = {

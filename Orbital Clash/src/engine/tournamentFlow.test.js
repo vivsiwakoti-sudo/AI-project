@@ -256,6 +256,7 @@ test('a tournament defaults to the 800 map and only accepts the offered sizes', 
   assert.equal(buildTournamentBracket({ random: seeded(2), arenaSize: 1000 }).arenaSize, 1000);
   assert.equal(buildTournamentBracket({ random: seeded(2), arenaSize: 123 }).arenaSize, 800, 'an unlisted size falls back');
   assert.equal(sanitizeArenaSize('900'), 800, 'a string is not a valid size');
+  assert.equal(sanitizeArenaSize(600), 600);
   assert.equal(sanitizeArenaSize(700), 700);
 });
 
