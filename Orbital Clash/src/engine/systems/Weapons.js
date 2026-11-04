@@ -316,7 +316,7 @@ export function drawStake(ctx, { start, length, glow = "#ff2038" }) {
   ctx.restore();
 }
 
-// Double-bitted war axe head centred on the origin; the handle trails behind (-x).
+// Single-bit hatchet head centred on the origin; the handle trails behind (-x).
 export function drawAxeHead(ctx, { size = 10, glow = "#ff2a2a", intensity = 0 }) {
   ctx.save();
   // Handle.
@@ -336,26 +336,29 @@ export function drawAxeHead(ctx, { size = 10, glow = "#ff2a2a", intensity = 0 })
   steel.addColorStop(1, "#3c2229");
   ctx.fillStyle = steel;
 
-  // Two crescent bits, top and bottom.
-  for (const s of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(-size * 0.3, 0);
-    ctx.quadraticCurveTo(-size * 0.9, s * size * 1.5, size * 0.4, s * size * 1.45);
-    ctx.quadraticCurveTo(size * 0.9, s * size * 0.7, size * 0.3, 0);
-    ctx.closePath();
-    ctx.fill();
-  }
+  // Single bit: one crescent edge on the top side, and a short spike on the other.
+  ctx.fillStyle = steel;
+  ctx.beginPath();
+  ctx.moveTo(-size * 0.3, 0);
+  ctx.quadraticCurveTo(-size * 0.9, size * 1.5, size * 0.4, size * 1.45);
+  ctx.quadraticCurveTo(size * 0.9, size * 0.7, size * 0.3, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-size * 0.3, 0);
+  ctx.lineTo(-size * 0.7, -size * 0.9);
+  ctx.lineTo(-size * 0.1, -size * 0.5);
+  ctx.closePath();
+  ctx.fill();
 
   ctx.shadowBlur = 5;
   ctx.strokeStyle = `rgba(255, ${Math.round(120 - intensity * 80)}, ${Math.round(120 - intensity * 80)}, 0.95)`;
   ctx.lineWidth = 1.6;
   ctx.lineCap = "round";
-  for (const s of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(-size * 0.75, s * size * 1.1);
-    ctx.quadraticCurveTo(-size * 0.2, s * size * 1.55, size * 0.4, s * size * 1.45);
-    ctx.stroke();
-  }
+  ctx.beginPath();
+  ctx.moveTo(-size * 0.75, size * 1.1);
+  ctx.quadraticCurveTo(-size * 0.2, size * 1.55, size * 0.4, size * 1.45);
+  ctx.stroke();
 
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#b8862b";
