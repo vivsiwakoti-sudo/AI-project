@@ -10,7 +10,7 @@ class Potion extends Projectile {
     constructor(x, y, vx, vy, owner, effect) {
         super(x, y, vx, vy, effect.damage, owner);
         this.effect = effect;
-        this.impactRadius = 20;
+        this.impactRadius = 40;
     }
 }
 
