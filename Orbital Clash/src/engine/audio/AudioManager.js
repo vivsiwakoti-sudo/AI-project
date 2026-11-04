@@ -679,21 +679,14 @@ class AudioManager {
     // --- Weapon-specific layer -------------------------------------------------
     switch (weapon) {
       case "IceSword":
-        // Cold, glassy chime on top of the slice.
-        playMetalSlice(ctx, this.sfxGain, now, { baseFreq: 1800 * jitter, sweepTo: 7000, gain: 0.26, ring: 4200, duration: 0.2 });
-        playTone(ctx, this.sfxGain, 1760 * jitter, now, 0.28, { type: "sine", gain: 0.12, attack: 0.002, release: 0.26 });
-        return;
       case "Samurai":
       case "Knight":
       case "Reaper":
       case "Berserker":
-        // Edged blades: a bright metallic slice.
-        playMetalSlice(ctx, this.sfxGain, now, { baseFreq: 2400 * jitter, sweepTo: 8500, gain: 0.3, ring: 3400, duration: 0.16 });
-        return;
       case "Assassin":
-        // Small and quick: a light, short slice plus a soft stab.
-        playMetalSlice(ctx, this.sfxGain, now, { baseFreq: 3000 * jitter, sweepTo: 9500, gain: 0.2, ring: 5200, duration: 0.1 });
-        playStab(ctx, this.sfxGain, now, { gain: 0.16, freq: 300 });
+      case "Vampire":
+        // Every melee blade shares one metallic cut so the sound reads consistently.
+        playMetalSlice(ctx, this.sfxGain, now, { baseFreq: 2400 * jitter, sweepTo: 8500, gain: 0.3, ring: 3400, duration: 0.16 });
         return;
       case "Spearman":
         // A puncturing stab with a wood-and-metal thump.
@@ -744,11 +737,6 @@ class AudioManager {
         // Heavy, fleshy contact.
         playCrush(ctx, this.sfxGain, now, { gain: 0.4, freq: 120 });
         return;
-      case "Vampire":
-        // A claw slash with a raking scrape.
-        playMetalSlice(ctx, this.sfxGain, now, { baseFreq: 2000 * jitter, sweepTo: 6000, gain: 0.24, ring: 2600, duration: 0.14 });
-        playNoiseBurst(ctx, this.sfxGain, now, 0.1, { filterType: "bandpass", filterFreq: 600, gain: 0.16 });
-        return;
       case "Tunneler":
       case "Ghost":
         // Ethereal / subterranean hits.
@@ -768,6 +756,10 @@ class AudioManager {
       AOE: { freq: 110, noiseFilter: 650, duration: 0.2 }
     };
     const preset = presets[category] || presets.Body;
+    if (category === "Melee") {
+      playMetalSlice(ctx, this.sfxGain, now, { baseFreq: 2400 * jitter, sweepTo: 8500, gain: 0.3, ring: 3400, duration: 0.16 });
+      return;
+    }
     playThump(ctx, this.sfxGain, now, preset.freq * jitter, preset.duration, { gain: 0.34 });
     playNoiseBurst(ctx, this.sfxGain, now, preset.duration * 0.8, { filterFreq: preset.noiseFilter, gain: 0.22 });
   }
