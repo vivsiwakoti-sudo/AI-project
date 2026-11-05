@@ -657,19 +657,6 @@ export class FighterBase {
         ctx.shadowBlur = 0;
         ctx.restore();
 
-        // HP readout centred on the body. Outlined so it reads over the gradient.
-        const hpText = String(Math.max(0, Math.ceil(this.health)));
-        ctx.save();
-        ctx.font = `bold ${Math.max(9, Math.round(this.radius * 0.6))}px system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
-        ctx.strokeText(hpText, this.x, this.y);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(hpText, this.x, this.y);
-        ctx.restore();
-
         // Low-HP danger tint: a pulsing red shell that intensifies as the fighter
         // nears elimination. Drawn before the hit pop so a fresh hit still reads
         // on top of it. Presentation only - it never gates anything.

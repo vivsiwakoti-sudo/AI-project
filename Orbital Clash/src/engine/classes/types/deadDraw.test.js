@@ -18,7 +18,6 @@ const makeCtx = () => {
     fillRect: () => { calls.fillRect++; },
     strokeRect: noop, clearRect: noop, clip: noop, setLineDash: noop,
     fillText: () => { calls.fillText++; },
-    strokeText: noop,
     createLinearGradient: () => ({ addColorStop: noop }),
     createRadialGradient: () => ({ addColorStop: noop }),
     set globalAlpha(v) { this._a = v; },
