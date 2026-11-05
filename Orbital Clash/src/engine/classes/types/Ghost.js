@@ -8,6 +8,10 @@ export class Ghost extends FighterBase {
         this.ghostTimer = 5;
         this.ghostDuration = 0;
         this.normalSpeed = data.speed;
+        this.baseDamage = data.damage;
+        this.ghostDamage = 15;
+        this.ghostSpeed = 20;
+        this.ghostPhaseDuration = 2;
     }
 
     update(dt, opponent) {
@@ -20,8 +24,9 @@ export class Ghost extends FighterBase {
             if (this.ghostTimer <= 0) {
                 this.isGhost = true;
                 this.isInvulnerable = true;
-                this.speed = 10; // Ghost speed
-                this.ghostDuration = 5;
+                this.speed = this.ghostSpeed;
+                this.damage = this.ghostDamage;
+                this.ghostDuration = this.ghostPhaseDuration;
                 this.ghostTimer = 5; // Reset
                 this.isCharging = false;
                 this.emitBurst("#ffffff", 22, 380);
@@ -53,6 +58,7 @@ export class Ghost extends FighterBase {
                 this.isGhost = false;
                 this.isInvulnerable = false;
                 this.speed = this.normalSpeed;
+                this.damage = this.baseDamage;
             }
         }
     }
@@ -74,7 +80,7 @@ export class Ghost extends FighterBase {
             }
             ctx.restore();
 
-            ctx.globalAlpha = 0.4;
+            ctx.globalAlpha = 0.8;
             // Ghost mode: ethereal glow
             ctx.shadowBlur = 30;
             ctx.shadowColor = "#FFFFFF";
