@@ -1,6 +1,7 @@
 import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
+import { audioManager } from "../../audio/AudioManager.js";
 
 export class Ninja extends FighterBase {
     constructor(data, x, y) {
@@ -49,6 +50,7 @@ export class Ninja extends FighterBase {
                     savedVx: 0,
                     savedVy: 0
                 };
+                audioManager.playShotSfx("Ninja");
             }
         }
 

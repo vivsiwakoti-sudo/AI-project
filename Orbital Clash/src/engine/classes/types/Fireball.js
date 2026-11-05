@@ -2,6 +2,7 @@ import { FighterBase } from "../FighterBase.js";
 import { Projectile } from "../Projectile.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
+import { audioManager } from "../../audio/AudioManager.js";
 
 const BURN_DURATION = 5;
 const BURN_TICK_INTERVAL = 1 / 3;
@@ -35,6 +36,7 @@ export class Fireball extends FighterBase {
                 // dodged, or apply the burn.
                 this.projectiles.push(new Projectile(this.x, this.y, vx, vy, 0, this));
             }
+            audioManager.playShotSfx("Fireball");
             this.attackTimer = 3;
         }
 

@@ -1,6 +1,7 @@
 import { FighterBase } from "../FighterBase.js";
 import { Projectile } from "../Projectile.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
+import { audioManager } from "../../audio/AudioManager.js";
 import { drawSpear } from "../../systems/Weapons.js";
 
 class Spear extends Projectile {
@@ -216,6 +217,7 @@ export class Spearman extends FighterBase {
             const vx = Math.cos(angle) * 12;
             const vy = Math.sin(angle) * 12;
             this.projectiles.push(new Spear(this.x, this.y, vx, vy, this));
+            audioManager.playShotSfx("Spearman");
             this.spearCooldown = 3.5;
         }
     }

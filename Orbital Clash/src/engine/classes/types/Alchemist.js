@@ -2,6 +2,7 @@ import { FighterBase } from "../FighterBase.js";
 import { Projectile } from "../Projectile.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
+import { audioManager } from "../../audio/AudioManager.js";
 
 // Same inset as the inner border in CollisionSystem.resolveFighterWall.
 const WALL_INSET = 20;
@@ -78,6 +79,7 @@ export class Alchemist extends FighterBase {
         this.throwAngle = angle;
         this.throwAnimation = 0.35;
         this.projectiles.push(p);
+        audioManager.playShotSfx("Alchemist");
     }
 
     // True when the flask has reached the playable border.

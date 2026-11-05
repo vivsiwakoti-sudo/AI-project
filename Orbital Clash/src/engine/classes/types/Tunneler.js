@@ -1,6 +1,7 @@
 import { FighterBase } from "../FighterBase.js";
 import { Projectile } from "../Projectile.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
+import { audioManager } from "../../audio/AudioManager.js";
 
 export class Tunneler extends FighterBase {
     constructor(data, x, y) {
@@ -71,6 +72,7 @@ export class Tunneler extends FighterBase {
                         const angle = baseAngle + (i - 2) * 0.2;
                         this.spikes.push(new Projectile(this.x, this.y, Math.cos(angle)*8, Math.sin(angle)*8, this.damage, this));
                     }
+                    audioManager.playShotSfx("Tunneler");
                     if (this.particleSystem) {
                         this.particleSystem.emit(this.x, this.y, "#d2a679", 26, { speed: 420, size: 3.4 });
                         this.particleSystem.emit(this.x, this.y, "#A9A9A9", 14, { speed: 560, size: 2.6 });

@@ -764,6 +764,48 @@ class AudioManager {
     playNoiseBurst(ctx, this.sfxGain, now, preset.duration * 0.8, { filterFreq: preset.noiseFilter, gain: 0.22 });
   }
 
+  // Plays once per launch (a whole volley counts as one shot). `weapon` is the
+  // shooter's class name.
+  playShotSfx(weapon = null) {
+    const ctx = this.ensureContext();
+    const now = ctx.currentTime;
+    const jitter = 0.94 + Math.random() * 0.12;
+    switch (weapon) {
+      case "Gunner":
+        // Sharp crack with a short low body.
+        playNoiseBurst(ctx, this.sfxGain, now, 0.06, { filterType: "highpass", filterFreq: 1800, gain: 0.3 });
+        playThump(ctx, this.sfxGain, now, 260 * jitter, 0.1, { gain: 0.26, pitchDrop: 0.5 });
+        return;
+      case "Fireball":
+        // Rising ignition whoosh.
+        playNoiseBurst(ctx, this.sfxGain, now, 0.25, { filterType: "bandpass", filterFreq: 600, sweepTo: 2200, gain: 0.22, q: 1.2 });
+        playTone(ctx, this.sfxGain, 280 * jitter, now, 0.12, { type: "sawtooth", gain: 0.06, attack: 0.01, release: 0.1 });
+        return;
+      case "Alchemist":
+        // Flask lob: a quick swish and a glassy pop.
+        playNoiseBurst(ctx, this.sfxGain, now, 0.12, { filterType: "bandpass", filterFreq: 1500, sweepTo: 3200, gain: 0.2, q: 1.8 });
+        playTone(ctx, this.sfxGain, 1800 * jitter, now + 0.06, 0.05, { type: "triangle", gain: 0.12, attack: 0.002, release: 0.04 });
+        return;
+      case "Spearman":
+        // Spear whoosh with a metallic tick.
+        playNoiseBurst(ctx, this.sfxGain, now, 0.18, { filterType: "bandpass", filterFreq: 1200, sweepTo: 3500, gain: 0.2, q: 2 });
+        playMetalSlice(ctx, this.sfxGain, now, { baseFreq: 2000 * jitter, sweepTo: 4500, gain: 0.1, duration: 0.07 });
+        return;
+      case "Tunneler":
+        // Ground-breaking crack as the spikes erupt.
+        playThump(ctx, this.sfxGain, now, 110 * jitter, 0.18, { gain: 0.3, pitchDrop: 0.4 });
+        playNoiseBurst(ctx, this.sfxGain, now, 0.16, { filterType: "bandpass", filterFreq: 800, sweepTo: 2200, gain: 0.22, q: 1.4 });
+        return;
+      case "Ninja":
+        // Rope dart zipping out: a fast whip.
+        playNoiseBurst(ctx, this.sfxGain, now, 0.22, { filterType: "bandpass", filterFreq: 2600, sweepTo: 900, gain: 0.18, q: 2 });
+        playTone(ctx, this.sfxGain, 1400 * jitter, now, 0.06, { type: "triangle", gain: 0.06, attack: 0.002, release: 0.05 });
+        return;
+      default:
+        return;
+    }
+  }
+
   playDeathSfx() {
     const ctx = this.ensureContext();
     const now = ctx.currentTime;

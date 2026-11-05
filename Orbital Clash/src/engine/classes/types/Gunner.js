@@ -2,6 +2,7 @@ import { FighterBase } from "../FighterBase.js";
 import { Projectile } from "../Projectile.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { drawBolt } from "../../systems/Weapons.js";
+import { audioManager } from "../../audio/AudioManager.js";
 
 export class Gunner extends FighterBase {
     constructor(data, x, y) {
@@ -97,6 +98,7 @@ export class Gunner extends FighterBase {
             const vy = Math.sin(angle) * 11;
             this.projectiles.push(new Projectile(this.x, this.y, vx, vy, damage, this));
         }
+        audioManager.playShotSfx("Gunner");
 
         this.cooldownTimer = cooldown;
         this.lastShotTime = 0.2;
