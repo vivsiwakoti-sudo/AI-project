@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
-import { loadHistory, clearHistory } from "../engine/battleHistory";
+import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
 import { hasResumableTournament, loadTournamentStats } from "../engine/tournament";
 import ClassCard from "./MenuComponents/ClassCard";
 
@@ -82,6 +82,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(loadHistory);
+  const [battleCount, setBattleCount] = useState(loadBattleCount);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
   // Read once on mount: the menu only needs to know whether a partial bracket is
@@ -160,6 +161,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const handleOpenHistory = () => {
     audioManager.playUiClick();
     setHistory(loadHistory());
+    setBattleCount(loadBattleCount());
     setConfirmClearHistory(false);
     setShowHistory(true);
   };
@@ -171,6 +173,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
       return;
     }
     setHistory(clearHistory());
+    setBattleCount(loadBattleCount());
     setConfirmClearHistory(false);
   };
 
@@ -247,7 +250,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             onClick={handleOpenHistory}
             title="View the log of past battles"
           >
-            BATTLE HISTORY{history.length > 0 ? ` (${history.length})` : ""}
+            BATTLE HISTORY{battleCount > 0 ? ` (${battleCount})` : ""}
           </button>
           <button
             className={`reset-progress-button ${confirmReset ? "reset-progress-confirm" : ""}`}

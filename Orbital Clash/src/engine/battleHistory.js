@@ -13,6 +13,11 @@
 
 export const HISTORY_KEY = "arena-battle-history";
 
+// Lifetime battle count, kept separately from the log. The log is capped (below),
+// so its length can never report more than MAX_HISTORY_ENTRIES; this counter is
+// what the menu shows as the number of battles played.
+export const BATTLE_COUNT_KEY = "arena-battle-count";
+
 // Newest entries are kept at the FRONT of the array. The cap bounds how much
 // storage a long-running install can consume; a battle log is a short recap,
 // not an archive, so the oldest entries fall off once the cap is reached.
@@ -80,6 +85,29 @@ function writeHistory(entries) {
   }
 }
 
+// Installs that predate the counter have no stored value, so it starts from the
+// number of logged battles rather than zero.
+export function loadBattleCount() {
+  if (!available()) return 0;
+  try {
+    const raw = window.localStorage.getItem(BATTLE_COUNT_KEY);
+    if (raw === null) return loadHistory().length;
+    const count = Number(raw);
+    return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeBattleCount(count) {
+  if (!available()) return;
+  try {
+    window.localStorage.setItem(BATTLE_COUNT_KEY, String(count));
+  } catch {
+    /* storage disabled or full - count just will not persist */
+  }
+}
+
 // Builds a history entry from an end-of-battle results array and appends it.
 // Returns the new (newest-first) history so the caller can render it without a
 // second read. `results` is the same array the end screen receives: each fighter
@@ -107,8 +135,12 @@ export function recordBattle(results, { aborted = false } = {}) {
   );
 
   const entry = { timestamp: Date.now(), winner, aborted, durationSeconds, participants };
+  // Read the count before the log is written: with no stored counter yet, the
+  // fallback counts logged battles, and the new entry must not be included.
+  const count = loadBattleCount() + 1;
   const next = [entry, ...loadHistory()].slice(0, MAX_HISTORY_ENTRIES);
   writeHistory(next);
+  writeBattleCount(count);
   return next;
 }
 
@@ -116,6 +148,7 @@ export function clearHistory() {
   if (!available()) return [];
   try {
     window.localStorage.removeItem(HISTORY_KEY);
+    window.localStorage.removeItem(BATTLE_COUNT_KEY);
   } catch {
     /* storage disabled - nothing to clear */
   }
