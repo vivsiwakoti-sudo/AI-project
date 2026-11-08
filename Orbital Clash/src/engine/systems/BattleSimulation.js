@@ -294,6 +294,10 @@ export function drawBattleFrame(ctx, {
   ctx.fillRect(0, 0, arenaSize, arenaSize);
 
   ctx.save();
+  // The playable-area outline. It must be stroked OUTSIDE the clip: a rect clip
+  // keeps only the pixels strictly inside the path, so stroking the border while
+  // clipped to that same rect throws the whole 2px line away and the arena reads
+  // as "no outline, just the inner floor". Stroke first, then clip what follows.
   ctx.strokeStyle = "rgba(0, 242, 255, 0.4)";
   ctx.lineWidth = 2;
   ctx.strokeRect(inner, inner, innerSize, innerSize);
