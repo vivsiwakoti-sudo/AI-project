@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { loadLastReplayFrames } from "../engine/replayStore";
 
+// Frames are decoded just in time into a small sliding window of ImageBitmaps.
+// A 25 second replay holds hundreds of frames, and decoding all of them up front
+// would cost hundreds of megabytes.
+const LOOKAHEAD = 20;
+
 function BattleReplay({ frames, playing, onEnded }) {
   const canvasRef = useRef(null);
   const onEndedRef = useRef(onEnded);
@@ -17,67 +22,87 @@ function BattleReplay({ frames, playing, onEnded }) {
 
     let frameRequest;
     let cancelled = false;
-    const objectUrls = [];
-    const images = frames.map(frame => {
-      const image = new Image();
-      const source = frame.image instanceof Blob ? URL.createObjectURL(frame.image) : frame.image;
-      if (frame.image instanceof Blob) objectUrls.push(source);
-      image.src = source;
-      return image;
-    });
+    const ready = new Map();
+    const requested = new Set();
+    const last = frames.length - 1;
+
+    const request = index => {
+      if (index > last || requested.has(index)) return;
+      requested.add(index);
+      createImageBitmap(frames[index].image).then(bitmap => {
+        if (cancelled) bitmap.close();
+        else ready.set(index, bitmap);
+      }).catch(() => {});
+    };
+    // Draws the newest decoded frame at or before `index`, so a frame that is
+    // still decoding holds the previous picture instead of flashing blank.
     const drawAt = index => {
-      const image = images[index];
-      if (image?.complete && image.naturalWidth > 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      for (let i = index; i >= 0; i--) {
+        const bitmap = ready.get(i);
+        if (bitmap) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          return;
+        }
+      }
+    };
+    const release = index => {
+      for (const [i, bitmap] of ready) {
+        if (i < index - 1) {
+          bitmap.close();
+          ready.delete(i);
+        }
       }
     };
 
-    Promise.all(images.map(image => new Promise(resolve => {
-      if (image.complete) resolve();
-      else {
-        image.onload = resolve;
-        image.onerror = resolve;
-      }
-    }))).then(() => {
-      if (cancelled) return;
-      if (!playing) {
-        drawAt(images.length - 1);
-        return;
-      }
-      drawAt(0);
-
+    if (!playing) {
+      request(last);
+      const showLast = () => {
+        if (cancelled) return;
+        if (ready.has(last)) drawAt(last);
+        else frameRequest = requestAnimationFrame(showLast);
+      };
+      showLast();
+    } else {
       const startTime = frames[0].time;
-      const duration = Math.max(0, frames[frames.length - 1].time - startTime);
-      if (duration === 0) {
-        drawAt(images.length - 1);
-        onEndedRef.current();
-        return;
-      }
-
+      const duration = Math.max(0, frames[last].time - startTime);
       let playbackStart = null;
       let index = 0;
+      for (let i = 0; i <= LOOKAHEAD; i++) request(i);
+
       const tick = now => {
         if (cancelled) return;
-        if (playbackStart === null) playbackStart = now;
+        // The clock starts once the first frame is decoded, so the opening
+        // seconds are not skipped while it loads.
+        if (playbackStart === null) {
+          if (!ready.has(0)) {
+            frameRequest = requestAnimationFrame(tick);
+            return;
+          }
+          playbackStart = now;
+        }
         const elapsed = Math.min(duration, (now - playbackStart) / 1000);
         const target = startTime + elapsed;
         while (index + 1 < frames.length && frames[index + 1].time <= target) index++;
+        for (let i = index; i <= index + LOOKAHEAD; i++) request(i);
         drawAt(index);
+        release(index);
         if (elapsed >= duration) {
-          drawAt(images.length - 1);
+          request(last);
+          drawAt(last);
           onEndedRef.current();
           return;
         }
         frameRequest = requestAnimationFrame(tick);
       };
       frameRequest = requestAnimationFrame(tick);
-    });
+    }
 
     return () => {
       cancelled = true;
       if (frameRequest) cancelAnimationFrame(frameRequest);
-      objectUrls.forEach(url => URL.revokeObjectURL(url));
+      ready.forEach(bitmap => bitmap.close());
+      ready.clear();
     };
   }, [frames, playing]);
 

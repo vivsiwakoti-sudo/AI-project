@@ -5,10 +5,11 @@ export const GRAPHICS_LEVELS = Object.freeze(["low", "medium", "high"]);
 export const DEFAULT_GRAPHICS_QUALITY = "high";
 
 // glowScale multiplies every shadowBlur, so 0 removes glow entirely.
+// replayInterval is the simulated seconds between replay snapshots (30, 20 and 10 fps).
 export const GRAPHICS_PROFILES = Object.freeze({
-  low: { glowScale: 0, particleDensity: 0.4, maxParticles: 300, replayInterval: 0.5 },
-  medium: { glowScale: 0.5, particleDensity: 0.8, maxParticles: 700, replayInterval: 0.3 },
-  high: { glowScale: 1, particleDensity: 1.35, maxParticles: 1400, replayInterval: 0.2 }
+  low: { glowScale: 0, particleDensity: 0.4, maxParticles: 300, replayInterval: 1 / 10 },
+  medium: { glowScale: 0.5, particleDensity: 0.8, maxParticles: 700, replayInterval: 1 / 20 },
+  high: { glowScale: 1, particleDensity: 1.35, maxParticles: 1400, replayInterval: 1 / 30 }
 });
 
 export function graphicsProfile(level) {

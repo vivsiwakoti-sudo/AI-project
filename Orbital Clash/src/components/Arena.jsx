@@ -365,6 +365,8 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       let resolveCapture;
       const pendingCapture = new Promise(resolve => { resolveCapture = resolve; });
       state.pendingReplayCaptures.push(pendingCapture);
+      // JPEG: encoding a snapshot blocks the game loop for ~3ms, versus ~10ms for
+      // WebP, which is too slow at 30 snapshots a second.
       replayCanvas.toBlob(blob => {
         if (blob && capturedAt >= state.replayTime - REPLAY_SECONDS - 0.2) {
           state.replayFrames.push({ time: capturedAt, image: blob });
@@ -373,7 +375,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
         const pendingIndex = state.pendingReplayCaptures.indexOf(pendingCapture);
         if (pendingIndex >= 0) state.pendingReplayCaptures.splice(pendingIndex, 1);
         resolveCapture();
-      }, "image/webp", 0.68);
+      }, "image/jpeg", 0.6);
     };
 
     // async because the hand-off awaits any in-flight replay captures before it
@@ -429,9 +431,14 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       } else {
         if (!gameState.current.resolved) {
           gameState.current.replayTime += simulationDt;
-          if (gameState.current.replayTime >= gameState.current.nextReplayCapture) {
+          // Schedule from the previous slot, not from now, so rounding and frame
+          // jitter cannot stretch every interval by a whole extra rendered frame.
+          if (gameState.current.replayTime + 0.004 >= gameState.current.nextReplayCapture) {
             shouldCaptureReplayFrame = true;
-            gameState.current.nextReplayCapture = gameState.current.replayTime + replayInterval;
+            gameState.current.nextReplayCapture = Math.max(
+              gameState.current.nextReplayCapture + replayInterval,
+              gameState.current.replayTime
+            );
           }
         }
         timerAccumulator += simulationDt;

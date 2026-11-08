@@ -6,7 +6,7 @@ import { GRAPHICS_LEVELS } from "../engine/graphics";
 const percent = value => Math.round(value * 100);
 
 const GRAPHICS_HINTS = {
-  low: "No glow, sparse particles and half-rate replay capture. Best for slower computers.",
+  low: "No glow, sparse particles and a lower replay frame rate. Best for slower computers.",
   medium: "Soft glow and moderate particle bursts.",
   high: "Full glow and dense particle bursts."
 };
