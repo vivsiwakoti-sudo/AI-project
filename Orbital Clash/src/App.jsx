@@ -7,16 +7,27 @@ import SettingsPanel from "./components/SettingsPanel";
 import TournamentScreen from "./components/TournamentScreen";
 import ChampionScreen from "./components/ChampionScreen";
 import ScreenTransition from "./components/ScreenTransition";
+import PredictionModal from "./components/PredictionModal";
 import { audioManager } from "./engine/audio/AudioManager";
 import { DEFAULT_ARENA_SIZE } from "./engine/config";
+import { FIGHTER_CLASSES } from "./engine/fighterDefinitions";
+import {
+  addPrediction,
+  resolveBattlePrediction,
+  resolveTournamentPrediction,
+  voidTournamentPrediction
+} from "./engine/predictions";
 import {
   buildTournamentBracket,
   loadTournamentStats,
   loadActiveTournament,
+  hasResumableTournament,
   saveActiveTournament,
   recordTournamentResult
 } from "./engine/tournament";
 import "./App.css";
+
+const ALL_FIGHTERS = Object.values(FIGHTER_CLASSES).map(({ name, color }) => ({ name, color }));
 
 function App() {
   const [screen, setScreen] = useState("menu");
@@ -31,6 +42,9 @@ function App() {
   // in from the centre once; the flag is cleared as soon as the player leaves it.
   const [showTitle, setShowTitle] = useState(true);
   const [rosterIntro, setRosterIntro] = useState(false);
+  // A prediction is asked for before a battle starts or a new bracket is built.
+  // `onConfirm` receives the guesses and carries on with the start it was waiting on.
+  const [pendingPrediction, setPendingPrediction] = useState(null);
 
   // --- Tournament Mode -------------------------------------------------------
   // `tournament` is the live bracket driven by the engine; `tournamentRunId`
@@ -41,14 +55,9 @@ function App() {
   const [champion, setChampion] = useState(null);
   const [stats, setStats] = useState(() => loadTournamentStats());
 
-  // Opens Tournament Mode. An in-progress tournament restored from storage is
-  // resumed exactly where it stopped, so closing the game mid-bracket does not
-  // lose progress; only when there is no resumable bracket does a new 25-class
-  // tournament get built. A *completed* saved tournament is not resumed - it is
-  // shown on the champion screen instead of replaying its bracket.
-  const startTournament = () => {
-    const restored = loadActiveTournament();
-    const next = restored || buildTournamentBracket();
+  // Puts a bracket on screen. A completed bracket goes to the champion screen
+  // instead of replaying its matches.
+  const enterTournament = next => {
     saveActiveTournament(next);
     setTournament(next);
     setStats(loadTournamentStats());
@@ -61,6 +70,35 @@ function App() {
     }
     setChampion(null);
     setScreen("tournament");
+  };
+
+  // A new bracket is only built once its winner has been predicted, so the
+  // prediction is stored against the bracket's own id.
+  const beginNewTournament = arenaSize => {
+    setPendingPrediction({
+      kind: "tournament",
+      fighters: ALL_FIGHTERS,
+      onConfirm: guesses => {
+        const next = buildTournamentBracket({ arenaSize });
+        addPrediction({ kind: "tournament", tournamentId: next.id, guesses });
+        setPendingPrediction(null);
+        enterTournament(next);
+      }
+    });
+  };
+
+  // Opens Tournament Mode. An in-progress tournament restored from storage is
+  // resumed exactly where it stopped, so closing the game mid-bracket does not
+  // lose progress; only when there is no resumable bracket does a new 25-class
+  // tournament get built. A *completed* saved tournament is not resumed - it is
+  // shown on the champion screen instead of replaying its bracket.
+  const startTournament = () => {
+    const restored = loadActiveTournament();
+    if (restored) {
+      enterTournament(restored);
+      return;
+    }
+    beginNewTournament(undefined);
   };
 
   const returnToRoster = () => {
@@ -86,8 +124,26 @@ function App() {
   // so the transition wrapper can keep showing the old one for the length of its
   // exit animation. `screen` still drives it exactly as before.
   const screens = {
-    menu: <Menu intro={rosterIntro} onStart={(f, size) => { setSelectedFighters(f); setArenaSize(size); setRosterIntro(false); setScreen("game"); }} onStartTournament={startTournament} />,
-    game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => { setBattleResults(res); setBattleAborted(Boolean(meta?.aborted)); setReplayFrames(meta?.replayFrames || []); setScreen("end"); }} />,
+    menu: <Menu intro={rosterIntro} onStart={(f, size) => setPendingPrediction({
+      kind: "battle",
+      fighters: f.map(({ name, color }) => ({ name, color })),
+      onConfirm: guesses => {
+        addPrediction({ kind: "battle", guesses });
+        setPendingPrediction(null);
+        setSelectedFighters(f);
+        setArenaSize(size);
+        setRosterIntro(false);
+        setScreen("game");
+      }
+    })} onStartTournament={startTournament} />,
+    game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => {
+      const aborted = Boolean(meta?.aborted);
+      resolveBattlePrediction({ winner: res?.find(f => f.placement === 1)?.name ?? null, aborted });
+      setBattleResults(res);
+      setBattleAborted(aborted);
+      setReplayFrames(meta?.replayFrames || []);
+      setScreen("end");
+    }} />,
     end: <EndScreen results={battleResults} aborted={battleAborted} replayFrames={replayFrames} onReturn={returnToRoster} />,
     tournament: (
       <TournamentScreen
@@ -103,10 +159,15 @@ function App() {
           // Fold the whole tournament into the persistent stats + history once.
           // The engine guards against counting the same tournament twice.
           setStats(recordTournamentResult(next));
+          resolveTournamentPrediction(next.id, next.champion);
           setChampion(next);
           setScreen("champion");
         }}
         onExit={() => {
+          // EXIT WITHOUT SAVING discards the bracket, so its prediction can never
+          // be settled. A bracket saved for later stays resumable and keeps its
+          // prediction pending.
+          if (!hasResumableTournament()) voidTournamentPrediction(tournament?.id);
           setTournament(null);
           setScreen("menu");
         }}
@@ -119,13 +180,7 @@ function App() {
         onNewTournament={() => {
           // The next tournament starts on the map the last one used; the overview
           // lets the player change it before the first match.
-          const next = buildTournamentBracket({ arenaSize: (champion || tournament)?.arenaSize });
-          saveActiveTournament(next);
-          setTournament(next);
-          setTournamentRunId(id => id + 1);
-          setChampion(null);
-          setStats(loadTournamentStats());
-          setScreen("tournament");
+          beginNewTournament((champion || tournament)?.arenaSize);
         }}
         onMainMenu={() => {
           setTournament(null);
@@ -159,6 +214,14 @@ function App() {
               a fresh mount and its entrance animation always plays from the start;
               the transition wrapper itself stays mounted (see ScreenTransition). */}
           <ScreenTransition screenKey={screen} render={key => <div className="app-screen" key={key}>{screens[key]}</div>} />
+          {pendingPrediction && (
+            <PredictionModal
+              kind={pendingPrediction.kind}
+              fighters={pendingPrediction.fighters}
+              onConfirm={guesses => pendingPrediction.onConfirm(guesses)}
+              onCancel={() => setPendingPrediction(null)}
+            />
+          )}
         </>
       )}
     </div>

@@ -498,6 +498,7 @@
 /* Opens the saved battle log; tinted cyan so it reads as a primary action next
    to the filters rather than another filter chip. */
 .roster-filters .battle-history-button { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 40%, var(--border)); }
+.roster-filters .prediction-button { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 40%, var(--border)); }
 
 .roster-filters .reset-progress-button:hover {
   color: var(--danger);
@@ -1057,6 +1058,115 @@
   border-color: var(--danger);
   background: var(--danger-soft);
 }
+
+/* --- Predictions ------------------------------------------------------- */
+.prediction-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+
+.prediction-tally span {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.prediction-tally-overall { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 50%, var(--border)) !important; }
+
+.prediction-guesses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.prediction-guess { color: var(--text-secondary); }
+.prediction-guess b { color: var(--text); }
+.prediction-guess i { font-style: normal; margin-left: 2px; }
+.prediction-guess-right i { color: #7fe39b; }
+.prediction-guess-wrong i { color: var(--danger); }
+.prediction-void { opacity: 0.6; }
+
+.prediction-overlay { z-index: 60; }
+
+.prediction-modal {
+  width: min(560px, calc(100% - 32px));
+  max-height: min(640px, calc(100vh - 48px));
+  overflow-y: auto;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-elevated);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--cyan) 18%, transparent);
+}
+
+.prediction-modal header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.prediction-modal h2 { margin: 2px 0 0; font-size: 20px; letter-spacing: 0.06em; }
+
+.prediction-count-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.prediction-count-button {
+  padding: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cyan);
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.prediction-count-button:hover { border-color: var(--cyan); box-shadow: 0 0 18px color-mix(in srgb, var(--cyan) 35%, transparent); }
+
+.prediction-progress { margin: 0 0 12px; font-size: 12px; letter-spacing: 0.08em; color: var(--text-secondary); }
+
+.prediction-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.prediction-pick-button {
+  padding: 10px 8px;
+  border: 1px solid color-mix(in srgb, var(--fighter-color) 55%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fighter-color) 10%, transparent);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.prediction-pick-button:hover { box-shadow: 0 0 16px color-mix(in srgb, var(--fighter-color) 45%, transparent); }
+
+.prediction-cancel-button {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.prediction-cancel-button:hover { color: var(--danger); border-color: var(--danger); }
 
 /* --- Battle report ---------------------------------------------------- */
 .results-screen { width: min(720px, calc(100% - 32px)); margin: 64px auto 60px; text-align: center; }

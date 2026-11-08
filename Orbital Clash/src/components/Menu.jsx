@@ -3,6 +3,7 @@ import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
+import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
 import { hasResumableTournament, loadTournamentStats } from "../engine/tournament";
 import ClassCard from "./MenuComponents/ClassCard";
 
@@ -40,6 +41,8 @@ function clearRecords() {
 
 // 1 -> "1st", 2 -> "2nd", ... Used by the battle-history log to rank the
 // participants of each saved fight.
+const PREDICTION_STATUS_LABEL = { pending: "PENDING", resolved: "SETTLED", void: "VOID" };
+
 function ordinal(n) {
   const value = Math.floor(Number(n));
   if (!Number.isFinite(value)) return "—";
@@ -84,6 +87,9 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [history, setHistory] = useState(loadHistory);
   const [battleCount, setBattleCount] = useState(loadBattleCount);
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const [predictions, setPredictions] = useState(loadPredictions);
+  const predictionTally = useMemo(() => tallyPredictions(predictions), [predictions]);
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
   // Read once on mount: the menu only needs to know whether a partial bracket is
   // waiting, and nothing on this screen can create or finish one.
@@ -118,6 +124,13 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [showHistory]);
+
+  useEffect(() => {
+    if (!showPredictions) return;
+    const onKey = (event) => { if (event.key === "Escape") setShowPredictions(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showPredictions]);
 
   // Any count from 2 to 4 is a legal battle, so the roster is ready as soon as
   // the minimum is met. The arena derives everything else (spawn seats, HUD
@@ -175,6 +188,12 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
     setHistory(clearHistory());
     setBattleCount(loadBattleCount());
     setConfirmClearHistory(false);
+  };
+
+  const handleOpenPredictions = () => {
+    audioManager.playUiClick();
+    setPredictions(loadPredictions());
+    setShowPredictions(true);
   };
 
   const handleRandomSelection = () => {
@@ -251,6 +270,13 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             title="View the log of past battles"
           >
             BATTLE HISTORY{battleCount > 0 ? ` (${battleCount})` : ""}
+          </button>
+          <button
+            className="prediction-button"
+            onClick={handleOpenPredictions}
+            title="View your winner predictions and how often they were right"
+          >
+            PREDICTIONS{predictionTally.overall.total > 0 ? ` (${predictionTally.overall.correct}/${predictionTally.overall.total})` : ""}
           </button>
           <button
             className={`reset-progress-button ${confirmReset ? "reset-progress-confirm" : ""}`}
@@ -387,7 +413,57 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
         </div>
       )}
 
-      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length}-WAY FREE FOR ALL — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize); }}>START BATTLE</button></footer>
-    </main>
+      {showPredictions && (
+        <div className="fighter-info-overlay" role="dialog" aria-label="Predictions">
+          <div className="battle-history-panel">
+            <header>
+              <div>
+                <div className="roster-eyebrow">SAVED LOCALLY</div>
+                <h2>PREDICTIONS</h2>
+              </div>
+              <button className="fighter-info-close" onClick={() => setShowPredictions(false)} aria-label="Close predictions">×</button>
+            </header>
+
+            <div className="prediction-tally">
+              <span className="prediction-tally-overall">RIGHT {predictionTally.overall.correct} / {predictionTally.overall.total}</span>
+              {predictionTally.guessers.map(slot => (
+                <span key={slot.guesser} className="prediction-tally-guesser">{slot.guesser} {slot.correct} / {slot.total}</span>
+              ))}
+            </div>
+
+            {predictions.length === 0 ? (
+              <p className="battle-history-empty">No predictions yet. Pick a winner before a battle or tournament and it will be kept here.</p>
+            ) : (
+              <ol className="battle-history-list">
+                {predictions.map(entry => (
+                  <li key={entry.id} className={`battle-history-row prediction-row prediction-${entry.status}`}>
+                    <div className="battle-history-row-head">
+                      <span className="battle-history-outcome">
+                        {entry.kind === PREDICTION_KINDS.tournament ? "TOURNAMENT" : "BATTLE"} • {PREDICTION_STATUS_LABEL[entry.status]}
+                      </span>
+                      <span className="battle-history-meta">
+                        {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "Unknown time"}
+                        {entry.winner ? ` • WINNER: ${entry.winner}` : ""}
+                      </span>
+                    </div>
+                    <div className="prediction-guesses">
+                      {entry.guesses.map(guess => (
+                        <span
+                          key={guess.guesser}
+                          className={`prediction-guess ${guess.correct === true ? "prediction-guess-right" : guess.correct === false ? "prediction-guess-wrong" : ""}`}
+                        >
+                          <b>{guess.guesser}</b> {guess.pick} <i>{guess.correct === true ? "✓" : guess.correct === false ? "✗" : "—"}</i>
+                        </span>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </div>
+      )}
+
+      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length}-WAY FREE FOR ALL — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize); }}>START BATTLE</button></footer>    </main>
   );
 }
