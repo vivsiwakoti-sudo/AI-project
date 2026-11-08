@@ -42,10 +42,55 @@ test('the factory builds a Summoner instance', () => {
   assert.ok(makeSummoner() instanceof Summoner);
 });
 
-test('the summonable pool is the roster minus Summoner and Duplicator', () => {
+test('the summonable pool is the roster minus Summoner', () => {
   assert.ok(!SUMMONABLE_CLASSES.includes('Summoner'));
-  assert.ok(!SUMMONABLE_CLASSES.includes('Duplicator'));
-  assert.equal(SUMMONABLE_CLASSES.length, Object.keys(FIGHTER_CLASSES).length - 2);
+  assert.ok(SUMMONABLE_CLASSES.includes('Duplicator'));
+  assert.equal(SUMMONABLE_CLASSES.length, Object.keys(FIGHTER_CLASSES).length - 1);
+});
+
+test('every summonable class is equally likely to be summoned', () => {
+  const originalRandom = Math.random;
+  try {
+    SUMMONABLE_CLASSES.forEach((name, index) => {
+      const summoner = makeSummoner();
+      let calls = 0;
+      // The first roll picks the class; the bucket centre maps back to that index.
+      Math.random = () => (calls++ === 0 ? (index + 0.5) / SUMMONABLE_CLASSES.length : 0.5);
+      assert.equal(summoner.summonRandom().name, name);
+    });
+  } finally {
+    Math.random = originalRandom;
+  }
+});
+
+test('a summoned Duplicator takes its clone swarm with it when the summon leaves play', () => {
+  const summoner = makeSummoner();
+  const duplicator = FighterFactory.createFighter('Duplicator', 400, 400);
+  duplicator.arenaSize = 800;
+  duplicator.owner = summoner;
+  summoner.summons.push(duplicator);
+  duplicator.spawnClone();
+  duplicator.spawnClone();
+  const clones = [...duplicator.clones];
+  assert.equal(clones.length, 2);
+
+  summoner.die(null);
+  assert.ok(clones.every(clone => clone.isDead));
+});
+
+test('a pruned Duplicator summon also takes its clone swarm with it', () => {
+  const summoner = makeSummoner();
+  const duplicator = FighterFactory.createFighter('Duplicator', 400, 400);
+  duplicator.arenaSize = 800;
+  duplicator.owner = summoner;
+  summoner.summons.push(duplicator);
+  duplicator.spawnClone();
+  const clones = [...duplicator.clones];
+
+  duplicator.health = 0;
+  summoner.update(0, null);
+  assert.equal(summoner.summons.length, 0);
+  assert.ok(clones.every(clone => clone.isDead));
 });
 
 test('the first summon pulse lands after 15 seconds, with two 15 HP summons', () => {

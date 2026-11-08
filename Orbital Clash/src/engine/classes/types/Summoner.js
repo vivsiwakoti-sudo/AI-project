@@ -6,9 +6,9 @@ export const SUMMON_INTERVAL = 15;
 export const SUMMON_HEALTH = 15;
 export const SUMMONS_PER_PULSE = 2;
 
-// A Summoner cannot summon itself, and Duplicator already manages its own clone
-// swarm (spawn cap, clone tree), which would not follow the summon's team rules.
-const NON_SUMMONABLE = new Set(["Summoner", "Duplicator"]);
+// Every roster class is equally likely to be summoned, except the Summoner itself.
+// A summoned Duplicator's clone swarm is torn down whenever its summon leaves play.
+const NON_SUMMONABLE = new Set(["Summoner"]);
 export const SUMMONABLE_CLASSES = Object.keys(FIGHTER_CLASSES).filter(name => !NON_SUMMONABLE.has(name));
 
 export class Summoner extends FighterBase {
@@ -26,7 +26,11 @@ export class Summoner extends FighterBase {
             return;
         }
         super.update(dt, opponent);
-        this.summons = this.summons.filter(summon => !summon.isDead && summon.health > 0);
+        this.summons = this.summons.filter(summon => {
+            if (!summon.isDead && summon.health > 0) return true;
+            summon.killCloneTree?.();
+            return false;
+        });
 
         this.summonTimer -= dt;
         if (this.summonTimer <= 0) {
@@ -62,9 +66,11 @@ export class Summoner extends FighterBase {
 
     killSummons(particles = this.particleSystem) {
         for (const summon of this.summons) {
-            if (summon.isDead) continue;
-            summon.health = 0;
-            summon.die(particles);
+            if (!summon.isDead) {
+                summon.health = 0;
+                summon.die(particles);
+            }
+            summon.killCloneTree?.();
         }
         this.summons = [];
     }
