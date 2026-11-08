@@ -66,7 +66,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Bullet",
     cooldown: 4.5,
     description: "Fires bullets in various patterns.",
-    description2: "Sprays four bullets per burst from one of four randomly chosen combos: weak/inaccurate (40%), strong/inaccurate (40%), weak/accurate (15%) or strong/accurate (5%). Strong bursts hit harder but take longer to charge.",
+    description2: "Each shot is one of four random bursts: 1 bullet for 15 damage (8s cooldown), 10 bullets for 10 damage each (6s), 3 bullets for 7 damage each (4s), or 4 bullets for 5 damage each (2s).",
     keywords: ["bullets", "spray", "spread", "random"],
   },
   "Samurai": {

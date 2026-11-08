@@ -4,6 +4,14 @@ import { DamageSystem } from "../../systems/DamageSystem.js";
 import { drawBolt } from "../../systems/Weapons.js";
 import { audioManager } from "../../audio/AudioManager.js";
 
+// One burst per shot, picked at random. `accuracy` is the aim spread in radians.
+const GUNNER_PATTERNS = [
+    { bullets: 1, damage: 15, cooldown: 8, accuracy: 0.05 },
+    { bullets: 10, damage: 10, cooldown: 6, accuracy: 0.5 },
+    { bullets: 3, damage: 7, cooldown: 4, accuracy: 0.1 },
+    { bullets: 4, damage: 5, cooldown: 2, accuracy: 0.3 },
+];
+
 export class Gunner extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -62,32 +70,8 @@ export class Gunner extends FighterBase {
     }
 
     shoot(opponent) {
-        const rand = Math.random();
-        let bullets = 1;
-        let accuracy = 0.5; // Spread
-        let cooldown = 2;
-        let damage = 5;
-
-        if (rand < 0.4) { // Weak/Inaccurate
-            damage = 4;
-            accuracy = 0.5;
-            cooldown = 2;
-            bullets = 4;
-        } else if (rand < 0.8) { // Strong/Inaccurate
-            damage = 6.5;
-            accuracy = 0.5;
-            cooldown = 4;
-            bullets = 4;
-        } else if (rand < 0.95) { // Weak/Accurate
-            damage = 4;
-            accuracy = 0.1;
-            cooldown = 3;
-        } else { // Strong/Accurate (Spray)
-            damage = 6;
-            accuracy = 0.05;
-            cooldown = 8;
-            bullets = 4;
-        }
+        const pattern = GUNNER_PATTERNS[Math.floor(Math.random() * GUNNER_PATTERNS.length)];
+        const { bullets, damage, cooldown, accuracy } = pattern;
 
         // AIM AT OPPONENT, THEN FIRE
         const baseAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
