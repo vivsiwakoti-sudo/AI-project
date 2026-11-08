@@ -1807,7 +1807,11 @@
 .tournament-body {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  /* Stage first, bracket panel second. The bracket is reference material and the
+     stage is the thing being watched, so the panel is capped at 420px AND at
+     ~1/3 of the row: on a 1232px row it gives the stage what it needs for a
+     full-size arena plus two HUD columns while still showing the bracket. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(420px, 33%));
   gap: 16px;
   align-items: start;
 }
@@ -1852,22 +1856,35 @@
    tournament match is fought on screen exactly like a normal battle. */
 .tournament-arena-live {
   display: grid;
-  /* Canvas in the middle, fighter HUDs on either side. The canvas track is the
-     world's native size (--arena-px, set from the tournament's chosen map)
-     wherever there is room, so the fight reads at the same scale as a normal
-     battle; the HUD tracks give up width first. */
-  grid-template-columns: minmax(170px, 1fr) minmax(0, var(--arena-px, 800px)) minmax(170px, 1fr);
+  /* Canvas in the middle, fighter HUDs on either side.
+
+     Two baked-in versions of this rule were broken, in opposite directions:
+       - `minmax(0, 1fr)` on the middle track: with three 1fr tracks the free
+         space is split three ways, so an 800px arena was handed 402px. The
+         canvas was scaled to 48%, and every fighter's body was drawn ~20px
+         across - the "doesn't show the full design" report.
+       - `auto` on the middle track: the arena kept its full 800px but the
+         tracks then totalled 1100px inside a 796px stage, so the left HUD was
+         pushed off-screen (x = -140) and the right HUD sat on the canvas.
+
+     The middle track is therefore `min(native size, what is left after the
+     HUDs)`: the arena fills the stage when it fits and shrinks proportionally
+     when it does not, and the HUDs always keep their column. */
+  grid-template-columns: var(--hud-col, 150px) minmax(0, var(--arena-px, 800px)) var(--hud-col, 150px);
   gap: 12px;
   align-items: start;
   justify-items: center;
   padding: 14px;
+  /* Lets the stage's own width (not its content) drive the tracks, so the arena
+     track can actually shrink below 800px instead of forcing an overflow. */
+  min-width: 0;
   /* The live arena is taller than a static stage; never clip a fighter's HUD. */
   overflow: visible;
 }
 
 /* Narrow windows: the panels stay on the sides and simply get narrower. */
 @media (max-width: 1240px) {
-  .tournament-arena-live { grid-template-columns: minmax(160px, 1fr) minmax(0, 1fr) minmax(160px, 1fr); }
+  .tournament-arena-live { --hud-col: 120px; }
   .tournament-hud { font-size: 0.78em; }
 }
 
@@ -1891,13 +1908,13 @@
 
 .tournament-canvas-wrap {
   position: relative;
+  /* Fill the arena's grid track. That track is already sized to
+     min(native world size, available space) by the grid rule above, so this is
+     a full-scale arena whenever there is room and a proportional one when there
+     is not - never the 48% scale a fixed track used to force. */
   width: 100%;
-  aspect-ratio: 1;
-  /* The track is the world size, so fill it. Capping by viewport height
-     shrank the canvas far below its column and made every fighter read as a speck
-     in a mostly-empty square. The arena is the point of this screen: it gets the
-     full world scale, and the page scrolls if the window is short. */
   max-width: var(--arena-px, 800px);
+  aspect-ratio: 1;
   justify-self: center;
   border: 1px solid color-mix(in srgb, var(--cyan) 55%, var(--border));
   border-radius: var(--radius);
@@ -2965,7 +2982,7 @@
   .tournament-controls { justify-content: space-between; }
   .tournament-control { flex: 1 1 auto; padding: 0 8px; font-size: 0.58rem; }
   .tournament-arena { min-height: 300px; padding: 8px; }
-  .tournament-arena-live { grid-template-columns: minmax(120px, 1fr) minmax(0, 1fr) minmax(120px, 1fr); gap: 8px; padding: 8px; }
+  .tournament-arena-live { --hud-col: 96px; gap: 8px; padding: 8px; }
   .champion-path-step { grid-template-columns: minmax(0, 1fr) 48px; }
   .champion-path-detail { grid-column: 1 / -1; }
   .champion-match-row { grid-template-columns: minmax(0, 1fr) 44px; }
