@@ -213,7 +213,7 @@ function App() {
           {/* The `.app-screen` node is keyed on the screen so the arriving screen is
               a fresh mount and its entrance animation always plays from the start;
               the transition wrapper itself stays mounted (see ScreenTransition). */}
-          <ScreenTransition screenKey={screen} render={key => <div className="app-screen" key={key}>{screens[key]}</div>} />
+          <ScreenTransition screenKey={screen} render={key => <div className={`app-screen app-screen-${key}`} key={key}>{screens[key]}</div>} />
           {pendingPrediction && (
             <PredictionModal
               kind={pendingPrediction.kind}

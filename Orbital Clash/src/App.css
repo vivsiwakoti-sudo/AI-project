@@ -190,8 +190,13 @@
 }
 
 /* --- Roster screen ---------------------------------------------------- */
+/* The screen wrapper sizes to its content, so the menu's wrapper is stretched to
+   the full stage width and the roster is centred inside it. */
+.app-screen-menu { width: 100%; }
+
 .roster-screen {
   width: min(100%, 1120px);
+  margin: 0 auto;
   box-sizing: border-box;
   padding: 34px 0 118px;
 }
