@@ -93,10 +93,10 @@ function App() {
       <TournamentScreen
         key={tournamentRunId}
         tournament={tournament}
-        onTournamentChange={next => {
-          setTournament(next);
-          saveActiveTournament(next);
-        }}
+        // Storage is the TournamentScreen's job: it writes every bracket change
+        // and is the only place that may DELETE the save (EXIT WITHOUT SAVING).
+        // Saving again here would resurrect a bracket the player just discarded.
+        onTournamentChange={next => setTournament(next)}
         onComplete={next => {
           setTournament(next);
           saveActiveTournament(next);

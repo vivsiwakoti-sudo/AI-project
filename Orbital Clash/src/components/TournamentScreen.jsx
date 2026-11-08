@@ -1,4 +1,5 @@
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { audioManager } from "../engine/audio/AudioManager";
 import {
   MATCH_CLOCK_SECONDS,
@@ -111,6 +112,10 @@ function TournamentScreenView({
   const [isBracketMinimized, setIsBracketMinimized] = useState(false);
   const [isArenaFullscreen, setIsArenaFullscreen] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+  // The bracket as it stands right now, for handlers that run outside the render
+  // that created them, so an exit can never write a stale copy.
+  const bracketRef = useRef(tournament);
+  useEffect(() => { bracketRef.current = tournament; }, [tournament]);
 
   // Refs mirror the state the async match runner reads, so a run in flight never
   // sees a stale closure. This is what keeps "pause", "speed" and "next match"
@@ -192,10 +197,26 @@ function TournamentScreenView({
   }, [hudFighters, stageMatch]);
 
   // Persist every bracket change so closing the game mid-tournament resumes it.
+  // The bracket is written to storage HERE and only here, so leaving through
+  // `leaveTournament` can genuinely decide its fate. App no longer writes on
+  // `onTournamentChange` for the same reason: a discard that removed the save
+  // must not be undone by an outer handler re-saving the bracket it was handed.
   useEffect(() => {
     saveActiveTournament(tournament);
     onTournamentChange?.(tournament);
   }, [tournament, onTournamentChange]);
+
+  // A saved bracket from a previous run survives in storage after this screen
+  // unmounts. If the player left via SAVE & EXIT, App remounts it unchanged; if
+  // they had just picked a different map, the restored bracket would differ and
+  // EXIT WITHOUT SAVING would silently leave the OLD bracket resumable. Writing
+  // the mount-time bracket back on the next mount keeps storage equal to the
+  // bracket actually on screen, so a discard always ends in a clean slot.
+  useEffect(() => {
+    saveActiveTournament(initialTournament);
+    // Mount only: `initialTournament` is the bracket this run started from.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!savedNotice) return undefined;
@@ -559,8 +580,13 @@ function TournamentScreenView({
     boutRef.current?.destroy();
     boutRef.current = null;
     audioManager.stopMusic();
-    saveActiveTournament(save ? tournament : null);
-    onExit?.();
+    // This write is the decision. It must be the LAST write of the bracket, so
+    // nothing queued behind the exit clicks can put it back (a discarded bracket
+    // used to survive as soon as the first round had been played).
+    saveActiveTournament(save ? bracketRef.current : null);
+    // Leave synchronously: the screen is replaced in this same task, so no effect
+    // (this screen's or App's) can re-save the bracket afterwards.
+    flushSync(() => onExit?.());
   };
 
   const confirmExit = () => {
