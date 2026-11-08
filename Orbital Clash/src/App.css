@@ -76,11 +76,14 @@
   background: var(--cyan-soft);
 }
 
+/* Top bar buttons take their own accent, tinted like the roster toolbar. */
 .audio-toggle-button {
-  color: var(--text-secondary);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  --btn-accent: var(--teal);
+  color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--btn-accent) 45%, var(--border));
   border-radius: var(--radius-pill);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--btn-accent) 18%, transparent);
   font: 700 0.65rem var(--font-data);
   letter-spacing: 0.1em;
   padding: 7px 14px;
@@ -90,11 +93,13 @@
 
 .audio-toggle-button:hover,
 .audio-toggle-button[aria-pressed="true"] {
-  color: var(--cyan);
-  border-color: var(--cyan);
-  background: var(--cyan-soft);
-  box-shadow: 0 0 12px var(--cyan-glow);
+  color: var(--btn-accent);
+  border-color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 16%, var(--surface));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--btn-accent) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--btn-accent) 14%, transparent);
 }
+
+.app-topbar-actions .audio-toggle-button:nth-child(2) { --btn-accent: var(--lavender); }
 
 /* --- Settings panel (volumes and graphics quality) ------------------- */
 .settings-panel {
@@ -780,6 +785,7 @@
 
 /* Map size picker shown in the dock before every match. */
 .map-size-picker {
+  --btn-accent: var(--sky);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -792,33 +798,37 @@
   min-height: 28px;
   padding: 0 10px;
   cursor: pointer;
-  color: var(--text-secondary);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--btn-accent) 45%, var(--border));
   border-radius: var(--radius-pill);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--btn-accent) 18%, transparent);
   font: 600 0.6rem var(--font-data);
   letter-spacing: 0.1em;
-  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .map-size-picker button:hover,
 .map-size-picker .map-size-active {
-  color: var(--cyan);
-  border-color: var(--cyan);
-  background: var(--cyan-soft);
+  color: var(--btn-accent);
+  border-color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 16%, var(--surface));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--btn-accent) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--btn-accent) 14%, transparent);
 }
 
+/* The primary call to action: a filled pink button with a faint glow. */
 .start-battle-button,
 .return-roster-button {
+  --btn-accent: var(--pink);
   border: 0;
   border-radius: var(--radius);
-  background: var(--grad-primary);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--btn-accent) 85%, white), var(--btn-accent));
   color: #031018;
   padding: 12px 30px;
   font: 700 0.72rem var(--font-ui);
   letter-spacing: 0.14em;
   cursor: pointer;
-  box-shadow: 0 0 28px rgba(0, 242, 255, 0.75), 0 0 56px rgba(0, 242, 255, 0.35), 0 10px 26px -12px rgba(0, 242, 255, 0.6);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--btn-accent) 40%, transparent), 0 10px 22px -14px color-mix(in srgb, var(--btn-accent) 60%, transparent);
   transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease), filter var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
@@ -826,7 +836,7 @@
 .return-roster-button:hover {
   transform: translateY(-2px);
   filter: brightness(1.08);
-  box-shadow: 0 0 26px rgba(0, 242, 255, 0.6), 0 14px 32px -12px rgba(0, 242, 255, 0.55);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--btn-accent) 55%, transparent), 0 14px 26px -14px color-mix(in srgb, var(--btn-accent) 60%, transparent);
 }
 
 .start-battle-button:active:not(:disabled),
