@@ -147,6 +147,19 @@ export function countAlive(fighters) {
   return alive;
 }
 
+// Results-screen order: longest survival first. Fighters knocked out in the same
+// frame share one timestamp, so that tie is broken the way a tournament draw is
+// (see resolveDraw): more damage dealt wins, then spawn order.
+export function rankBySurvival(fighters) {
+  return [...fighters].sort((a, b) => {
+    const bySurvival = (b.survivalTime ?? 0) - (a.survivalTime ?? 0);
+    if (bySurvival !== 0) return bySurvival;
+    const byDamage = (b.totalDamageDealt || 0) - (a.totalDamageDealt || 0);
+    if (byDamage !== 0) return byDamage;
+    return fighters.indexOf(a) - fighters.indexOf(b);
+  });
+}
+
 // --- One simulation frame ----------------------------------------------------
 
 // Advances a whole bout by one frame. `options`:

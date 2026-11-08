@@ -7,7 +7,7 @@ import StatsPanel from "./StatsPanel";
 import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSystem";
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
-import { countAlive, decayScreenShake, drawGridLines, stepBattle } from "../engine/systems/BattleSimulation";
+import { countAlive, decayScreenShake, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
 
 // Turns every shadowBlur write into a no-op, removing glow from all draw code at once.
 function disableGlow(ctx) {
@@ -81,7 +81,7 @@ const RESOLUTION_GRACE_SECONDS = 1;
 // drift apart or run twice. Damage lands from several places in a frame (class
 // attacks, body collisions, sudden death, damage-over-time), so death is resolved
 // in a single sweep after all of them rather than inside any one of them.
-function killFighter(fighter, fighters, particles) {
+function killFighter(fighter, fighters, particles, diedAt) {
   if (!fighter) return false;
   // Note: DamageSystem already calls victim.die() and sets isDead on a lethal
   // hit, so by the time this runs the fighter is usually ALREADY dead. Guarding
@@ -103,8 +103,8 @@ function killFighter(fighter, fighters, particles) {
   // Only fire the death effect if nobody has yet (DamageSystem may have).
   if (!fighter.isDead) fighter.die(particles);
   fighter.isDead = true;
-  fighter.eliminatedAt = (performance.now() - (battleStartAt.current ?? performance.now())) / 1000;
-  fighter.survivalTime = fighter.eliminatedAt;
+  fighter.eliminatedAt = diedAt;
+  fighter.survivalTime = diedAt;
   // Nobody may keep attacking a corpse, and it must stop being a collision body.
   // BOTH the committed target and the per-frame `opponent` reference are cleared:
   // `chooseTarget` only consults `target`, but a class that stores the opponent it
@@ -124,12 +124,15 @@ function killFighter(fighter, fighters, particles) {
 // Returns true if anything died, so the caller can react (end-of-battle check).
 function resolveDeaths(fighters, particles) {
   let died = false;
+  // One timestamp for the whole sweep: fighters killed in the same frame fell
+  // together, and must tie so finishBattle can settle the tie as a draw.
+  const diedAt = (performance.now() - (battleStartAt.current ?? performance.now())) / 1000;
   for (const f of fighters) {
     // Any fighter that is dead or out of HP but has no elimination timestamp yet
     // still needs one: DamageSystem marks death, but the ordering data for
     // placements is recorded here.
     if (f && !f.eliminatedAt && (f.isDead || f.health <= 0)) {
-      died = killFighter(f, fighters, particles) || died;
+      died = killFighter(f, fighters, particles, diedAt) || died;
     }
   }
   return died;
@@ -158,15 +161,9 @@ function finishBattle(fighters) {
     if (f.survivalTime == null) f.survivalTime = f.battleDuration;
   });
 
-  // Rank by survival time, descending. A tie (two fighters on the same measured
-  // second, or an arena handed over without timestamps) keeps the arena's own
-  // seat order, which is stable across engines - Array.sort is not guaranteed to
-  // be, so the index is compared explicitly rather than trusted to be stable.
-  const standings = [...fighters].sort((a, b) => {
-    const bySurvival = (b.survivalTime ?? 0) - (a.survivalTime ?? 0);
-    if (bySurvival !== 0) return bySurvival;
-    return fighters.indexOf(a) - fighters.indexOf(b);
-  });
+  // Rank by survival time, descending; same-frame double knockouts are settled
+  // by damage dealt (see rankBySurvival).
+  const standings = rankBySurvival(fighters);
 
   standings.forEach((f, i) => {
     f.placement = i + 1;
