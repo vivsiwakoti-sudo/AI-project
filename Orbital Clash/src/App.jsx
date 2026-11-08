@@ -11,6 +11,7 @@ import PredictionModal from "./components/PredictionModal";
 import { audioManager } from "./engine/audio/AudioManager";
 import { DEFAULT_ARENA_SIZE } from "./engine/config";
 import { FIGHTER_CLASSES } from "./engine/fighterDefinitions";
+import { saveLastReplay } from "./engine/replayStore";
 import {
   addPrediction,
   resolveBattlePrediction,
@@ -35,7 +36,6 @@ function App() {
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
   const [battleResults, setBattleResults] = useState(null);
   const [battleAborted, setBattleAborted] = useState(false);
-  const [replayFrames, setReplayFrames] = useState([]);
   const [isMuted, setIsMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   // The title screen opens the app. Its zoom hands off to the roster, which zooms
@@ -103,7 +103,6 @@ function App() {
 
   const returnToRoster = () => {
     setBattleResults(null);
-    setReplayFrames([]);
     setScreen("menu");
   };
 
@@ -141,10 +140,15 @@ function App() {
       resolveBattlePrediction({ winner: res?.find(f => f.placement === 1)?.name ?? null, aborted });
       setBattleResults(res);
       setBattleAborted(aborted);
-      setReplayFrames(meta?.replayFrames || []);
+      // The last 25 seconds are kept for the roster's replay button.
+      saveLastReplay(meta?.replayFrames, {
+        aborted,
+        winner: res?.find(f => f.placement === 1)?.name ?? null,
+        fighters: (res ?? []).map(({ name, color }) => ({ name, color }))
+      });
       setScreen("end");
     }} />,
-    end: <EndScreen results={battleResults} aborted={battleAborted} replayFrames={replayFrames} onReturn={returnToRoster} />,
+    end: <EndScreen results={battleResults} aborted={battleAborted} onReturn={returnToRoster} />,
     tournament: (
       <TournamentScreen
         key={tournamentRunId}

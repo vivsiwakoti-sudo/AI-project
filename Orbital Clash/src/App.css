@@ -535,6 +535,13 @@
 /* Opens the saved battle log. */
 .roster-filters .battle-history-button { --btn-accent: var(--teal); }
 .roster-filters .prediction-button { --btn-accent: var(--warning); }
+.roster-filters .replay-menu-button { --btn-accent: var(--sky); }
+.roster-filters .replay-menu-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+  text-shadow: none;
+}
 .roster-filters .tournament-mode-button { --btn-accent: var(--gold); }
 
 /* Destructive action, so it reads in danger red rather than an accent colour. */
@@ -1243,7 +1250,7 @@
 .results-summary span { color: var(--text-muted); font: 0.55rem var(--font-data); letter-spacing: 0.16em; }
 .results-summary b { color: var(--text-h); font: 700 1.2rem var(--font-mono); letter-spacing: 0.02em; }
 
-.replay-section { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 28px; }
+.replay-section { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 18px; }
 .replay-button {
   min-height: 38px;
   padding: 0 18px;
@@ -1257,8 +1264,9 @@
   box-shadow: 0 0 12px var(--cyan-glow);
   transition: transform var(--dur-fast) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-.replay-button:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--cyan) 18%, var(--surface)); box-shadow: 0 0 18px var(--cyan-glow); }
-.battle-replay-canvas { display: block; width: min(100%, 480px); height: auto; aspect-ratio: 1; border: 1px solid var(--border-strong); border-radius: var(--radius); background: #000; box-shadow: var(--shadow-md), 0 0 20px var(--cyan-glow); }
+.replay-button:hover:not(:disabled) { transform: translateY(-1px); background: color-mix(in srgb, var(--cyan) 18%, var(--surface)); box-shadow: 0 0 18px var(--cyan-glow); }
+.replay-button:disabled { cursor: default; opacity: 0.6; }
+.battle-replay-canvas { display: block; width: min(100%, 480px, 62vh); height: auto; aspect-ratio: 1; border: 1px solid var(--border-strong); border-radius: var(--radius); background: #000; box-shadow: var(--shadow-md), 0 0 20px var(--cyan-glow); }
 
 /* Stacked cards (one per fighter) with grouped metrics, rather than a dense grid. */
 .results-table { display: flex; flex-direction: column; gap: 14px; margin-top: 34px; text-align: left; }

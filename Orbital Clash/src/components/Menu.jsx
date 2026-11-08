@@ -5,6 +5,8 @@ import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } fr
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
 import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
 import { hasResumableTournament, loadTournamentStats } from "../engine/tournament";
+import { loadLastReplayMeta } from "../engine/replayStore";
+import ReplayPlayer from "./ReplayPlayer";
 import ClassCard from "./MenuComponents/ClassCard";
 
 const RECORDS_KEY = "arena-battles-records";
@@ -90,6 +92,8 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [showPredictions, setShowPredictions] = useState(false);
   const [predictions, setPredictions] = useState(loadPredictions);
   const predictionTally = useMemo(() => tallyPredictions(predictions), [predictions]);
+  const [showReplay, setShowReplay] = useState(false);
+  const [replayMeta, setReplayMeta] = useState(null);
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
   // Read once on mount: the menu only needs to know whether a partial bracket is
   // waiting, and nothing on this screen can create or finish one.
@@ -101,6 +105,21 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   useEffect(() => {
     audioManager.playMenuMusic();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLastReplayMeta().then(meta => {
+      if (!cancelled) setReplayMeta(meta);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!showReplay) return;
+    const onKey = (event) => { if (event.key === "Escape") setShowReplay(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showReplay]);
 
   // Right-click opens the detail panel; Escape or any other click closes it.
   useEffect(() => {
@@ -196,6 +215,11 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
     setShowPredictions(true);
   };
 
+  const handleOpenReplay = () => {
+    audioManager.playUiClick();
+    setShowReplay(true);
+  };
+
   const handleRandomSelection = () => {
     audioManager.playUiClick();
     const names = Object.keys(FIGHTER_CLASSES);
@@ -277,6 +301,14 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             title="View your winner predictions and how often they were right"
           >
             PREDICTIONS{predictionTally.overall.total > 0 ? ` (${predictionTally.overall.correct}/${predictionTally.overall.total})` : ""}
+          </button>
+          <button
+            className="replay-menu-button"
+            onClick={handleOpenReplay}
+            disabled={!replayMeta}
+            title={replayMeta ? "Watch the last 25 seconds of your most recent battle" : "Finish a battle to save a replay"}
+          >
+            LAST REPLAY
           </button>
           <button
             className={`reset-progress-button ${confirmReset ? "reset-progress-confirm" : ""}`}
@@ -409,6 +441,33 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             >
               {confirmClearHistory ? "CONFIRM CLEAR" : "CLEAR HISTORY"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {showReplay && (
+        <div className="fighter-info-overlay" role="dialog" aria-label="Last replay">
+          <div className="battle-history-panel">
+            <header>
+              <div>
+                <div className="roster-eyebrow">
+                  {replayMeta?.savedAt ? new Date(replayMeta.savedAt).toLocaleString() : "SAVED LOCALLY"}
+                  {replayMeta?.seconds > 0 ? ` • LAST ${replayMeta.seconds}s` : ""}
+                </div>
+                <h2>LAST REPLAY</h2>
+              </div>
+              <button className="fighter-info-close" onClick={() => setShowReplay(false)} aria-label="Close replay">×</button>
+            </header>
+            {replayMeta?.fighters?.length > 0 && (
+              <div className="battle-history-fighters">
+                {replayMeta.fighters.map((p, i) => (
+                  <span key={`${p.name}-${i}`} className="battle-history-fighter" style={{ "--fighter-color": p.color }}>
+                    {p.name}{!replayMeta.aborted && p.name === replayMeta.winner ? " 👑" : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+            <ReplayPlayer />
           </div>
         </div>
       )}

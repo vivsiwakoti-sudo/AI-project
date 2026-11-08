@@ -8,6 +8,7 @@ import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSys
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
+import { REPLAY_SECONDS } from "../engine/replayStore";
 import { countAlive, decayScreenShake, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
 
 // Distributes the fighter HUD panels across the two sides of the arena.
@@ -291,7 +292,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       await Promise.all([...state.pendingReplayCaptures]);
     }
     const endTime = state.replayEndTime ?? state.replayTime;
-    const startTime = Math.max(0, endTime - 10);
+    const startTime = Math.max(0, endTime - REPLAY_SECONDS);
     return state.replayFrames
       .filter(frame => frame.time >= startTime && frame.time <= endTime)
       .sort((a, b) => a.time - b.time);
@@ -365,9 +366,9 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       const pendingCapture = new Promise(resolve => { resolveCapture = resolve; });
       state.pendingReplayCaptures.push(pendingCapture);
       replayCanvas.toBlob(blob => {
-        if (blob && capturedAt >= state.replayTime - 10.2) {
+        if (blob && capturedAt >= state.replayTime - REPLAY_SECONDS - 0.2) {
           state.replayFrames.push({ time: capturedAt, image: blob });
-          state.replayFrames = state.replayFrames.filter(frame => frame.time >= state.replayTime - 10.2);
+          state.replayFrames = state.replayFrames.filter(frame => frame.time >= state.replayTime - REPLAY_SECONDS - 0.2);
         }
         const pendingIndex = state.pendingReplayCaptures.indexOf(pendingCapture);
         if (pendingIndex >= 0) state.pendingReplayCaptures.splice(pendingIndex, 1);

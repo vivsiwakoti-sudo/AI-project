@@ -61,105 +61,14 @@ function WinnerMark({ color }) {
   return <canvas ref={canvasRef} width={160} height={110} aria-hidden="true" />;
 }
 
-function BattleReplay({ frames, playing, onEnded }) {
-  const canvasRef = useRef(null);
-  const onEndedRef = useRef(onEnded);
-
-  useEffect(() => {
-    onEndedRef.current = onEnded;
-  }, [onEnded]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!ctx || !frames.length) return undefined;
-
-    let frameRequest;
-    let cancelled = false;
-    const objectUrls = [];
-    const images = frames.map(frame => {
-      const image = new Image();
-      const source = frame.image instanceof Blob ? URL.createObjectURL(frame.image) : frame.image;
-      if (frame.image instanceof Blob) objectUrls.push(source);
-      image.src = source;
-      return image;
-    });
-    const drawAt = index => {
-      const image = images[index];
-      if (image?.complete && image.naturalWidth > 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-      }
-    };
-
-    Promise.all(images.map(image => new Promise(resolve => {
-      if (image.complete) resolve();
-      else {
-        image.onload = resolve;
-        image.onerror = resolve;
-      }
-    }))).then(() => {
-      if (cancelled) return;
-      if (!playing) {
-        drawAt(images.length - 1);
-        return;
-      }
-      drawAt(0);
-
-      const startTime = frames[0].time;
-      const duration = Math.max(0, frames[frames.length - 1].time - startTime);
-      if (duration === 0) {
-        drawAt(images.length - 1);
-        onEndedRef.current();
-        return;
-      }
-
-      let playbackStart = null;
-      let index = 0;
-      const tick = now => {
-        if (cancelled) return;
-        if (playbackStart === null) playbackStart = now;
-        const elapsed = Math.min(duration, (now - playbackStart) / 1000);
-        const target = startTime + elapsed;
-        while (index + 1 < frames.length && frames[index + 1].time <= target) index++;
-        drawAt(index);
-        if (elapsed >= duration) {
-          drawAt(images.length - 1);
-          onEndedRef.current();
-          return;
-        }
-        frameRequest = requestAnimationFrame(tick);
-      };
-      frameRequest = requestAnimationFrame(tick);
-    });
-
-    return () => {
-      cancelled = true;
-      if (frameRequest) cancelAnimationFrame(frameRequest);
-      objectUrls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [frames, playing]);
-
-  return <canvas ref={canvasRef} className="battle-replay-canvas" width={800} height={800} aria-label="Replay of the final seconds of the battle" />;
-}
-
-export default function EndScreen({ results: rawResults, aborted = false, replayFrames = [], onReturn }) {
+export default function EndScreen({ results: rawResults, aborted = false, onReturn }) {
   // Guard *inside* the body, not via a destructuring default: StrictMode remounts
   // a mount that exactly filled the root, and that rebuild passes the props the
   // error handler saw (undefined) straight through. A parameter default is not
   // re-applied when a render is replayed with those saved props; this is.
   const results = Array.isArray(rawResults) ? rawResults : [];
   const [records, setRecords] = useState(null);
-  const [showReplay, setShowReplay] = useState(false);
-  const [replayPlaying, setReplayPlaying] = useState(false);
   const committed = useRef(false);
-  const handleReplayEnded = () => setReplayPlaying(false);
-
-  const playReplay = () => {
-    audioManager.playUiClick();
-    setShowReplay(true);
-    setReplayPlaying(true);
-  };
 
   // Ranked by survival time, longest first: the fighter who stayed alive last is
   // 1st, the one knocked out first is last. The arena stamps `placement` from the
@@ -199,7 +108,7 @@ export default function EndScreen({ results: rawResults, aborted = false, replay
 
     // Append this battle to the persistent history log. This runs from the same
     // once-only commit effect as the records below, so a battle is logged exactly
-    // once even though the end screen can re-render (replay, mute, etc.). It is
+    // once even though the end screen can re-render (mute, etc.). It is
     // recorded for aborted battles too - a no-contest is part of the history -
     // which is why it sits above the early return.
     recordBattle(results, { aborted });
@@ -279,13 +188,6 @@ export default function EndScreen({ results: rawResults, aborted = false, replay
           </div>
         </>
       )}
-
-      {replayFrames.length > 0 && <div className="replay-section">
-        <button className="replay-button" onClick={playReplay}>
-          {replayPlaying ? "REPLAYING..." : showReplay ? "PLAY REPLAY AGAIN" : "REPLAY LAST 10 SECONDS"}
-        </button>
-        {showReplay && <BattleReplay frames={replayFrames} playing={replayPlaying} onEnded={handleReplayEnded} />}
-      </div>}
 
       <div className="results-table">
         {ordered.map((f, i) => {
