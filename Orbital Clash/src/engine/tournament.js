@@ -19,19 +19,19 @@ import { stepBattle } from "./systems/BattleSimulation.js";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE } from "./config.js";
 
 // --- Tournament shape -------------------------------------------------------
-// 25 classes -> 9 preliminary matches (18 fighters) + 7 byes = 16 in the Round
-// of 16, then 8 + 4 + 2 + 1 = 24 matches in total. These are the rules, so they
+// 26 classes -> 10 preliminary matches (20 fighters) + 6 byes = 16 in the Round
+// of 16, then 8 + 4 + 2 + 1 = 25 matches in total. These are the rules, so they
 // are constants rather than magic numbers scattered through the code.
-export const TOURNAMENT_SIZE = 25;
-export const BYE_COUNT = 7;
+export const TOURNAMENT_SIZE = 26;
+export const BYE_COUNT = 6;
 export const ROUND_DEFINITIONS = [
-  { key: "preliminary", label: "Preliminary Round", short: "PRELIM", matches: 9 },
+  { key: "preliminary", label: "Preliminary Round", short: "PRELIM", matches: 10 },
   { key: "round16", label: "Round of 16", short: "R16", matches: 8 },
   { key: "quarterfinal", label: "Quarterfinals", short: "QF", matches: 4 },
   { key: "semifinal", label: "Semifinals", short: "SF", matches: 2 },
   { key: "final", label: "Grand Final", short: "FINAL", matches: 1 }
 ];
-export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + round.matches, 0); // 24
+export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + round.matches, 0); // 25
 export const ROUND_LABELS = Object.fromEntries(ROUND_DEFINITIONS.map(round => [round.key, round.label]));
 export const ROUND_ORDER = ROUND_DEFINITIONS.map(round => round.key);
 
@@ -466,14 +466,14 @@ function shuffle(list, random) {
 }
 
 // Builds a fresh, fully random single-elimination bracket from the existing class
-// list. Seven classes are drawn for byes first, then the remaining 18 are paired
-// into the 9 preliminary matches. No strength, seed or win rate is consulted -
+// list. Six classes are drawn for byes first, then the remaining 20 are paired
+// into the 10 preliminary matches. No strength, seed or win rate is consulted -
 // byes are random by design.
 export function buildTournamentBracket({ random = Math.random, timestamp = Date.now(), arenaSize = TOURNAMENT_ARENA_SIZE } = {}) {
   const allNames = Object.keys(FIGHTER_CLASSES);
   if (allNames.length !== TOURNAMENT_SIZE) {
-    // The tournament format is defined for 25 classes. A changed roster should be
-    // an explicit decision, not a silently malformed bracket.
+    // The tournament format is defined for a fixed roster size. A changed roster
+    // should be an explicit decision, not a silently malformed bracket.
     throw new Error(`Tournament mode needs ${TOURNAMENT_SIZE} classes, but the roster has ${allNames.length}.`);
   }
 
@@ -583,7 +583,7 @@ function entrantsForRound(tournament, roundKey) {
 }
 
 // Creates the next round's matches as soon as its entrants exist. The Round of 16
-// cannot be built until all 9 preliminary matches are decided, so this is called
+// cannot be built until all 10 preliminary matches are decided, so this is called
 // after every resolution rather than on a timer.
 function ensureUpcomingRounds(tournament) {
   for (const roundKey of ROUND_ORDER) {

@@ -53,7 +53,7 @@ function seeded(seed) {
   };
 }
 
-test('the bracket uses exactly the 25 existing classes, 9 prelim matches + 7 byes', () => {
+test('the bracket uses exactly the 26 existing classes, 10 prelim matches + 6 byes', () => {
   const bracket = buildTournamentBracket({ random: seeded(7) });
   const roster = Object.keys(FIGHTER_CLASSES);
 
@@ -61,11 +61,11 @@ test('the bracket uses exactly the 25 existing classes, 9 prelim matches + 7 bye
   assert.deepEqual(validateTournament(bracket), []);
 
   const prelim = bracket.rounds.preliminary.matches;
-  assert.equal(prelim.length, 9);
+  assert.equal(prelim.length, 10);
   assert.equal(bracket.byes.length, BYE_COUNT);
 
   const entrants = [...prelim.flatMap(m => [m.first, m.second]), ...bracket.byes.map(b => b.name)];
-  assert.equal(entrants.length, 25);
+  assert.equal(entrants.length, TOURNAMENT_SIZE);
   assert.deepEqual([...entrants].sort(), [...roster].sort(), 'every class enters exactly once');
 });
 
@@ -91,9 +91,9 @@ test('an active save records the bout on stage, its round, eliminations and who 
   assert.equal(loadActiveTournament().currentMatchId, next.id, 'restoring resumes the same bout');
 });
 
-test('round sizes are 9 / 8 / 4 / 2 / 1 = 24 matches', () => {
-  assert.deepEqual(ROUND_DEFINITIONS.map(r => r.matches), [9, 8, 4, 2, 1]);
-  assert.equal(TOTAL_MATCHES, 24);
+test('round sizes are 10 / 8 / 4 / 2 / 1 = 25 matches', () => {
+  assert.deepEqual(ROUND_DEFINITIONS.map(r => r.matches), [10, 8, 4, 2, 1]);
+  assert.equal(TOTAL_MATCHES, 25);
 });
 
 test('playing every match produces a champion, and the save survives a "close and reopen"', () => {
@@ -119,7 +119,7 @@ test('playing every match produces a champion, and the save survives a "close an
     // continue from the restored copy, as App.jsx does on startTournament().
     const restored = loadActiveTournament();
     if (tournament.status === 'complete') {
-      // The 24th match finishes the tournament; a finished bracket is deliberately
+      // The 25th match finishes the tournament; a finished bracket is deliberately
       // not resumable (see the dedicated test below).
       assert.equal(restored, null);
       break;
@@ -131,9 +131,9 @@ test('playing every match produces a champion, and the save survives a "close an
     closedAndReopened += 1;
   }
 
-  assert.equal(closedAndReopened, TOTAL_MATCHES - 1, 'closed and reopened after each of the 23 unfinished states');
+  assert.equal(closedAndReopened, TOTAL_MATCHES - 1, 'closed and reopened after each of the 24 unfinished states');
   assert.equal(played, TOTAL_MATCHES);
-  assert.equal(resolvedMatches(tournament).length, 24);
+  assert.equal(resolvedMatches(tournament).length, TOTAL_MATCHES);
   assert.equal(tournament.status, 'complete');
   assert.ok(tournament.champion);
   assert.ok(tournament.runnerUp);
@@ -145,8 +145,8 @@ test('playing every match produces a champion, and the save survives a "close an
   assert.equal(tournament.rounds.quarterfinal.matches.length, 4);
   assert.equal(tournament.rounds.semifinal.matches.length, 2);
   assert.equal(tournament.rounds.final.matches.length, 1);
-  assert.equal(allMatches(tournament).length, 24);
-  assert.equal(tournament.eliminated.length, 24, 'every class but the champion is eliminated');
+  assert.equal(allMatches(tournament).length, TOTAL_MATCHES);
+  assert.equal(tournament.eliminated.length, TOURNAMENT_SIZE - 1, 'every class but the champion is eliminated');
   assert.ok(!tournament.eliminated.includes(tournament.champion), 'the champion is never eliminated');
 });
 
@@ -202,14 +202,14 @@ test('a hand-edited/broken save is discarded instead of resuming a corrupt brack
   assert.equal(loadActiveTournament(), null);
 });
 
-test('a save from the old roster (extra names) still resumes the 25-class bracket', () => {
+test('a save from the old roster (extra names) still resumes the full bracket', () => {
   store.clear();
   const bracket = buildTournamentBracket({ random: seeded(9) });
   bracket.participants.push('Retired Class');
   saveActiveTournament(bracket);
   const restored = loadActiveTournament();
   assert.ok(restored);
-  assert.equal(restored.participants.length, 25);
+  assert.equal(restored.participants.length, TOURNAMENT_SIZE);
   assert.ok(!restored.participants.includes('Retired Class'));
 });
 
@@ -227,7 +227,7 @@ test('an unfinished save mid-final resumes with only the final left', () => {
   assert.equal(restored.status, 'active');
   assert.equal(restored.currentRound, 'final');
   assert.equal(nextPendingMatch(restored).id, 'final-1');
-  assert.equal(resolvedMatches(restored).length, 23);
+  assert.equal(resolvedMatches(restored).length, TOTAL_MATCHES - 1);
 });
 
 test('a finished tournament is cleared from the active save, so the next click starts fresh', () => {

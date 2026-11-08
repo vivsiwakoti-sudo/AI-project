@@ -286,14 +286,14 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
           >
             {confirmReset ? "CONFIRM RESET" : "RESET PROGRESS"}
           </button>
-          {/* Primary entry to the autonomous 25-class bracket. It sits with the
+          {/* Primary entry to the autonomous 26-class bracket. It sits with the
               roster actions because it starts a mode, not a single battle. */}
           <button
             className="tournament-mode-button"
             onClick={() => { audioManager.playUiClick(); setCanResumeTournament(false); onStartTournament?.(); }}
             title={canResumeTournament
               ? "Continue the tournament you left unfinished"
-              : "Watch all 25 classes fight a single-elimination tournament"}
+              : "Watch all 26 classes fight a single-elimination tournament"}
           >
             🏆 {canResumeTournament ? "RESUME TOURNAMENT" : "TOURNAMENT MODE"}
           </button>

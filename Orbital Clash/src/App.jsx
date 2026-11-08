@@ -89,7 +89,7 @@ function App() {
 
   // Opens Tournament Mode. An in-progress tournament restored from storage is
   // resumed exactly where it stopped, so closing the game mid-bracket does not
-  // lose progress; only when there is no resumable bracket does a new 25-class
+  // lose progress; only when there is no resumable bracket does a new 26-class
   // tournament get built. A *completed* saved tournament is not resumed - it is
   // shown on the champion screen instead of replaying its bracket.
   const startTournament = () => {

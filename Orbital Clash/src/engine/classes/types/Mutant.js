@@ -30,13 +30,16 @@ export class Mutant extends FighterBase {
     mutate() {
         const healthPercent = this.maxHealth > 0 ? this.health / this.maxHealth : 0;
 
-        // Randomly change HP/max HP and damage within ranges
-        const newMaxHealth = Math.floor(Math.random() * (250 - 10 + 1)) + 10;
+        // Randomly change damage (and, for a normal Mutant, HP/max HP) within ranges.
         this.damage = Math.floor(Math.random() * (100 - 10 + 1)) + 10;
 
-        this.maxHealth = newMaxHealth;
-        // Health is preserved as a percentage, so mutating can both gain and lose HP.
-        this.health = Math.max(1, Math.ceil(newMaxHealth * healthPercent));
+        // A summoned Mutant keeps its summon HP: only its damage mutates.
+        if (!this.owner) {
+            const newMaxHealth = Math.floor(Math.random() * (250 - 10 + 1)) + 10;
+            this.maxHealth = newMaxHealth;
+            // Health is preserved as a percentage, so mutating can both gain and lose HP.
+            this.health = Math.max(1, Math.ceil(newMaxHealth * healthPercent));
+        }
         this.updateMutantScale();
         this.mutationFlash = 0.6;
         this.emitBurst(this.damage >= 60 ? "#ff4d4d" : this.color, 26, 420);

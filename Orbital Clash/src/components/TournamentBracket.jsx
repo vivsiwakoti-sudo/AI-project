@@ -154,7 +154,7 @@ export default function TournamentBracket({ tournament, currentMatchId, onSelect
                 ) : (
                   <div className="tb-round-pending">
                     {roundKey === "round16"
-                      ? "9 preliminary winners + 7 byes"
+                      ? `${ROUND_DEFINITIONS[0].matches} preliminary winners + ${BYE_COUNT} byes`
                       : "Awaiting previous round"}
                   </div>
                 )}

@@ -1,4 +1,4 @@
-// Independent verification of the 25-class / 24-match tournament format and the
+// Independent verification of the 26-class / 25-match tournament format and the
 // "save an unfinished tournament" requirement. Runs against the real engine.
 const param = () => ({ value: 0, setValueAtTime() { }, setTargetAtTime() { }, cancelScheduledValues() { }, linearRampToValueAtTime() { }, exponentialRampToValueAtTime() { } });
 const store = new Map();
@@ -34,22 +34,22 @@ const ok = (cond, msg) => { console.log(`${cond ? 'PASS' : 'FAIL'}  ${msg}`); if
 
 // --- 1. Roster + format constants -------------------------------------------
 const classes = Object.keys(FIGHTER_CLASSES);
-ok(classes.length === 25, `exactly 25 fighter classes exist (got ${classes.length})`);
-ok(TOURNAMENT_SIZE === 25, `TOURNAMENT_SIZE is 25 (got ${TOURNAMENT_SIZE})`);
-ok(BYE_COUNT === 7, `BYE_COUNT is 7 (got ${BYE_COUNT})`);
-ok(TOTAL_MATCHES === 24, `TOTAL_MATCHES is 24 (got ${TOTAL_MATCHES})`);
+ok(classes.length === 26, `exactly 26 fighter classes exist (got ${classes.length})`);
+ok(TOURNAMENT_SIZE === 26, `TOURNAMENT_SIZE is 26 (got ${TOURNAMENT_SIZE})`);
+ok(BYE_COUNT === 6, `BYE_COUNT is 6 (got ${BYE_COUNT})`);
+ok(TOTAL_MATCHES === 25, `TOTAL_MATCHES is 25 (got ${TOTAL_MATCHES})`);
 
-const expected = { preliminary: 9, round16: 8, quarterfinal: 4, semifinal: 2, final: 1 };
+const expected = { preliminary: 10, round16: 8, quarterfinal: 4, semifinal: 2, final: 1 };
 for (const [key, count] of Object.entries(expected)) {
   const def = ROUND_DEFINITIONS.find(d => d.key === key);
   ok(Boolean(def), `round "${key}" is defined`);
   ok(def?.matches === count, `round "${key}" has ${count} matches (got ${def?.matches})`);
 }
 const sum = ROUND_DEFINITIONS.reduce((a, d) => a + d.matches, 0);
-ok(sum === 24, `round definitions sum to 24 matches (got ${sum})`);
+ok(sum === 25, `round definitions sum to 25 matches (got ${sum})`);
 ok(ROUND_ORDER.length === 5, `5 rounds exist (got ${ROUND_ORDER.length})`);
-// 18 prelim fighters + 7 byes = 25 entrants into the Round of 16.
-ok(expected.preliminary * 2 + BYE_COUNT === 16, '9 prelim winners + 7 byes = 16 in the Round of 16');
+// 20 prelim fighters (10 matches) + 6 byes = 26 entrants. The 10 prelim winners + 6 byes fill the Round of 16.
+ok(expected.preliminary + BYE_COUNT === 16, '10 prelim winners + 6 byes = 16 in the Round of 16');
 ok(expected.round16 * 2 === 16, 'Round of 16 holds 16 classes in 8 matches');
 ok(expected.quarterfinal * 2 === 8 && expected.semifinal * 2 === 4 && expected.final * 2 === 2, 'later rounds halve correctly');
 
@@ -57,18 +57,18 @@ ok(expected.quarterfinal * 2 === 8 && expected.semifinal * 2 === 4 && expected.f
 const bracket = buildTournamentBracket();
 const byes = bracket.byes.map(b => b.name);
 const prelimFighters = bracket.rounds.preliminary.matches.flatMap(m => [m.first, m.second]);
-ok(bracket.byes.length === 7, `7 byes drawn (got ${bracket.byes.length})`);
-ok(bracket.rounds.preliminary.matches.length === 9, `9 preliminary matches drawn (got ${bracket.rounds.preliminary.matches.length})`);
-ok(prelimFighters.length === 18, `18 classes in the preliminary round (got ${prelimFighters.length})`);
+ok(bracket.byes.length === 6, `6 byes drawn (got ${bracket.byes.length})`);
+ok(bracket.rounds.preliminary.matches.length === 10, `10 preliminary matches drawn (got ${bracket.rounds.preliminary.matches.length})`);
+ok(prelimFighters.length === 20, `20 classes in the preliminary round (got ${prelimFighters.length})`);
 const entrants = new Set([...prelimFighters, ...byes]);
-ok(entrants.size === 25, `25 unique entrants (got ${entrants.size})`);
-ok(entrants.size === classes.length && classes.every(c => entrants.has(c)), 'every one of the 25 classes enters exactly once');
+ok(entrants.size === 26, `26 unique entrants (got ${entrants.size})`);
+ok(entrants.size === classes.length && classes.every(c => entrants.has(c)), 'every one of the 26 classes enters exactly once');
 ok(prelimFighters.every(n => !byes.includes(n)), 'no class is both in a prelim match and a bye');
 ok(byes.every(n => Boolean(FIGHTER_CLASSES[n])), 'every bye is a real class');
 ok(validateTournament(bracket).length === 0, `fresh bracket validates (${validateTournament(bracket)[0] || 'ok'})`);
 
 // --- 3. Play all 24 matches and confirm the progression ---------------------
-const tournament = buildTournamentBracket();
+let tournament = buildTournamentBracket();
 const perRound = {};
 let guard = 0;
 while (guard++ < 40) {
@@ -77,31 +77,32 @@ while (guard++ < 40) {
   const result = runTournamentMatch(match.first, match.second, { arenaSize: T.TOURNAMENT_ARENA_SIZE });
   ok(Boolean(result?.winner && result?.loser), `${match.id}: produced a valid winner (${result?.winner?.name ?? result?.error})`);
   if (!result?.winner) break;
-  const { applied } = applyMatchResult(tournament, match, result);
-  ok(applied, `${match.id}: result applied to the bracket`);
+  const outcome = applyMatchResult(tournament, match, result);
+  tournament = outcome.tournament;
+  ok(outcome.applied, `${match.id}: result applied to the bracket`);
   perRound[match.round] = (perRound[match.round] || 0) + 1;
 }
-ok(perRound.preliminary === 9, `played 9 preliminary matches (got ${perRound.preliminary})`);
+ok(perRound.preliminary === 10, `played 10 preliminary matches (got ${perRound.preliminary})`);
 ok(perRound.round16 === 8, `played 8 Round of 16 matches (got ${perRound.round16})`);
 ok(perRound.quarterfinal === 4, `played 4 quarterfinals (got ${perRound.quarterfinal})`);
 ok(perRound.semifinal === 2, `played 2 semifinals (got ${perRound.semifinal})`);
 ok(perRound.final === 1, `played 1 grand final (got ${perRound.final})`);
-ok(resolvedMatches(tournament).length === 24, `24 matches resolved (got ${resolvedMatches(tournament).length})`);
+ok(resolvedMatches(tournament).length === 25, `25 matches resolved (got ${resolvedMatches(tournament).length})`);
 ok(tournament.status === 'complete' && Boolean(tournament.champion), `tournament completed with champion ${tournament.champion}`);
 ok(validateTournament(tournament, { requireComplete: true }).length === 0, 'completed bracket validates');
 // The champion must not have been knocked out by an earlier loss.
 const lossOfChampion = allMatches(tournament).find(m => m.loser === tournament.champion && m.round !== 'final');
 ok(!lossOfChampion, 'champion was never eliminated before the final');
-// Exactly 24 distinct classes were eliminated (25 entrants - 1 champion).
-ok(new Set(tournament.eliminated).size === 24, `24 classes eliminated (got ${new Set(tournament.eliminated).size})`);
+// Exactly 25 distinct classes were eliminated (26 entrants - 1 champion).
+ok(new Set(tournament.eliminated).size === 25, `25 classes eliminated (got ${new Set(tournament.eliminated).size})`);
 
 // --- 4. Save an UNFINISHED tournament and resume it exactly -----------------
 store.clear();
-const partial = buildTournamentBracket();
+let partial = buildTournamentBracket();
 for (let i = 0; i < 3; i++) {
   const m = nextPendingMatch(partial);
   const r = runTournamentMatch(m.first, m.second, { arenaSize: T.TOURNAMENT_ARENA_SIZE });
-  applyMatchResult(partial, m, r);
+  partial = applyMatchResult(partial, m, r).tournament;
 }
 saveActiveTournament(partial); // simulates closing the program mid-tournament
 const saved = store.get(T.TOURNAMENT_SAVE_KEY ?? 'orbital-clash-tournament-active') ?? store.values().next().value;
@@ -110,8 +111,8 @@ const resumed = loadActiveTournament();
 ok(Boolean(resumed), 'the unfinished tournament loads back from storage');
 ok(resumed?.status === 'active', `resumed tournament is still active (got ${resumed?.status})`);
 ok(resolvedMatches(resumed).length === 3, `resumed with 3 resolved matches (got ${resolvedMatches(resumed).length})`);
-ok(resumed.byes.map(b => b.name).join('|') === partial.byes.map(b => b.name).join('|'), 'the 7 byes survive the save/resume round-trip');
-ok(resumed.participants.length === 25, `all 25 participants survive (got ${resumed.participants.length})`);
+ok(resumed.byes.map(b => b.name).join('|') === partial.byes.map(b => b.name).join('|'), 'the 6 byes survive the save/resume round-trip');
+ok(resumed.participants.length === 26, `all 26 participants survive (got ${resumed.participants.length})`);
 ok(nextPendingMatch(resumed)?.id === nextPendingMatch(partial)?.id, 'resumes at the same pending match, not from scratch');
 const played = allMatches(resumed).filter(m => m.status === 'resolved');
 ok(played.length === 3 && played.every(m => m.winner && m.loser && Number.isFinite(m.durationSeconds)), 'every resumed result keeps winner, loser and duration');
@@ -138,7 +139,7 @@ store.set(key, JSON.stringify(good));
 ok(loadActiveTournament() !== null, 'control: the untouched save loads');
 tryLoad('a save with only 5 byes', raw => { raw.byes = raw.byes.slice(0, 5); });
 tryLoad('a save with a wrong-sized round', raw => { raw.rounds.preliminary.matches.pop(); });
-tryLoad('a save with 24 participants', raw => { raw.participants.pop(); });
+tryLoad('a save with 25 participants', raw => { raw.participants.pop(); });
 tryLoad('a save naming an unknown class', raw => { raw.rounds.preliminary.matches[0].first = 'Not A Class'; });
 tryLoad('a save with a bogus winner', raw => { raw.rounds.preliminary.matches[0].winner = 'Not A Class'; });
 

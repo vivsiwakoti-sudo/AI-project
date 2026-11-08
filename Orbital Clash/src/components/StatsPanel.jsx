@@ -37,6 +37,7 @@ function getSpecialRows(fighter) {
     case "Ninja": return [["ROPE DART", fighter.ropeActive ? "IN FLIGHT" : "READY"]];
     case "Snake": return [["TRAIL SEGMENTS", String(fighter.trail?.length || 0)]];
     case "Duplicator": return [["CLONES ACTIVE", String(fighter.clones?.length || 0)], ["GENERATION", String(fighter.generation || 0)]];
+    case "Summoner": return [["SUMMONS ACTIVE", String(fighter.summons?.length || 0)]];
     case "Knight": return [["SHIELD", fighter.shieldActive ? "ACTIVE" : "READY"]];
     case "Ghost": return [["GHOST MODE", fighter.isGhost ? "ACTIVE" : "READY"]];
     default: return [];

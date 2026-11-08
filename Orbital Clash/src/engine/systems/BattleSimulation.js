@@ -19,13 +19,41 @@ import { DamageSystem } from "./DamageSystem.js";
 // definition of "valid target" used by every check here.
 //
 //   - never the fighter itself (a fighter must NEVER target itself)
+//   - never a teammate (a summon and its summoner fight on the same side)
 //   - never a corpse (dead fighters are removed from targeting immediately)
 // Unreachable or invulnerable states are filtered by the callers below, so a
 // class cannot lock onto a Tunneler mid-dive or a target it can never damage.
 export function isValidTarget(candidate, self) {
   if (!candidate || candidate === self) return false;
   if (candidate.isDead || candidate.health <= 0) return false;
+  if (isTeammate(candidate, self)) return false;
   return true;
+}
+
+// A summon fights for its summoner, so the two share a team. Anything without an
+// owner is its own team.
+export function teamOf(fighter) {
+  return fighter?.owner ?? fighter;
+}
+
+export function isTeammate(a, b) {
+  return teamOf(a) === teamOf(b);
+}
+
+// Every body taking part in the fight: each top-level fighter followed by its live
+// summons. Summons are stepped, targeted and collided like any fighter, but they
+// never sit in the arena's fighter list, so placements, the HUD and the victory
+// check still only count top-level fighters.
+export function collectBodies(fighters) {
+  const bodies = [];
+  for (const f of fighters) {
+    if (!f) continue;
+    bodies.push(f);
+    for (const summon of f.summons ?? []) {
+      if (!summon.isDead && summon.health > 0) bodies.push(summon);
+    }
+  }
+  return bodies;
 }
 
 // Every ranged class's declared attack type, with a name fallback for anything
@@ -145,12 +173,15 @@ export function stepBattle(fighters, options = {}) {
     returnAlive = false
   } = options;
 
-  fighters.forEach((f, i) => {
+  // Summons are stepped alongside their owners (see collectBodies).
+  const bodies = collectBodies(fighters);
+
+  bodies.forEach((f, i) => {
     // With up to four fighters in the arena, every class targets one valid
     // living opponent (see chooseTarget). Each class's update() only ever
     // reads a single opponent, so this keeps their AI unchanged while
     // making free-for-alls work.
-    const opponent = chooseTarget(fighters, i);
+    const opponent = chooseTarget(bodies, i);
     f.opponent = opponent;
     // Other classes' target selection will overwrite f.target below; keep
     // the reference tally here so it stays an accurate "who is aiming at me".
@@ -158,7 +189,7 @@ export function stepBattle(fighters, options = {}) {
     // The opponents THIS fighter may actually hit. A class only ever sees a
     // single opponent, so anything that has to reach every fighter (touch
     // damage, an explosion, a web) reads this list instead.
-    f.victims = fighters.filter(other => other !== f && canBeVictim(other));
+    f.victims = bodies.filter(other => !isTeammate(other, f) && canBeVictim(other));
     // Who this fighter may body-check. Body attack type is the ONLY gate for
     // touch damage, and it is read through DamageSystem.isBodyAttacker so the
     // arena and the class-level contact hooks can never disagree about who is
@@ -182,17 +213,17 @@ export function stepBattle(fighters, options = {}) {
   // as a side effect, and every class reads its opponent from the VALUE it
   // was handed, so the two can disagree for one frame without any class
   // behaving differently. Writing the fresh target back here settles it.
-  fighters.forEach(f => {
+  bodies.forEach(f => {
     if (!f.isDead && f.health > 0) f.target = f.opponent ?? null;
   });
 
   // Dead fighters are skipped entirely: no wall collision, no body collision,
   // no hitbox. A corpse cannot shove a living fighter around or be hit again.
-  fighters.forEach(f => { if (!f.isDead && f.health > 0) CollisionSystem.resolveFighterWall(f, arenaSize); });
+  bodies.forEach(f => { if (!f.isDead && f.health > 0) CollisionSystem.resolveFighterWall(f, arenaSize); });
 
   // Fighter-vs-fighter physics runs for EVERY pair of LIVING fighters, so a
   // 3 or 4-way brawl shoves and bounces exactly like a duel does.
-  const alive = fighters.filter(f => !f.isDead && f.health > 0);
+  const alive = bodies.filter(f => !f.isDead && f.health > 0);
   let hardestImpact = 0;
   for (let i = 0; i < alive.length; i++) {
     for (let j = i + 1; j < alive.length; j++) {
@@ -210,7 +241,8 @@ export function stepBattle(fighters, options = {}) {
       // Body contact only damages when the fighter's attack type is Body.
       // Contact is `overlapped` (pre-resolution geometry) OR `touching` (the
       // resolver's verdict). Either signal is enough for a genuine touch.
-      const contact = overlapped || touching;
+      // Teammates (a summon and its summoner) never hurt each other on contact.
+      const contact = (overlapped || touching) && !isTeammate(f1, f2);
       const bodyAttackers = [];
       if (contact && DamageSystem.isBodyAttacker(f1) && f1.damageCooldown <= 0) bodyAttackers.push(f1);
       if (contact && DamageSystem.isBodyAttacker(f2) && f2.damageCooldown <= 0) bodyAttackers.push(f2);
@@ -233,7 +265,10 @@ export function stepBattle(fighters, options = {}) {
     }
   }
 
-  return returnAlive ? { hardestImpact, alive } : { hardestImpact };
+  // Victory counts top-level fighters only, so summons never decide a bout.
+  return returnAlive
+    ? { hardestImpact, alive: fighters.filter(f => !f.isDead && f.health > 0) }
+    : { hardestImpact };
 }
 
 // Decays screen shake for every fighter. Kept next to the step so both modes

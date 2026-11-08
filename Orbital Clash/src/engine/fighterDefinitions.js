@@ -361,5 +361,19 @@ export const FIGHTER_CLASSES = {
     description: "Adapts to enemy attacks.",
     description2: "A heavy puncher that studies what hits it. The wheel over its head spins hard every time it adapts. After three hits from a category it adapts: melee becomes 30% resistant and unlocks a 25% parry that stuns the attacker for 1 second, projectiles become 50% resistant and unlock a 35% parry against further ranged shots, and body contact becomes 75% resistant. Its own body is a weapon too: slamming into an opponent deals its damage.",
     keywords: ["adapt", "resist", "parry", "wheel", "tank"],
+  },
+  "Summoner": {
+    name: "Summoner",
+    color: "#c084fc",
+    health: 75,
+    damage: 0,
+    speed: 5,
+    bodySize: 40,
+    shape: "round",
+    attackType: "Trail",
+    cooldown: 0,
+    description: "Summons two roster fighters every 15 seconds.",
+    description2: "Carries a staff and deals no touch damage. Every 15 seconds he summons two random roster fighters with 15 HP each and their full abilities. Summons fight for him, can be hit by enemies, and vanish when he is knocked out.",
+    keywords: ["summon", "staff", "minions", "trail"],
   }
 };
