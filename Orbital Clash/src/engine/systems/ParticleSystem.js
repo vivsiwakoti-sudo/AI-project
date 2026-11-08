@@ -1,11 +1,5 @@
 import { expandingRing, TAU } from "./Fx.js";
-
-// Performance mode thins every burst and lowers the live particle cap.
-const PERFORMANCE_DENSITY = 0.4;
-const PERFORMANCE_MAX_PARTICLES = 300;
-const DEFAULT_MAX_PARTICLES = 1400;
-// Normal mode bursts are denser than the base counts so impacts read bigger.
-const DEFAULT_DENSITY = 1.35;
+import { graphicsProfile } from "../graphics.js";
 
 function pushParticle(system, particle) {
     // Hard cap keeps long stalemate fights from degrading the frame rate.
@@ -14,11 +8,12 @@ function pushParticle(system, particle) {
 }
 
 export class ParticleSystem {
-    constructor({ performanceMode = false } = {}) {
+    constructor({ graphicsQuality } = {}) {
+        const profile = graphicsProfile(graphicsQuality);
         this.particles = [];
         this.rings = [];
-        this.densityScale = performanceMode ? PERFORMANCE_DENSITY : DEFAULT_DENSITY;
-        this.maxParticles = performanceMode ? PERFORMANCE_MAX_PARTICLES : DEFAULT_MAX_PARTICLES;
+        this.densityScale = profile.particleDensity;
+        this.maxParticles = profile.maxParticles;
     }
 
     // Velocity is px/second, so particles behave identically at 1x/2x/3x speed.

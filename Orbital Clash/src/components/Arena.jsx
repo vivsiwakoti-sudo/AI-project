@@ -7,12 +7,8 @@ import StatsPanel from "./StatsPanel";
 import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSystem";
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
+import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import { countAlive, decayScreenShake, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
-
-// Turns every shadowBlur write into a no-op, removing glow from all draw code at once.
-function disableGlow(ctx) {
-  Object.defineProperty(ctx, "shadowBlur", { get: () => 0, set: () => {} });
-}
 
 // Distributes the fighter HUD panels across the two sides of the arena.
 //
@@ -281,7 +277,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
     resolutionGrace: 0,
     // Set once the afterglow expires so the onFinish hand-off fires exactly once.
     handoffStarted: false,
-    particles: new ParticleSystem({ performanceMode: getSettings().performanceMode }),
+    particles: new ParticleSystem({ graphicsQuality: getSettings().graphicsQuality }),
     replayTime: 0,
     nextReplayCapture: 0,
     replayEndTime: null,
@@ -349,10 +345,9 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    const performanceMode = getSettings().performanceMode;
-    if (performanceMode) disableGlow(ctx);
-    // Performance mode captures replay frames half as often to cut encoding work.
-    const replayInterval = performanceMode ? 0.5 : 0.2;
+    const profile = graphicsProfile(getSettings().graphicsQuality);
+    applyGlowScale(ctx, profile.glowScale);
+    const replayInterval = profile.replayInterval;
     const replayCanvas = document.createElement("canvas");
     replayCanvas.width = 480;
     replayCanvas.height = 480;

@@ -251,7 +251,7 @@ function matchOutcome(fighters, durationSeconds, peakLiveFighters) {
 // global instead froze the browser's animation-frame scheduler and stopped the
 // watched match dead.
 export function createTournamentBout(firstName, secondName, options = {}) {
-  const { arenaSize = TOURNAMENT_ARENA_SIZE, performanceMode = false } = options;
+  const { arenaSize = TOURNAMENT_ARENA_SIZE, graphicsQuality } = options;
   if (!firstName || !secondName) return null;
   if (firstName === secondName) return null;
 
@@ -263,7 +263,7 @@ export function createTournamentBout(firstName, secondName, options = {}) {
     return null;
   }
 
-  const particles = new ParticleSystem({ performanceMode });
+  const particles = new ParticleSystem({ graphicsQuality });
   fighters.forEach(fighter => { fighter.particleSystem = particles; });
 
   // Seconds that actually elapsed in the fight (never the afterglow).
@@ -430,7 +430,7 @@ export function runTournamentMatch(firstName, secondName, options = {}) {
   if (!firstName || !secondName) return { winner: null, error: "missing-fighter" };
   if (firstName === secondName) return { winner: null, error: "duplicate-fighter" };
 
-  const bout = createTournamentBout(firstName, secondName, { arenaSize, performanceMode: true });
+  const bout = createTournamentBout(firstName, secondName, { arenaSize, graphicsQuality: "low" });
   if (!bout) return { winner: null, error: "missing-fighter" };
 
   try {

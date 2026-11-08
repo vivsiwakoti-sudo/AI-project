@@ -4,6 +4,7 @@ import { drawBattleFrame } from "../engine/systems/BattleSimulation";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { audioManager } from "../engine/audio/AudioManager";
 import { getSettings } from "../engine/settings";
+import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 
 const BATTLE_COUNT = 3;
 const ARENA_SIZE = 600;
@@ -26,17 +27,18 @@ export default function BackgroundBattles() {
 
   useEffect(() => {
     audioManager.setSfxSilenced(true);
-    const performanceMode = getSettings().performanceMode;
+    const { graphicsQuality } = getSettings();
+    const profile = graphicsProfile(graphicsQuality);
 
-    const slots = Array.from({ length: BATTLE_COUNT }, (_, index) => ({
-      ctx: canvasRefs.current[index]?.getContext("2d") || null,
-      bout: null,
-      previous: []
-    }));
+    const slots = Array.from({ length: BATTLE_COUNT }, (_, index) => {
+      const ctx = canvasRefs.current[index]?.getContext("2d") || null;
+      if (ctx) applyGlowScale(ctx, profile.glowScale);
+      return { ctx, bout: null, previous: [] };
+    });
 
     const startBout = slot => {
       const [first, second] = pickPair(slot.previous);
-      slot.bout = createTournamentBout(first, second, { arenaSize: ARENA_SIZE, performanceMode });
+      slot.bout = createTournamentBout(first, second, { arenaSize: ARENA_SIZE, graphicsQuality });
       slot.previous = [first, second];
     };
 

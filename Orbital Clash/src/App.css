@@ -96,7 +96,7 @@
   box-shadow: 0 0 12px var(--cyan-glow);
 }
 
-/* --- Settings panel (volumes and performance mode) -------------------- */
+/* --- Settings panel (volumes and graphics quality) ------------------- */
 .settings-panel {
   width: min(460px, 100%);
   box-sizing: border-box;
@@ -170,6 +170,17 @@
   border-color: var(--cyan);
   background: var(--cyan-soft);
   box-shadow: 0 0 12px var(--cyan-glow);
+}
+
+.settings-segmented {
+ display: flex;
+ gap: 8px;
+}
+
+.settings-segmented .settings-toggle {
+ flex: 1;
+ align-self: stretch;
+ min-width: 0;
 }
 
 .settings-hint {

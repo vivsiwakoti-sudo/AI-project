@@ -17,6 +17,7 @@ import {
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { drawBattleFrame } from "../engine/systems/BattleSimulation";
 import { getSettings } from "../engine/settings";
+import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import TournamentBracket from "./TournamentBracket";
 import TournamentOverview from "./TournamentOverview";
 import StatsPanel from "./StatsPanel";
@@ -257,7 +258,7 @@ function TournamentScreenView({
     // rings - the same way the arena creates them on mount.
     const bout = createTournamentBout(match.first, match.second, {
       arenaSize: arenaSizeRef.current,
-      performanceMode: getSettings().performanceMode
+      graphicsQuality: getSettings().graphicsQuality
     });
     if (!bout) {
       setErrorMessage(`"${match.first}" vs "${match.second}" could not be set up.`);
@@ -296,6 +297,7 @@ function TournamentScreenView({
     // Music starts with the fight and must not outlive it.
     audioManager.playBattleMusic();
     const ctx = canvasRef.current?.getContext("2d") || null;
+    if (ctx) applyGlowScale(ctx, graphicsProfile(getSettings().graphicsQuality).glowScale);
     let frameId = 0;
     // `lastTime` starts null and is seeded from the FIRST animation-frame
     // timestamp. Seeding it from performance.now() compares two clocks with

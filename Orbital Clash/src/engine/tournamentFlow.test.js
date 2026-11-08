@@ -297,7 +297,7 @@ test('a save from before arena sizes existed (or with a bad size) resumes on the
 
 test('a bout is built on the tournament arena size it is given', () => {
   for (const size of [700, 1000]) {
-    const bout = createTournamentBout('Knight', 'Ninja', { arenaSize: size, performanceMode: true });
+    const bout = createTournamentBout('Knight', 'Ninja', { arenaSize: size, graphicsQuality: 'low' });
     assert.equal(bout.arenaSize, size);
     const inside = bout.fighters.every(f => f.x > 0 && f.x < size && f.y > 0 && f.y < size);
     assert.ok(inside, `both fighters spawn inside a ${size} map`);

@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { getSettings, updateSettings } from "../engine/settings";
+import { GRAPHICS_LEVELS } from "../engine/graphics";
 
 const percent = value => Math.round(value * 100);
+
+const GRAPHICS_HINTS = {
+  low: "No glow, sparse particles and half-rate replay capture. Best for slower computers.",
+  medium: "Soft glow and moderate particle bursts.",
+  high: "Full glow and dense particle bursts."
+};
 
 export default function SettingsPanel({ onClose }) {
   const [settings, setSettings] = useState(getSettings);
@@ -52,13 +59,18 @@ export default function SettingsPanel({ onClose }) {
         </label>
 
         <div className="settings-row">
-          <span className="settings-label">PERFORMANCE MODE</span>
-          <button
-            className="settings-toggle"
-            aria-pressed={settings.performanceMode}
-            onClick={() => change({ performanceMode: !settings.performanceMode })}
-          >{settings.performanceMode ? "ON" : "OFF"}</button>
-          <p className="settings-hint">Turns off glow, thins particles and slows replay capture. Applies from the next battle.</p>
+          <span className="settings-label">GRAPHICS QUALITY <b>{settings.graphicsQuality.toUpperCase()}</b></span>
+          <div className="settings-segmented" role="group" aria-label="Graphics quality">
+            {GRAPHICS_LEVELS.map(level => (
+              <button
+                key={level}
+                className="settings-toggle"
+                aria-pressed={settings.graphicsQuality === level}
+                onClick={() => change({ graphicsQuality: level })}
+              >{level.toUpperCase()}</button>
+            ))}
+          </div>
+          <p className="settings-hint">{GRAPHICS_HINTS[settings.graphicsQuality]} Applies from the next battle.</p>
         </div>
       </div>
     </div>
