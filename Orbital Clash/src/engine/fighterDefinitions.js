@@ -142,6 +142,18 @@ export const FIGHTER_CLASSES = {
   "Ghost": {
     name: "Ghost",
     color: "#FFFFFF",
+    // These four fields were missing, and they are what the fighter is BUILT
+    // from: FighterBase reads `bodySize` for its collision radius and the draw
+    // path for its silhouette. With `bodySize` absent `radius` was null, so
+    // Ghost could not be drawn at all (its gradient radius was non-finite and
+    // threw every frame) and its hitbox was null too. Values match its listed
+    // behaviour: 100 HP like the other light classes and the fast 8 px/frame
+    // movement implied by a phasing body class.
+    health: 100,
+    speed: 8,
+    bodySize: 40,
+    // The floating-sheet silhouette already defined in Shapes.js.
+    shape: "wisp",
     damage: 5,
     attackType: "Body",
     cooldown: 5,
@@ -198,6 +210,10 @@ export const FIGHTER_CLASSES = {
     damage: 15,
     speed: 3,
     bodySize: 60,
+    // The heater-shield silhouette Shapes.js already defines for this class.
+    // Without it `traceShape` fell back to a plain circle and the Knight had no
+    // shield body at all, only its inner gradient.
+    shape: "shield",
     attackType: "Melee",
     cooldown: 0.25,
     description: "Heavy armor, sword slash, shield parry.",
