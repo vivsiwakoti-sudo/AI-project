@@ -43,7 +43,7 @@ test('Spider lays webs where it moves instead of shooting them', () => {
   assert.equal(spider.webProjectiles, undefined, 'Spider should no longer shoot projectiles');
 });
 
-test('A web bites once for 3 damage and is then spent', () => {
+test('A web bites once for 5 damage and is then spent', () => {
   const spider = new Spider({
     name: 'Spider',
     color: '#7CFF6B',
@@ -72,15 +72,15 @@ test('A web bites once for 3 damage and is then spent', () => {
   spider.createWeb(700, 100);
   const startHealth = target.health;
 
-  // First frame inside the web: exactly 3 damage from the touch bite.
+  // First frame inside the web: exactly the Spider's 5 damage from the touch bite.
   spider.update(1 / 60, target);
   const afterTouch = startHealth - target.health;
-  assert.equal(afterTouch, 3, `touch should deal exactly 3 damage, dealt ${afterTouch}`);
+  assert.equal(afterTouch, 5, `touch should deal exactly 5 damage, dealt ${afterTouch}`);
   assert.equal(spider.webs.some(w => w.x === 700 && w.y === 100), false, 'a touched web should be spent');
 
   // Staying inside afterwards must not bite again.
   for (let i = 0; i < 90; i++) spider.update(1 / 60, target);
-  assert.equal(startHealth - target.health, 3, 'a spent web should not keep biting');
+  assert.equal(startHealth - target.health, 5, 'a spent web should not keep biting');
 });
 
 test('Re-entering a spent web does not bite; a fresh web does', () => {
@@ -109,16 +109,16 @@ test('Re-entering a spent web does not bite; a fresh web does', () => {
   }, 700, 100);
 
   spider.createWeb(700, 100);
-  spider.update(1 / 60, target);       // enters -> 3 touch damage, web spent
+  spider.update(1 / 60, target);       // enters -> 5 touch damage, web spent
   target.x = 2000;                      // steps out
   spider.update(1 / 60, target);
   target.x = 700;                       // steps back in onto the spent web
   spider.update(1 / 60, target);
-  assert.equal(100 - target.health, 3, 'a spent web must not bite on re-entry');
+  assert.equal(100 - target.health, 5, 'a spent web must not bite on re-entry');
 
   spider.createWeb(700, 100);           // a freshly laid web bites again
   spider.update(1 / 60, target);
-  assert.equal(100 - target.health, 6, 'each fresh web should bite once');
+  assert.equal(100 - target.health, 10, 'each fresh web should bite once');
 });
 
 test('Web slow effects apply a 60% movement reduction', () => {

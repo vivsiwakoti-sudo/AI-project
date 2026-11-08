@@ -35,7 +35,7 @@ export class Spider extends FighterBase {
             this.dropTimer = 3;
         }
 
-        // A web slows by 60% for 2 seconds and deals 3 damage the moment it is
+        // A web slows by 60% for 2 seconds and deals the Spider's damage the moment it is
         // touched, then vanishes - so a web is a single one-shot trap rather than a DOT field.
         // Every web that catches a fighter also adds a permanent 5% slow that stacks
         // with the others and lasts until the bout ends (fighters are rebuilt per bout).
@@ -60,7 +60,7 @@ export class Spider extends FighterBase {
                 weave.stacks += 1;
                 weave.multiplier = Math.max(0, 1 - WEB_WEAVE_STEP * weave.stacks);
 
-                DamageSystem.applyDamage(this, victim, 3, "AOE", { ignoreCooldown: true });
+                DamageSystem.applyDamage(this, victim, this.damage, "AOE", { ignoreCooldown: true });
                 if (victim.particleSystem) victim.particleSystem.emitImpact(victim.x, victim.y, "#c8ffe0", 12);
 
                 // Spend the web: it is consumed on the touch that triggered it.

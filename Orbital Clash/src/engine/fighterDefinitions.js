@@ -259,7 +259,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 4,
     description: "Lays webs to slow and damage.",
-    description2: "Spins one web every 3 seconds wherever it walks. Anything that touches a web is slowed by 60% for 2 seconds, takes 3 damage, and gains a permanent 5% slow that stacks with every web it touches until the bout ends - and the web is spent on that touch, vanishing instantly. Untouched webs fade after 25 seconds, so the arena becomes a field of single-use traps.",
+    description2: "Spins one web every 3 seconds wherever it walks. Anything that touches a web is slowed by 60% for 2 seconds, takes 5 damage, and gains a permanent 5% slow that stacks with every web it touches until the bout ends - and the web is spent on that touch, vanishing instantly. Untouched webs fade after 25 seconds, so the arena becomes a field of single-use traps.",
     keywords: ["web", "slow", "zone", "dot", "trap"],
   },
   "Tunneler": {
