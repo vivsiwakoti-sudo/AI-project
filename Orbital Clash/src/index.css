@@ -30,6 +30,16 @@
   --purple: #a855f7;
   --purple-soft: rgba(168, 85, 247, 0.14);
 
+  /* --- Toolbar accents (each roster button gets one) ------------------- */
+  --orange: #ff7a45;
+  --yellow: #ffe14d;
+  --pink: #ff4fd8;
+  --lime: #b6ff3d;
+  --teal: #5eead4;
+  --sky: #5aa9ff;
+  --lavender: #b197fc;
+  --gold: #ffd700;
+
   /* --- Semantic states ------------------------------------------------ */
   --success: #46e6a0;
   --warning: #ffb347;

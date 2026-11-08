@@ -258,7 +258,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
         <div className="roster-eyebrow">ROSTER <span>•</span> {Object.keys(FIGHTER_CLASSES).length} FIGHTERS</div>
         <h1 className="menu-header">PICK YOUR FIGHTERS</h1>
         <div className="roster-filters">
-          {filterOptions.map(option => <button key={option} className={filter === option ? "filter-active" : ""} onClick={() => setFilter(option)}>{option}</button>)}
+          {filterOptions.map(option => <button key={option} data-filter={option} className={filter === option ? "filter-active" : ""} onClick={() => setFilter(option)}>{option}</button>)}
           <select className="sort-select" value={sortKey} onChange={(e) => setSortKey(e.target.value)} title="Sort fighters by">
             {SORT_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
           </select>

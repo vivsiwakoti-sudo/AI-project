@@ -462,6 +462,7 @@
 /* Filters flow in their own row beneath the title instead of being absolutely
    positioned, so a long title and a long button row can never overlap. */
 .roster-filters {
+  --btn-accent: var(--cyan);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -469,14 +470,17 @@
   margin-top: 22px;
 }
 
+/* Every toolbar button is tinted by --btn-accent: a dim fill, a border and a
+   faint resting glow. Hover and the active filter brighten them. */
 .roster-filters button {
   min-height: 30px;
   padding: 0 14px;
   cursor: pointer;
-  color: var(--text-secondary);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--btn-accent) 45%, var(--border));
   border-radius: var(--radius-pill);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--btn-accent) 18%, transparent);
   font: 600 0.65rem var(--font-data);
   letter-spacing: 0.14em;
   transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
@@ -484,37 +488,52 @@
 
 .roster-filters button:hover,
 .roster-filters .filter-active {
-  color: var(--cyan);
-  border-color: var(--cyan);
-  background: var(--cyan-soft);
-  box-shadow: 0 0 12px var(--cyan-glow), inset 0 0 12px rgba(0, 242, 255, 0.1);
+  color: var(--btn-accent);
+  border-color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 16%, var(--surface));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--btn-accent) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--btn-accent) 14%, transparent);
   text-shadow: 0 0 6px currentColor;
 }
 
 .roster-filters button:active { transform: translateY(1px); }
 
+/* Category accents, one per attack type. */
+.roster-filters [data-filter="ALL"] { --btn-accent: var(--cyan); }
+.roster-filters [data-filter="MELEE"] { --btn-accent: var(--orange); }
+.roster-filters [data-filter="PROJECTILE"] { --btn-accent: var(--yellow); }
+.roster-filters [data-filter="BEAM"] { --btn-accent: var(--success); }
+.roster-filters [data-filter="AOE"] { --btn-accent: var(--purple); }
+.roster-filters [data-filter="BODY"] { --btn-accent: var(--pink); }
+.roster-filters [data-filter="TRAIL"] { --btn-accent: var(--sky); }
+
 /* Sort category dropdown, styled to match the pill buttons beside it. */
+.roster-filters .sort-select,
+.roster-filters .sort-button { --btn-accent: var(--lavender); }
+
 .roster-filters .sort-select {
   min-height: 30px;
   padding: 0 14px;
   cursor: pointer;
-  color: var(--cyan);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--btn-accent) 45%, var(--border));
   border-radius: var(--radius-pill);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--btn-accent) 18%, transparent);
   font: 600 0.65rem var(--font-data);
   letter-spacing: 0.14em;
 }
 
 .roster-filters .sort-select option { background: var(--surface); color: var(--text-h); }
 
-/* Destructive action, so it reads in danger red rather than the cyan accent. */
-.roster-filters .reset-progress-button { color: #c1748a; border-color: #3d1f2b; }
+.roster-filters .random-selection-button { --btn-accent: var(--lime); }
 
-/* Opens the saved battle log; tinted cyan so it reads as a primary action next
-   to the filters rather than another filter chip. */
-.roster-filters .battle-history-button { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 40%, var(--border)); }
-.roster-filters .prediction-button { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 40%, var(--border)); }
+/* Opens the saved battle log. */
+.roster-filters .battle-history-button { --btn-accent: var(--teal); }
+.roster-filters .prediction-button { --btn-accent: var(--warning); }
+.roster-filters .tournament-mode-button { --btn-accent: var(--gold); }
+
+/* Destructive action, so it reads in danger red rather than an accent colour. */
+.roster-filters .reset-progress-button { --btn-accent: var(--danger); }
 
 .roster-filters .reset-progress-button:hover {
   color: var(--danger);
