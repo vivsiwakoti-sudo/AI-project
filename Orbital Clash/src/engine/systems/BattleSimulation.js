@@ -328,6 +328,11 @@ export function drawBattleFrame(ctx, {
     ctx.clip();
     ctx.globalAlpha = dead ? deadBodyFade : 1;
     ctx.globalCompositeOperation = "source-over";
+    // Match the arena's per-fighter reset: several classes set ctx state while
+    // drawing (Ghost and Samurai drive globalAlpha for their phased/invisible
+    // forms) and rely on the renderer starting each body from a clean slate.
+    // Without this, one faded body dimmed every fighter drawn after it.
+    ctx.shadowBlur = 0;
     try {
       f.draw(ctx, time);
     } catch (error) {

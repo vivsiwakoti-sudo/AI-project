@@ -8,6 +8,28 @@ import { traceShape } from "../systems/Shapes.js";
 // stale flag clears before it can swallow the rest of the match.
 const STUN_FALLBACK_SECONDS = 4;
 
+// Body silhouette outline.
+//
+// Every class fills its shape with a radial gradient that is white in the middle
+// and BLACK at the rim, so an outline drawn in the body's own colour sits on an
+// almost-black edge and is easy to lose - Meteor stroked #FF4500 onto #FF4500 and
+// read as a shapeless smudge. The outline is instead derived from the body colour
+// with a guaranteed luminance separation: pushed toward white, unless the colour
+// is already very bright, in which case it is pushed toward the dark side. Either
+// way the rim stays readable against both the dark arena and the white-hot core.
+const OUTLINE_WIDTH = 3;
+
+function outlineColorFor(color) {
+    const hex = typeof color === "string" ? color.replace("#", "") : "";
+    if (!/^[0-9a-f]{6}$/i.test(hex)) return "#ffffff";
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const toward = lum > 170 ? 0 : 255; // bright bodies get a dark rim
+    const mix = 0.55;
+    const channel = v => Math.round(v + (toward - v) * mix);
+    return `rgb(${channel(r)}, ${channel(g)}, ${channel(b)})`;
+}
+
 export class FighterBase {
     constructor(data, x, y) {
         Object.assign(this, data);
@@ -636,11 +658,18 @@ export class FighterBase {
             ctx.restore();
         }
 
-        // Thin outline so even low-contrast shapes keep a readable edge.
+        // Outline so every class reads as its silhouette, not just its inner fill.
+        //
+        // The stroke MUST use a colour shaded away from the body's own gradient,
+        // not the body colour itself. `hitColor || color` was the same hue as the
+        // fill for most classes (Meteor strokes #FF4500 over an #FF4500 body), so
+        // the edge carried no contrast and the design collapsed into one blob.
+        // Mixing toward white, and darkening a stroke that is already near-white
+        // (Tornado, Knight), guarantees a visible rim on every class.
         traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle });
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = this.hitColor || this.color;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = outlineColorFor(this.hitColor || this.color);
+        ctx.lineWidth = OUTLINE_WIDTH;
         ctx.stroke();
 
         // Hot core sparks where the deflection landed.

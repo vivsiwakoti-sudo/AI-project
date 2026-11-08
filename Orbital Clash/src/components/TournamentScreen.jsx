@@ -116,6 +116,8 @@ function TournamentScreenView({
   // that created them, so an exit can never write a stale copy.
   const bracketRef = useRef(tournament);
   useEffect(() => { bracketRef.current = tournament; }, [tournament]);
+  // Set once the player leaves the tournament; see the persist effect below.
+  const leftRef = useRef(false);
 
   // Refs mirror the state the async match runner reads, so a run in flight never
   // sees a stale closure. This is what keeps "pause", "speed" and "next match"
@@ -197,11 +199,10 @@ function TournamentScreenView({
   }, [hudFighters, stageMatch]);
 
   // Persist every bracket change so closing the game mid-tournament resumes it.
-  // The bracket is written to storage HERE and only here, so leaving through
-  // `leaveTournament` can genuinely decide its fate. App no longer writes on
-  // `onTournamentChange` for the same reason: a discard that removed the save
-  // must not be undone by an outer handler re-saving the bracket it was handed.
+  // Skipped after leaving: the screen stays mounted during its exit animation,
+  // and App re-renders then, which would re-save a discarded bracket.
   useEffect(() => {
+    if (leftRef.current) return;
     saveActiveTournament(tournament);
     onTournamentChange?.(tournament);
   }, [tournament, onTournamentChange]);
@@ -575,6 +576,7 @@ function TournamentScreenView({
   // MODE click starts a fresh one. Discarding never touches the career stats,
   // which are only written when a tournament is actually completed.
   const leaveTournament = save => {
+    leftRef.current = true;
     setShowExitConfirm(false);
     runTokenRef.current += 1;
     boutRef.current?.destroy();

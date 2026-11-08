@@ -180,9 +180,16 @@ export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0 } = {}
     const rotation = (def.aim ? angle : 0) + (def.spin ? spinAngle : 0);
     if (rotation) ctx.rotate(rotation);
 
+    // A multi-loop shape (meteor, void, skull, ...) is ONE path made of several
+    // sub-paths: beginPath() must run once, before the loop. It used to run
+    // inside it, so every loop but the last was discarded and the body was
+    // filled from a leftover crater/detail loop - Meteor rendered as a ~13px
+    // black rock instead of its outline. Each loop is explicitly closed so the
+    // nonzero fill rule treats the holes (a void's core, a skull's eyes) as
+    // holes rather than cancelling parts of the silhouette.
     const loops = def.path ? def.path : [def.points];
+    ctx.beginPath();
     for (const loop of loops) {
-        ctx.beginPath();
         loop.forEach(([px, py], i) => {
             if (i === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
