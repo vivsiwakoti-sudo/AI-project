@@ -48,9 +48,12 @@ export class Meteor extends FighterBase {
 
     startStrike() {
         this.warningTimer = 3; // 3s warning
-        // Pick one quarter of the arena
+        // Pick one quarter of the arena. The quadrant is sized from the actual
+        // map, so the blast always covers exactly 25% of it (a fixed 400px
+        // square left gaps on 1000px maps and overflowed on 600px ones).
         const q = Math.floor(Math.random() * 4);
-        const size = 400;
+        const arenaSize = this.arenaSize ?? 800;
+        const size = arenaSize / 2;
         this.targetZone = {
             x: (q % 2) * size,
             y: Math.floor(q / 2) * size,
