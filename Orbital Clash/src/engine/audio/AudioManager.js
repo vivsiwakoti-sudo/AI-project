@@ -459,8 +459,14 @@ class AudioManager {
     const { musicVolume, sfxVolume } = getSettings();
     const now = this.ctx.currentTime;
     this.musicLevel.gain.setTargetAtTime(musicVolume, now, 0.02);
-    const sfxLevel = this.sfxSilenced ? 0 : SFX_BUS_GAIN * sfxVolume;
-    this.sfxGain.gain.setTargetAtTime(sfxLevel, now, 0.02);
+    const sfxParam = this.sfxGain.gain;
+    if (this.sfxSilenced) {
+      // A hard cut: a fade would let the first few milliseconds of each effect through.
+      sfxParam.cancelScheduledValues(now);
+      sfxParam.setValueAtTime(0, now);
+    } else {
+      sfxParam.setTargetAtTime(SFX_BUS_GAIN * sfxVolume, now, 0.02);
+    }
   }
 
   // Hard-cuts the music: stops the scheduler AND mutes the music bus at once, so
