@@ -46,6 +46,13 @@ export default function BackgroundBattles() {
     let lastTime = null;
     let stopped = false;
 
+    // Ends a bout and silences any gravity hum its fighters still hold; a finished
+    // bout no longer steps, so its open holes would never expire on their own.
+    const releaseBout = bout => {
+      bout.destroy();
+      bout.fighters.forEach(fighter => fighter.stopHoleLoop?.());
+    };
+
     const loop = time => {
       if (stopped) return;
       if (lastTime === null) lastTime = time;
@@ -60,7 +67,10 @@ export default function BackgroundBattles() {
         if (bout.finished) {
           // Let the final explosion play out, then hand the slot a new pairing.
           const stillPlaying = bout.stepAfterglow(dt);
-          if (!stillPlaying) slot.bout = null;
+          if (!stillPlaying) {
+            releaseBout(bout);
+            slot.bout = null;
+          }
         } else {
           bout.step(dt * PLAYBACK_SPEED);
         }
@@ -83,6 +93,10 @@ export default function BackgroundBattles() {
     return () => {
       stopped = true;
       cancelAnimationFrame(frameId);
+      slots.forEach(slot => {
+        if (slot.bout) releaseBout(slot.bout);
+        slot.bout = null;
+      });
       audioManager.setSfxSilenced(false);
     };
   }, []);

@@ -878,6 +878,8 @@ class AudioManager {
   // Starts the looped gravity rumble while a hole is open. Returns a stop
   // function so the class can silence it the moment the hole collapses.
   startBlackHoleLoop() {
+    // A loop started while sfx is silenced (menu scenery) would keep running and wake up later.
+    if (this.sfxSilenced) return () => {};
     const ctx = this.ensureContext();
     return playBlackHoleLoop(ctx, this.sfxGain, { gain: 0.14 });
   }
