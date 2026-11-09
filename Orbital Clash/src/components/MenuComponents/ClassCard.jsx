@@ -61,7 +61,7 @@ export default function ClassCard({ fighter, isSelected, isChampion = false, onC
       <canvas ref={canvasRef} width={50} height={50} />
       <div className="fighter-card-copy"><h3>{fighter.name}</h3><strong>{fighter.attackType}</strong></div>
       <div className="fighter-card-stats">
-        <span>HP <b>{fighter.health}</b></span><span>DMG <b>{fighter.damage}</b></span><span>SPD <b>{fighter.speed} px/f</b></span>
+        <span>HP <b>{fighter.health}</b></span><span>DMG <b>{fighter.damageLabel ?? fighter.damage}</b></span><span>SPD <b>{fighter.speed} px/f</b></span>
       </div>
       {stats && <div className="fighter-card-record">
         <span><small>W</small><b>{stats.wins}</b></span>

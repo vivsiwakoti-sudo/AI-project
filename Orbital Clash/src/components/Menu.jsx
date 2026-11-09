@@ -370,7 +370,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             <p className="fighter-info-body">{infoFighter.description2 || infoFighter.description}</p>
             <div className="fighter-info-grid">
               <span>HP <b>{infoFighter.health}</b></span>
-              <span>DMG <b>{infoFighter.damage}</b></span>
+              <span>DMG <b>{infoFighter.damageLabel ?? infoFighter.damage}</b></span>
               <span>SPD <b>{infoFighter.speed} px/f</b></span>
               <span>SIZE <b>{infoFighter.bodySize}</b></span>
               <span>CD <b>{infoFighter.cooldown ? `${infoFighter.cooldown}s` : "N/A"}</b></span>
