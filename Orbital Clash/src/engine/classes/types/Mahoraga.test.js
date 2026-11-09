@@ -56,6 +56,11 @@ const makeVictim = (overrides = {}) => ({
   ...overrides
 });
 
+// Runs the fighter's own update loop, so adaptation timers tick the same way they do in a match.
+const advanceFrames = (fighter, frames) => {
+  for (let i = 0; i < frames; i++) fighter.update(1 / 60, makeVictim());
+};
+
 test('Mahoraga is a Body attacker with no weapon animation left behind', () => {
   const mahoraga = makeMahoraga();
 
@@ -99,16 +104,44 @@ test('Mahoraga still adapts after three hits from a category', () => {
   const mahoraga = makeMahoraga();
 
   for (let i = 0; i < 3; i++) mahoraga.onHitTaken('Melee', 8);
-  assert.equal(mahoraga.getDamageMultiplier('Melee'), 0.7, 'melee adaptation is 30% resistance');
-
   for (let i = 0; i < 3; i++) mahoraga.onHitTaken('Projectile', 8);
-  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.5, 'projectile adaptation is 50% resistance');
-
   for (let i = 0; i < 3; i++) mahoraga.onHitTaken('Body', 8);
+  assert.equal(mahoraga.getDamageMultiplier('Melee'), 1, 'no resistance while the adaptation is still in progress');
+
+  advanceFrames(mahoraga, 290);
+  assert.equal(mahoraga.getDamageMultiplier('Melee'), 1, 'an adaptation takes at least 5 seconds');
+
+  advanceFrames(mahoraga, 20);
+  assert.equal(mahoraga.getDamageMultiplier('Melee'), 0.7, 'melee adaptation is 30% resistance');
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.7, 'the first projectile step is 30% resistance');
   assert.equal(mahoraga.getDamageMultiplier('Body'), 0.25, 'body adaptation is 75% resistance');
 
   // Wheel burst is kicked on each earned adaptation so it spins visibly.
   assert.ok(mahoraga.wheelBurst > 0, 'the wheel must spin on an adaptation');
+});
+
+test('Projectile resistance climbs 30% -> 40% -> 50% with each hit, every step taking 5 seconds', () => {
+  const mahoraga = makeMahoraga();
+
+  for (let i = 0; i < 3; i++) mahoraga.onHitTaken('Projectile', 8);
+  advanceFrames(mahoraga, 310);
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.7, '3 hits: 30% resistance');
+
+  mahoraga.onHitTaken('Projectile', 8);
+  advanceFrames(mahoraga, 280);
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.7, 'a 4th hit does not apply until its own 5 seconds pass');
+  advanceFrames(mahoraga, 40);
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.6, '4 hits: 40% resistance');
+
+  mahoraga.onHitTaken('Projectile', 8);
+  advanceFrames(mahoraga, 280);
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.6);
+  advanceFrames(mahoraga, 40);
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.5, '5 hits: 50% resistance');
+
+  for (let i = 0; i < 10; i++) mahoraga.onHitTaken('Projectile', 8);
+  advanceFrames(mahoraga, 900);
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.5, 'projectile resistance maxes out at 50%');
 });
 
 test('Mahoraga keeps attacking (bodily) against an opponent adapted to melee', () => {
@@ -118,6 +151,7 @@ test('Mahoraga keeps attacking (bodily) against an opponent adapted to melee', (
   // Adapt him to melee first, the way a real fight would. A melee adaptation
   // must not stop the body slam: contact damage is a different category.
   for (let i = 0; i < 3; i++) mahoraga.onHitTaken('Melee', 8);
+  advanceFrames(mahoraga, 310);
   assert.equal(mahoraga.getDamageMultiplier('Melee'), 0.7, 'melee adaptation is earned');
 
   const startHealth = opponent.health;
@@ -135,8 +169,10 @@ const adaptedMahoraga = (...categories) => {
   const mahoraga = makeMahoraga();
   mahoraga.health = mahoraga.maxHealth = 1e9;
   for (const category of categories) {
-    for (let i = 0; i < 3; i++) mahoraga.onHitTaken(category, 8);
+    for (let i = 0; i < 5; i++) mahoraga.onHitTaken(category, 8);
   }
+  // Long enough for every queued step (Projectile has three) to complete.
+  advanceFrames(mahoraga, 920);
   return mahoraga;
 };
 
