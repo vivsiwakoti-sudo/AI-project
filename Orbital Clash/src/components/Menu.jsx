@@ -7,6 +7,7 @@ import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/p
 import { hasResumableTournament, loadTournamentStats } from "../engine/tournament";
 import { loadLastReplayMeta } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
+import NeonBackdrop from "./NeonBackdrop";
 import ClassCard from "./MenuComponents/ClassCard";
 
 const RECORDS_KEY = "arena-battles-records";
@@ -278,15 +279,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
 
   return (
     <>
-    {/* A sibling of the roster, not a child: the roster's intro transform would
-        otherwise become the containing block and shift the backdrop. */}
-    <div className="roster-backdrop" aria-hidden="true">
-      <div className="roster-backdrop-mesh" />
-      <div className="roster-backdrop-nodes" />
-      <div className="roster-backdrop-vortex" />
-      <div className="roster-backdrop-vortex roster-backdrop-vortex-inner" />
-      <div className="roster-backdrop-core" />
-    </div>
+    <NeonBackdrop />
     <main className={`roster-screen${playIntro ? " roster-intro" : ""}`}>
       <div className="roster-heading">
         <div className="roster-eyebrow">ROSTER <span>•</span> {Object.keys(FIGHTER_CLASSES).length} FIGHTERS</div>

@@ -4,6 +4,7 @@ import { ParticleSystem } from "../engine/systems/ParticleSystem";
 import { squashTransform } from "../engine/systems/Fx";
 import { audioManager } from "../engine/audio/AudioManager";
 import StatsPanel from "./StatsPanel";
+import NeonBackdrop from "./NeonBackdrop";
 import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSystem";
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
@@ -703,6 +704,8 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
   }
 
   return (
+    <>
+    <NeonBackdrop />
     <div className="arena-screen" style={{ display: "flex", justifyContent: "center", alignItems: "center", color: "white", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "20px", marginBottom: "10px" }}>
             <label className="zoom-control" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -776,5 +779,6 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
           </div>
         </div>
     </div>
+    </>
   );
 }
