@@ -70,6 +70,9 @@ export default function ClassCard({ fighter, isSelected, isChampion = false, onC
         <span><small>APP</small><b>{stats.appearances}</b></span>
         <span><small>WIN</small><b>{stats.appearances ? `${(stats.winRate * 100).toFixed(0)}%` : "--"}</b></span>
       </div>}
+      {stats && <div className="fighter-card-best">
+        <small>BEST FINISH</small><b>{stats.bestFinish}</b>
+      </div>}
       <div className="fighter-card-ability">◆ {String(fighter.description || "").split(".")[0]}</div>
     </div>
   );

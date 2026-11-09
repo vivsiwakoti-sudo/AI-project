@@ -4,7 +4,7 @@ import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
 import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
-import { hasResumableTournament, loadTournamentStats } from "../engine/tournament";
+import { clearTournamentStats, hasResumableTournament, loadTournamentStats } from "../engine/tournament";
 import { loadLastReplayMeta } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
@@ -99,9 +99,10 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   // Read once on mount: the menu only needs to know whether a partial bracket is
   // waiting, and nothing on this screen can create or finish one.
   const [canResumeTournament, setCanResumeTournament] = useState(hasResumableTournament);
-  // The reigning champion is the winner of the last completed tournament. Read
-  // once on mount: the menu is remounted after every tournament, so it is fresh.
-  const [champion] = useState(() => loadTournamentStats().lastChampion);
+  // Read once on mount: the menu is remounted after every tournament, so it is fresh.
+  const [tournamentStats, setTournamentStats] = useState(loadTournamentStats);
+  // The reigning champion is the winner of the last completed tournament.
+  const champion = tournamentStats.lastChampion;
 
   useEffect(() => {
     audioManager.playMenuMusic();
@@ -185,7 +186,9 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
       return;
     }
     clearRecords();
+    clearTournamentStats();
     setRecords({});
+    setTournamentStats(loadTournamentStats());
     setConfirmReset(false);
   };
 
@@ -232,7 +235,13 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
     setSelected(names.slice(0, count));
   };
 
-  const statFor = (name) => statsFromRecords(records, name);
+  const statFor = (name) => {
+    const placement = tournamentStats.classes[name]?.bestPlacement;
+    return {
+      ...statsFromRecords(records, name),
+      bestFinish: placement == null ? "N/A" : ordinal(placement)
+    };
+  };
 
   const filterOptions = ["ALL", "MELEE", "PROJECTILE", "BEAM", "AOE", "BODY", "TRAIL"];
   // Every attackType used in fighterDefinitions.js maps to one filter bucket.

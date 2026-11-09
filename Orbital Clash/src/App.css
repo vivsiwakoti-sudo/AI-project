@@ -827,6 +827,28 @@
   text-overflow: ellipsis;
 }
 
+/* Best tournament finish, shown beneath the career record. */
+.fighter-card-best {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font: 0.58rem var(--font-data);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.fighter-card-best small { color: var(--text-muted); font: 0.48rem var(--font-data); }
+
+.fighter-card-best b {
+  color: color-mix(in srgb, var(--class-accent) 40%, #ffffff);
+  font: 0.72rem var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
 .fighter-card-record-new {
   color: color-mix(in srgb, var(--class-accent) 50%, #ffffff);
   font: 700 0.68rem var(--font-data);

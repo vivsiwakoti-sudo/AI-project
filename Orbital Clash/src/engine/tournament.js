@@ -812,6 +812,16 @@ export function saveTournamentStats(stats) {
   return stats;
 }
 
+// Wipes every tournament statistic, including each class's best finish.
+export function clearTournamentStats() {
+  if (!storageAvailable()) return;
+  try {
+    window.localStorage.removeItem(TOURNAMENT_STATS_KEY);
+  } catch {
+    /* storage disabled - nothing to clear */
+  }
+}
+
 // --- Completed tournament history -------------------------------------------
 
 function sanitizeTournamentEntry(entry) {
