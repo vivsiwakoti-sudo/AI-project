@@ -203,7 +203,8 @@
   isolation: isolate;
 }
 
-.app-screen-menu {
+.app-screen-menu,
+.app-screen-game {
   width: 100%;
   min-height: calc(100svh - 58px);
 }
