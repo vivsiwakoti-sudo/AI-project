@@ -197,7 +197,82 @@
 /* --- Roster screen ---------------------------------------------------- */
 /* The screen wrapper sizes to its content, so the menu's wrapper is stretched to
    the full stage width and the roster is centred inside it. */
-.app-screen-menu { width: 100%; }
+.app-screen-menu {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: calc(100svh - 58px);
+}
+
+/* Roster backdrop: a neon triangular mesh bending around a dark vortex. It sits
+   behind the roster (z-index -1 inside the isolated stage) and only animates
+   transform and opacity, so the roster layout is untouched. */
+.roster-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 60% at 50% 40%, #13195a 0%, #080b33 45%, #02030f 100%);
+}
+
+.roster-backdrop-mesh,
+.roster-backdrop-nodes {
+  position: absolute;
+  inset: -20%;
+  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 40%, transparent 0 24%, #000 66%);
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 40%, transparent 0 24%, #000 66%);
+}
+
+.roster-backdrop-mesh {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(110, 190, 255, 0.4) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(60deg, rgba(110, 190, 255, 0.4) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(120deg, rgba(110, 190, 255, 0.4) 0 1px, transparent 1px 72px);
+  animation: roster-mesh-sway 18s var(--ease) infinite alternate;
+}
+
+.roster-backdrop-nodes {
+  background-image:
+    radial-gradient(circle at 20px 20px, #f0abfc 0 2px, transparent 3px),
+    radial-gradient(circle at 103px 20px, #f0abfc 0 2px, transparent 3px),
+    radial-gradient(circle at 62px 92px, #e879f9 0 2px, transparent 3px),
+    radial-gradient(circle at 145px 92px, #e879f9 0 2px, transparent 3px);
+  background-size: 166px 144px;
+  animation: roster-node-glow 4.5s ease-in-out infinite alternate;
+}
+
+.roster-backdrop-vortex {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: min(130%, 1100px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, transparent 56%, rgba(0, 242, 255, 0.5) 70%, rgba(120, 90, 255, 0.35) 82%, transparent 100%);
+  transform: scaleY(0.42);
+  animation: roster-vortex-spin 70s linear infinite;
+}
+
+.roster-backdrop-vortex-inner {
+  width: min(80%, 760px);
+  background: radial-gradient(closest-side, transparent 60%, rgba(232, 121, 249, 0.45) 74%, transparent 100%);
+  animation-duration: 45s;
+  animation-direction: reverse;
+}
+
+.roster-backdrop-core {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: min(26%, 340px);
+  aspect-ratio: 1.6;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #000 45%, #02020c 75%, rgba(2, 3, 15, 0) 100%);
+  box-shadow: 0 0 36px 6px rgba(0, 242, 255, 0.16);
+}
 
 .roster-screen {
   width: min(100%, 1120px);
@@ -229,6 +304,21 @@
 @keyframes roster-zoom-in {
   from { transform: scale(0.5); opacity: 0; filter: blur(10px); }
   to { transform: scale(1); opacity: 1; filter: blur(0); }
+}
+
+@keyframes roster-mesh-sway {
+  from { transform: rotate(-2deg) scale(1.08); }
+  to { transform: rotate(2deg) scale(1.12); }
+}
+
+@keyframes roster-node-glow {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+
+@keyframes roster-vortex-spin {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
 }
 
 /* --- Title screen ----------------------------------------------------- */

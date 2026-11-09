@@ -277,6 +277,16 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const infoStats = info ? statFor(info) : null;
 
   return (
+    <>
+    {/* A sibling of the roster, not a child: the roster's intro transform would
+        otherwise become the containing block and shift the backdrop. */}
+    <div className="roster-backdrop" aria-hidden="true">
+      <div className="roster-backdrop-mesh" />
+      <div className="roster-backdrop-nodes" />
+      <div className="roster-backdrop-vortex" />
+      <div className="roster-backdrop-vortex roster-backdrop-vortex-inner" />
+      <div className="roster-backdrop-core" />
+    </div>
     <main className={`roster-screen${playIntro ? " roster-intro" : ""}`}>
       <div className="roster-heading">
         <div className="roster-eyebrow">ROSTER <span>•</span> {Object.keys(FIGHTER_CLASSES).length} FIGHTERS</div>
@@ -524,5 +534,6 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
       )}
 
       <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length}-WAY FREE FOR ALL — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize); }}>START BATTLE</button></footer>    </main>
+    </>
   );
 }
