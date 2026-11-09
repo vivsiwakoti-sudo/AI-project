@@ -60,6 +60,7 @@ export const FIGHTER_CLASSES = {
     color: "#708090",
     health: 80,
     damage: 4.5,
+    damageLabel: "5-15",
     speed: 5,
     bodySize: 44,
     shape: "hexagon",
