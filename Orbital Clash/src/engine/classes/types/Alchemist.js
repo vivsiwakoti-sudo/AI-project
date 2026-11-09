@@ -66,9 +66,9 @@ export class Alchemist extends FighterBase {
 
     throwPotion(opponent) {
         const effects = [
-            { type: "slow", damage: 5, duration: 2 },
+            { type: "slow", damage: 5, duration: 3 },
             { type: "poison", damage: 10 },
-            { type: "stun", damage: 7, duration: 1 },
+            { type: "stun", damage: 7, duration: 3 },
             { type: "percent", damage: 0 }, // Handled specially
             { type: "vampire", damage: 8 }
         ];
@@ -108,10 +108,8 @@ export class Alchemist extends FighterBase {
         this.particleSystem?.ring(potion.x, potion.y, burstColor, { startRadius: 8, endRadius: potion.impactRadius * 1.6, life: 0.4, lineWidth: 4 });
 
         if (effect.type === "percent") {
-            // The percentage is rolled PER VICTIM: splitting one roll between them
-            // would make the potion weaker the more fighters it happened to catch.
             blast.forEach(victim => {
-                const percentageDamage = victim.health * (0.1 + Math.random() * 0.15);
+                const percentageDamage = victim.health * 0.2;
                 DamageSystem.applyDamage(this, victim, percentageDamage, "AOE", { ignoreCooldown: true });
             });
             return;
