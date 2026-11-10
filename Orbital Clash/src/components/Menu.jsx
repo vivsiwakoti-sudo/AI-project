@@ -5,7 +5,7 @@ import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } fr
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
 import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
 import { clearTournamentStats, hasResumableTournament, loadTournamentStats } from "../engine/tournament";
-import { loadLastReplayMeta } from "../engine/replayStore";
+import { favoriteLastReplay, listFavoriteReplays, loadLastReplayMeta, removeFavoriteReplay, MAX_FAVORITE_REPLAYS } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
 import ClassCard from "./MenuComponents/ClassCard";
@@ -95,6 +95,10 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const predictionTally = useMemo(() => tallyPredictions(predictions), [predictions]);
   const [showReplay, setShowReplay] = useState(false);
   const [replayMeta, setReplayMeta] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [activeFavoriteId, setActiveFavoriteId] = useState(null);
+  const [favoriteNotice, setFavoriteNotice] = useState("");
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
   // Read once on mount: the menu only needs to know whether a partial bracket is
   // waiting, and nothing on this screen can create or finish one.
@@ -113,15 +117,22 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
     loadLastReplayMeta().then(meta => {
       if (!cancelled) setReplayMeta(meta);
     });
+    listFavoriteReplays().then(list => {
+      if (!cancelled) setFavorites(list);
+    });
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (!showReplay) return;
-    const onKey = (event) => { if (event.key === "Escape") setShowReplay(false); };
+    if (!showReplay && !showFavorites) return;
+    const onKey = (event) => {
+      if (event.key !== "Escape") return;
+      setShowReplay(false);
+      setShowFavorites(false);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [showReplay]);
+  }, [showReplay, showFavorites]);
 
   // Right-click opens the detail panel; Escape or any other click closes it.
   useEffect(() => {
@@ -221,7 +232,38 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
 
   const handleOpenReplay = () => {
     audioManager.playUiClick();
+    setFavoriteNotice("");
     setShowReplay(true);
+  };
+
+  // The star on the last replay: saves a copy of the clip to the favorites, or
+  // removes that copy when it is already saved.
+  const lastReplayFavorite = favorites.find(f => f.sourceSavedAt === replayMeta?.savedAt);
+
+  const handleToggleFavorite = async () => {
+    audioManager.playUiClick();
+    setFavoriteNotice("");
+    if (lastReplayFavorite) {
+      await removeFavoriteReplay(lastReplayFavorite.id);
+    } else {
+      const { error } = await favoriteLastReplay();
+      if (error === "full") setFavoriteNotice(`Favorites are full (${MAX_FAVORITE_REPLAYS}). Remove a clip first.`);
+      else if (error) setFavoriteNotice("Could not save this replay.");
+    }
+    setFavorites(await listFavoriteReplays());
+  };
+
+  const handleOpenFavorites = () => {
+    audioManager.playUiClick();
+    setActiveFavoriteId(null);
+    setShowFavorites(true);
+  };
+
+  const handleRemoveFavorite = async (id) => {
+    audioManager.playUiClick();
+    await removeFavoriteReplay(id);
+    if (activeFavoriteId === id) setActiveFavoriteId(null);
+    setFavorites(await listFavoriteReplays());
   };
 
   const handleRandomSelection = () => {
@@ -321,6 +363,13 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             title={replayMeta ? "Watch the last 25 seconds of your most recent battle" : "Finish a battle to save a replay"}
           >
             LAST REPLAY
+          </button>
+          <button
+            className="replay-menu-button favorites-menu-button"
+            onClick={handleOpenFavorites}
+            title="Watch the replay clips you have favorited"
+          >
+            ★ FAVORITES{favorites.length > 0 ? ` (${favorites.length})` : ""}
           </button>
           <button
             className={`reset-progress-button ${confirmReset ? "reset-progress-confirm" : ""}`}
@@ -479,7 +528,66 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
                 ))}
               </div>
             )}
+            <button
+              className={`favorite-toggle ${lastReplayFavorite ? "favorite-toggle-on" : ""}`}
+              onClick={handleToggleFavorite}
+              aria-pressed={Boolean(lastReplayFavorite)}
+            >
+              {lastReplayFavorite ? "★ FAVORITED" : "☆ FAVORITE THIS CLIP"}
+            </button>
+            {favoriteNotice && <p className="battle-history-empty">{favoriteNotice}</p>}
             <ReplayPlayer />
+          </div>
+        </div>
+      )}
+
+      {showFavorites && (
+        <div className="fighter-info-overlay" role="dialog" aria-label="Favorite replays">
+          <div className="battle-history-panel">
+            <header>
+              <div>
+                <div className="roster-eyebrow">SAVED LOCALLY • {favorites.length}/{MAX_FAVORITE_REPLAYS}</div>
+                <h2>FAVORITE REPLAYS</h2>
+              </div>
+              <button className="fighter-info-close" onClick={() => setShowFavorites(false)} aria-label="Close favorite replays">×</button>
+            </header>
+
+            {activeFavoriteId && <ReplayPlayer key={activeFavoriteId} favoriteId={activeFavoriteId} />}
+
+            {favorites.length === 0 ? (
+              <p className="battle-history-empty">No favorites yet. Open LAST REPLAY and tap FAVORITE THIS CLIP to keep a clip here.</p>
+            ) : (
+              <ol className="battle-history-list">
+                {favorites.map(clip => (
+                  <li key={clip.id} className={`battle-history-row ${clip.aborted ? "battle-history-aborted" : ""}`}>
+                    <div className="battle-history-row-head">
+                      <span className="battle-history-outcome">
+                        {clip.aborted ? "NO CONTEST" : clip.winner ? `${clip.winner} WIN` : "NO RESULT"}
+                      </span>
+                      <span className="battle-history-meta">
+                        {clip.savedAt ? new Date(clip.savedAt).toLocaleString() : "Unknown time"}
+                        {clip.seconds > 0 ? ` • ${clip.seconds}s` : ""}
+                      </span>
+                    </div>
+                    <div className="battle-history-fighters">
+                      {(clip.fighters || []).map((p, j) => (
+                        <span key={`${p.name}-${j}`} className="battle-history-fighter" style={{ "--fighter-color": p.color }}>
+                          {p.name}{!clip.aborted && p.name === clip.winner ? " 👑" : ""}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="favorite-actions">
+                      <button className="favorite-action" onClick={() => { audioManager.playUiClick(); setActiveFavoriteId(clip.id); }}>
+                        {activeFavoriteId === clip.id ? "WATCHING" : "WATCH"}
+                      </button>
+                      <button className="favorite-action favorite-action-remove" onClick={() => handleRemoveFavorite(clip.id)}>
+                        REMOVE
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </div>
       )}

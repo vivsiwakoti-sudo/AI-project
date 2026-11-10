@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
-import { loadLastReplayFrames } from "../engine/replayStore";
+import { loadFavoriteReplayFrames, loadLastReplayFrames } from "../engine/replayStore";
 
 // Frames are decoded just in time into a small sliding window of ImageBitmaps.
 // A 25 second replay holds hundreds of frames, and decoding all of them up front
@@ -109,21 +109,23 @@ function BattleReplay({ frames, playing, onEnded }) {
   return <canvas ref={canvasRef} className="battle-replay-canvas" width={800} height={800} aria-label="Replay of the last battle" />;
 }
 
-// Loads the stored replay and plays it once on open; the button replays it.
-export default function ReplayPlayer() {
+// Loads a stored replay and plays it once on open; the button replays it. With no
+// `favoriteId` it plays the last battle; otherwise that saved favorite clip.
+export default function ReplayPlayer({ favoriteId = null }) {
   const [frames, setFrames] = useState(null);
   const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    loadLastReplayFrames().then(loaded => {
+    const load = favoriteId ? loadFavoriteReplayFrames(favoriteId) : loadLastReplayFrames();
+    load.then(loaded => {
       if (!cancelled) setFrames(loaded);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [favoriteId]);
 
   if (frames === null) return <p className="battle-history-empty">Loading replay...</p>;
-  if (frames.length === 0) return <p className="battle-history-empty">No replay saved yet. Finish a battle and its last 25 seconds will be kept here.</p>;
+  if (frames.length === 0) return <p className="battle-history-empty">{favoriteId ? "This clip could not be loaded." : "No replay saved yet. Finish a battle and its last 25 seconds will be kept here."}</p>;
 
   return (
     <div className="replay-section">
