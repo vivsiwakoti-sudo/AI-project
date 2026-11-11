@@ -19,6 +19,7 @@ globalThis.window = {
 
 const { Yeti } = await import('./Yeti.js');
 const { FighterBase } = await import('../FighterBase.js');
+const { audioManager } = await import('../../audio/AudioManager.js');
 
 // speed 0 keeps both fighters pinned where the test puts them.
 const data = (name, extra = {}) => ({
@@ -93,7 +94,7 @@ test('a freeze ends after 2 seconds', () => {
   assert.equal(victim.isFrozen, false, 'the ice block melts after 2 seconds');
 });
 
-test('a leaping Yeti grows and shows its slam zone; an idle one does neither', () => {
+test('a leaping Yeti swells and lifts at the middle of its arc, with no ground marker; an idle one does neither', () => {
   const recordingCtx = () => {
     const calls = [];
     const ctx = new Proxy({}, {
@@ -106,17 +107,42 @@ test('a leaping Yeti grows and shows its slam zone; an idle one does neither', (
   const yeti = withRandom(0.5, () => new Yeti(data('Yeti'), 100, 100));
   const idle = recordingCtx();
   yeti.draw(idle.ctx);
-  assert.equal(idle.calls.some(([k]) => k === 'setLineDash'), false, 'no slam zone while idle');
-  assert.equal(idle.calls.some(([k, sx]) => k === 'scale' && sx === 1.5), false, 'no growth while idle');
+  assert.equal(idle.calls.some(([k]) => k === 'setLineDash'), false, 'no slam marker while idle');
+  assert.equal(idle.calls.some(([k, sx]) => k === 'scale' && sx === 2.2), false, 'no growth while idle');
 
-  yeti.cooldownTimer = 0;
-  yeti.update(1 / 60, new FighterBase(data('Victim'), 300, 100));
-  yeti.leapTime = 0.75; // apex of the jump
-  const leaping = recordingCtx();
-  yeti.draw(leaping.ctx);
-  assert.equal(leaping.calls.some(([k]) => k === 'setLineDash'), true, 'slam zone shown mid-leap');
-  assert.equal(leaping.calls.some(([k, sx]) => k === 'scale' && sx === 1.5), true, 'body grows to 1.5x at the apex');
+  yeti.leapState = 'leap';
+  yeti.leapProgress = 0.5;
+  const mid = recordingCtx();
+  yeti.draw(mid.ctx);
+  assert.equal(mid.calls.some(([k]) => k === 'setLineDash'), false, 'no slam marker mid-leap');
+  assert.equal(mid.calls.some(([k, sx]) => k === 'scale' && sx === 2.2), true, 'body swells to 2.2x at the middle of the arc');
+  assert.equal(mid.calls.some(([k, x, y]) => k === 'translate' && x === 100 && y === 100 - 22), true, 'body is lifted at the middle of the arc');
 });
+
+test('a slam shatters the ice and plays the slam sound', () => {
+  const yeti = withRandom(0.5, () => new Yeti(data('Yeti'), 100, 100));
+  const shatters = [];
+  let slamSounds = 0;
+  yeti.particleSystem = {
+    ring() { },
+    emit() { },
+    shatter: (...args) => shatters.push(args)
+  };
+  const originalSlamSfx = audioManager.playSlamSfx;
+  audioManager.playSlamSfx = () => { slamSounds += 1; };
+  try {
+    yeti.slam(new FighterBase(data('Victim'), 300, 100));
+  } finally {
+    audioManager.playSlamSfx = originalSlamSfx;
+  }
+
+  assert.equal(shatters.length, 1, 'one shatter burst per slam');
+  assert.equal(shatters[0][0], 100);
+  assert.equal(shatters[0][1], 100);
+  assert.equal(shatters[0][3].radius, 100, 'the break spreads across the 100px slam radius');
+  assert.equal(slamSounds, 1, 'the slam sound plays once');
+});
+
 
 test('a frozen Yeti cancels its leap without slamming', () => {
   const yeti = withRandom(0.5, () => new Yeti(data('Yeti'), 100, 100));

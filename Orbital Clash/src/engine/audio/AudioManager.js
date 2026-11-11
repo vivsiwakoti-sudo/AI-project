@@ -812,6 +812,17 @@ class AudioManager {
     }
   }
 
+  playSlamSfx() {
+    const ctx = this.ensureContext();
+    const now = ctx.currentTime;
+    // Heavy landing thump, a crunching ice break, and a glassy shatter ring on top.
+    playThump(ctx, this.sfxGain, now, 110, 0.35, { gain: 0.45, pitchDrop: 0.55 });
+    playNoiseBurst(ctx, this.sfxGain, now, 0.3, { filterType: "bandpass", filterFreq: 1400, sweepTo: 300, gain: 0.32, q: 1.2 });
+    playNoiseBurst(ctx, this.sfxGain, now + 0.03, 0.12, { filterType: "highpass", filterFreq: 3000, gain: 0.22 });
+    playTone(ctx, this.sfxGain, 2600, now + 0.04, 0.22, { type: "sine", gain: 0.1, attack: 0.002, release: 0.2 });
+    playTone(ctx, this.sfxGain, 1900, now + 0.08, 0.18, { type: "triangle", gain: 0.08, attack: 0.002, release: 0.16 });
+  }
+
   playDeathSfx() {
     const ctx = this.ensureContext();
     const now = ctx.currentTime;
