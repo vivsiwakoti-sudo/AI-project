@@ -93,6 +93,31 @@ test('a freeze ends after 2 seconds', () => {
   assert.equal(victim.isFrozen, false, 'the ice block melts after 2 seconds');
 });
 
+test('a leaping Yeti grows and shows its slam zone; an idle one does neither', () => {
+  const recordingCtx = () => {
+    const calls = [];
+    const ctx = new Proxy({}, {
+      get: (_t, key) => (...args) => { calls.push([key, ...args]); return ctx; },
+      set: () => true
+    });
+    return { ctx, calls };
+  };
+
+  const yeti = withRandom(0.5, () => new Yeti(data('Yeti'), 100, 100));
+  const idle = recordingCtx();
+  yeti.draw(idle.ctx);
+  assert.equal(idle.calls.some(([k]) => k === 'setLineDash'), false, 'no slam zone while idle');
+  assert.equal(idle.calls.some(([k, sx]) => k === 'scale' && sx === 1.5), false, 'no growth while idle');
+
+  yeti.cooldownTimer = 0;
+  yeti.update(1 / 60, new FighterBase(data('Victim'), 300, 100));
+  yeti.leapTime = 0.75; // apex of the jump
+  const leaping = recordingCtx();
+  yeti.draw(leaping.ctx);
+  assert.equal(leaping.calls.some(([k]) => k === 'setLineDash'), true, 'slam zone shown mid-leap');
+  assert.equal(leaping.calls.some(([k, sx]) => k === 'scale' && sx === 1.5), true, 'body grows to 1.5x at the apex');
+});
+
 test('a frozen Yeti cancels its leap without slamming', () => {
   const yeti = withRandom(0.5, () => new Yeti(data('Yeti'), 100, 100));
   yeti.cooldownTimer = 0;
