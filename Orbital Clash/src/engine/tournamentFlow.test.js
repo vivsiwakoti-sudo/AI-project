@@ -34,6 +34,7 @@ const {
   buildTournamentBracket,
   createTournamentBout,
   hasResumableTournament,
+  tournamentRoster,
   loadActiveTournament,
   matchDetails,
   nextPendingMatch,
@@ -53,11 +54,13 @@ function seeded(seed) {
   };
 }
 
-test('the bracket uses exactly the 26 existing classes, 10 prelim matches + 6 byes', () => {
+test('the bracket uses exactly the 26 tournament classes, 10 prelim matches + 6 byes', () => {
   const bracket = buildTournamentBracket({ random: seeded(7) });
-  const roster = Object.keys(FIGHTER_CLASSES);
+  const roster = tournamentRoster();
 
   assert.equal(roster.length, TOURNAMENT_SIZE);
+  assert.equal(roster.includes('Yeti'), false, 'the Yeti is excluded from tournament mode');
+  assert.equal(Object.keys(FIGHTER_CLASSES).includes('Yeti'), true, 'the Yeti is still a playable class');
   assert.deepEqual(validateTournament(bracket), []);
 
   const prelim = bracket.rounds.preliminary.matches;

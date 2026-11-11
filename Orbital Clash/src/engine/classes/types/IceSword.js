@@ -42,6 +42,7 @@ export class IceSword extends FighterBase {
                         onEnd: fighter => { fighter.slowVisual = false; }
                     });
                     target.slowVisual = true;
+                    EffectSystem.rollFreeze(target, 2);
                     if (target.particleSystem) {
                         target.particleSystem.emitImpact(swordX, swordY, "#bfe9ff", 12);
                     }

@@ -515,6 +515,22 @@ export class FighterBase {
         this.y = Math.max(0, Math.min(bound, this.y));
     }
 
+    // Frozen fighters are encased in a translucent block of ice (body-local space).
+    drawIceBlock(ctx) {
+        const half = this.radius * 1.15;
+        ctx.save();
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "#bff3ff";
+        ctx.fillStyle = "rgba(170, 232, 255, 0.5)";
+        ctx.strokeStyle = "rgba(235, 252, 255, 0.95)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-half, -half, half * 2, half * 2, this.radius * 0.35);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+
     updateDamageNumbers(dt) {
         this.damageNumbers.forEach(entry => {
             entry.life -= dt;
@@ -671,6 +687,8 @@ export class FighterBase {
         ctx.strokeStyle = outlineColorFor(this.hitColor || this.color);
         ctx.lineWidth = OUTLINE_WIDTH;
         ctx.stroke();
+
+        if (this.isFrozen) this.drawIceBlock(ctx);
 
         // Hot core sparks where the deflection landed.
         if (this.impactStrength > 0.05) {

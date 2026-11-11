@@ -26,6 +26,7 @@ const CLASS_ICONS = {
     "Vampire": "\u{1F9DB}",
     "Mahoraga": "\u2638\uFE0F",
     "Summoner": "\u{1F9DF}",
+    "Yeti": "\u{1F43E}",
 };
 
 export const renderMotif = (ctx, x, y, className) => {

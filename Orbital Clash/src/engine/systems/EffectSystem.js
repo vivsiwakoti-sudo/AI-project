@@ -1,4 +1,5 @@
 const SLOW_MULTIPLIERS = { slow: 0.5, "web-slow": 0.4, "trail-slow": 0.5 };
+const FREEZE_CHANCE = 0.25;
 // Permanent slows that multiply on top of the strongest timed slow instead of competing with it.
 const COMPOUNDING_SLOWS = new Set(["web-weave"]);
 
@@ -59,5 +60,24 @@ export class EffectSystem {
       .filter(effect => COMPOUNDING_SLOWS.has(effect.name))
       .reduce((product, effect) => product * (effect.multiplier ?? 1), 1);
     return timedSlow * compounding;
+  }
+
+  // Chance that a landed freeze hit actually freezes its victim.
+  static rollFreeze(fighter, seconds) {
+    if (Math.random() >= FREEZE_CHANCE) return false;
+    EffectSystem.freeze(fighter, seconds);
+    return true;
+  }
+
+  // Encases a fighter in ice: it cannot move, and its attacks and ability
+  // cooldowns are paused for the duration.
+  static freeze(fighter, seconds) {
+    fighter.isFrozen = true;
+    fighter.pauseAttacks?.(seconds);
+    EffectSystem.addEffect(fighter, {
+      name: "freeze",
+      duration: seconds,
+      onEnd: f => { f.isFrozen = false; }
+    });
   }
 }

@@ -10,7 +10,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Melee",
     cooldown: 0.25,
     description: "Icy sword rotates around. Slows enemies on hit.",
-    description2: "A long frozen blade orbits the fighter and strikes whoever it touches. Each hit slows the victim by 50% for 2 seconds, painted frost-blue so the debuff is always readable.",
+    description2: "A long frozen blade orbits the fighter and strikes whoever it touches. Each hit slows the victim by 50% for 2 seconds, painted frost-blue so the debuff is always readable. Every hit also has a 25% chance to freeze the victim solid in a block of ice for 2 seconds.",
     keywords: ["sword", "ice", "slow", "melee", "orbit"],
   },
   "Snake": {
@@ -380,5 +380,19 @@ export const FIGHTER_CLASSES = {
     description: "Summons two roster fighters every 15 seconds.",
     description2: "Carries a staff and deals no touch damage. Every 15 seconds he summons two random roster fighters with 15 HP each and their full abilities. Summons fight for him, can be hit by enemies, and vanish when he is knocked out.",
     keywords: ["summon", "staff", "minions", "trail"],
+  },
+  "Yeti": {
+    name: "Yeti",
+    color: "#E8F6FF",
+    health: 120,
+    damage: 10,
+    speed: 3,
+    bodySize: 52,
+    shape: "yeti",
+    attackType: "Area",
+    cooldown: 7.5,
+    description: "Leaps onto enemies for 10 AoE damage.",
+    description2: "Every 5-10 seconds the Yeti leaps onto its opponent and slams the ground for 10 damage to everyone nearby. Each enemy struck has a 25% chance to be frozen in a block of ice for 2 seconds. Frozen fighters cannot move or attack, and a frozen Yeti cancels its leap.",
+    keywords: ["leap", "aoe", "freeze", "ice", "slam"],
   }
 };

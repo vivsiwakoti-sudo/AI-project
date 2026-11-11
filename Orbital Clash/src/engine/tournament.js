@@ -24,6 +24,12 @@ import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE } from "./config.js";
 // are constants rather than magic numbers scattered through the code.
 export const TOURNAMENT_SIZE = 26;
 export const BYE_COUNT = 6;
+// Classes kept out of tournament mode. The bracket is sized for a fixed roster,
+// so classes added after the base 26 stay excluded.
+export const TOURNAMENT_EXCLUDED_CLASSES = new Set(["Yeti"]);
+export function tournamentRoster() {
+  return Object.keys(FIGHTER_CLASSES).filter(name => !TOURNAMENT_EXCLUDED_CLASSES.has(name));
+}
 export const ROUND_DEFINITIONS = [
   { key: "preliminary", label: "Preliminary Round", short: "PRELIM", matches: 10 },
   { key: "round16", label: "Round of 16", short: "R16", matches: 8 },
@@ -470,7 +476,7 @@ function shuffle(list, random) {
 // into the 10 preliminary matches. No strength, seed or win rate is consulted -
 // byes are random by design.
 export function buildTournamentBracket({ random = Math.random, timestamp = Date.now(), arenaSize = TOURNAMENT_ARENA_SIZE } = {}) {
-  const allNames = Object.keys(FIGHTER_CLASSES);
+  const allNames = tournamentRoster();
   if (allNames.length !== TOURNAMENT_SIZE) {
     // The tournament format is defined for a fixed roster size. A changed roster
     // should be an explicit decision, not a silently malformed bracket.

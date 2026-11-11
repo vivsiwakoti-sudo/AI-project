@@ -168,6 +168,10 @@ const SHAPES = {
             [[-0.16, 0.95], [0.16, 0.95], [0.16, -0.95], [-0.16, -0.95]],
             [...arc(0, 0, 0.3, 0, TAU, 12)]
         ]
+    },
+    // Yeti - a shaggy, jagged silhouette with a pale fur ruff.
+    yeti: {
+        points: polygon(16, { inner: 0.82 })
     }
 };
 
