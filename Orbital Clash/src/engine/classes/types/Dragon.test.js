@@ -53,7 +53,7 @@ function igniteAt(x, y) {
   return { dragon, victim, fire: dragon.fires[0] };
 }
 
-test('Dragon fire waits 0.75 s, then burns 1 per second for 5 seconds', () => {
+test('Dragon fire waits 0.75 s, then burns 5 per second for 5 seconds', () => {
   const { dragon, victim, fire } = igniteAt(400, 400);
   victim.x = fire.x;
   victim.y = fire.y;
@@ -62,16 +62,16 @@ test('Dragon fire waits 0.75 s, then burns 1 per second for 5 seconds', () => {
   assert.equal(victim.totalDamageTaken, 0, 'no damage before the 0.75 s delay ends');
 
   dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 1, 'the first burn lands 0.75 s after entering the fire');
+  assert.equal(victim.totalDamageTaken, 5, 'the first burn lands 0.75 s after entering the fire');
 
   for (let i = 0; i < 3; i++) dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 1, 'the next tick waits a full second');
+  assert.equal(victim.totalDamageTaken, 5, 'the next tick waits a full second');
 
   dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 2, 'the second tick lands at 1.75 s');
+  assert.equal(victim.totalDamageTaken, 10, 'the second tick lands at 1.75 s');
 
   for (let i = 0; i < 12; i++) dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 5, 'five ticks in total by 4.75 s');
+  assert.equal(victim.totalDamageTaken, 25, 'five ticks in total by 4.75 s');
 });
 
 test('Dragon fire vanishes 5 seconds after it bursts', () => {
@@ -84,7 +84,7 @@ test('Dragon fire vanishes 5 seconds after it bursts', () => {
 
   dragon.update(STEP, victim);
   assert.equal(dragon.fires.length, 0, 'the fire is gone at 5 s');
-  assert.equal(victim.totalDamageTaken, 5, 'no damage is dealt after the fire expires');
+  assert.equal(victim.totalDamageTaken, 25, 'no damage is dealt after the fire expires');
 });
 
 test('Dragon fire burn restarts its 0.75 s delay when a victim re-enters the circle', () => {
@@ -101,7 +101,7 @@ test('Dragon fire burn restarts its 0.75 s delay when a victim re-enters the cir
   assert.equal(victim.totalDamageTaken, 0, 'the delay starts over after leaving the fire');
 
   dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 1, 'the burn lands 0.75 s after re-entering');
+  assert.equal(victim.totalDamageTaken, 5, 'the burn lands 0.75 s after re-entering');
 });
 
 // Places the victim `distance` px from the fire's centre, then reports the damage it takes after the burn delay.
@@ -114,7 +114,7 @@ function damageFromFireAt(distance) {
 }
 
 test('Dragon fire only hits fighters that overlap its 100 px radius circle', () => {
-  assert.equal(damageFromFireAt(119), 1, 'a victim overlapping the rim is burned');
+  assert.equal(damageFromFireAt(119), 5, 'a victim overlapping the rim is burned');
   assert.equal(damageFromFireAt(121), 0, 'a victim just past the rim is missed');
 });
 
@@ -152,7 +152,7 @@ test('Dragon fireball flies 9 px per frame until it strikes something', () => {
   assert.ok(Math.abs(travelled - 90) < 1e-6, `expected 90 px of travel, got ${travelled}`);
 });
 
-test('Dragon fireball deals 10 on a direct hit, then its fire burns 1 after a 0.75 s delay', () => {
+test('Dragon fireball deals 10 on a direct hit, then its fire burns 5 after a 0.75 s delay', () => {
   const { dragon, victim, ball } = releaseFireball();
   ball.x = 400;
   ball.y = 400;
@@ -169,7 +169,7 @@ test('Dragon fireball deals 10 on a direct hit, then its fire burns 1 after a 0.
   assert.equal(victim.totalDamageTaken, 10, 'the fire waits before burning');
 
   dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 11, 'the fire burn lands 0.75 s after the fire starts');
+  assert.equal(victim.totalDamageTaken, 15, 'the fire burn lands 0.75 s after the fire starts');
 });
 
 test('Dragon fireball bursts at the arena wall and keeps its fire on the map', () => {

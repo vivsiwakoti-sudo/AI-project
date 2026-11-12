@@ -2,7 +2,7 @@ import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
 const FIRE_RADIUS = 100;
-const FIRE_TICK_DAMAGE = 1;
+const FIRE_TICK_DAMAGE = 5;
 const FIRE_BURN_DELAY = 0.75;
 const FIRE_BURN_TICKS = 5;
 const FIRE_DURATION = 5;
