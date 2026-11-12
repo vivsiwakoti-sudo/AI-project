@@ -1,15 +1,13 @@
 import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
-const LASER_SPEED = 900; // px per second the tip travels
 const LASER_HALF_WIDTH = 4;
 const LASER_FIXED_SECONDS = 5;
 const LASER_FADE_SECONDS = 0.5;
 const TOUCH_DAMAGE = 5;
 const TICK_DAMAGE = 1;
 const TICK_SECONDS = 0.25;
-const WALL_INSET = 20; // matches the arena's inner border in CollisionSystem
-const AIM_EPSILON = 1e-9;
+const MIN_POINT_SPACING = 2; // px the fighter must travel before the path records a new point
 
 // Distance from a point to the closest point on the segment ab.
 function distanceToSegment(px, py, ax, ay, bx, by) {
@@ -20,17 +18,16 @@ function distanceToSegment(px, py, ax, ay, bx, by) {
     return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
 }
 
-// Distance along a ray from (x, y) until it reaches the inner wall.
-function distanceToWall(x, y, angle, arenaSize) {
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const high = arenaSize - WALL_INSET;
-    let limit = Infinity;
-    if (cos > AIM_EPSILON) limit = Math.min(limit, (high - x) / cos);
-    else if (cos < -AIM_EPSILON) limit = Math.min(limit, (WALL_INSET - x) / cos);
-    if (sin > AIM_EPSILON) limit = Math.min(limit, (high - y) / sin);
-    else if (sin < -AIM_EPSILON) limit = Math.min(limit, (WALL_INSET - y) / sin);
-    return Math.max(0, limit);
+// Distance from a point to the closest part of the recorded path.
+function distanceToPath(px, py, points) {
+    if (points.length === 1) return Math.hypot(px - points[0].x, py - points[0].y);
+    let best = Infinity;
+    for (let i = 1; i < points.length; i++) {
+        const a = points[i - 1];
+        const b = points[i];
+        best = Math.min(best, distanceToSegment(px, py, a.x, a.y, b.x, b.y));
+    }
+    return best;
 }
 
 export class LaserBeam extends FighterBase {
@@ -52,89 +49,95 @@ export class LaserBeam extends FighterBase {
         this.lasers = this.lasers.filter(laser => this.updateLaser(laser, dt, victims));
     }
 
-    // Frozen, stunned or attack-paused fighters hold their next laser.
+    // Called by CollisionSystem when this fighter's body touches an arena wall.
+    onWallHit() {
+        const trail = this.drawingTrail();
+        if (!trail) return;
+        trail.points.push({ x: this.x, y: this.y });
+        trail.fixed = true;
+        this.cooldownTimer = this.cooldown;
+        if (this.particleSystem) {
+            this.particleSystem.emit(this.x, this.y, "#ff5a7e", 14, { speed: 260, size: 2.6, life: 0.45 });
+        }
+    }
+
+    drawingTrail() {
+        return this.lasers.find(laser => !laser.fixed) ?? null;
+    }
+
+    // Frozen, stunned or attack-paused fighters hold off starting a new trail.
     updateLaunch(opponent) {
         const held = this.isFrozen || this.isStunned || this.attackPauseTimer > 0;
-        if (held || this.cooldownTimer > 0 || !opponent || opponent.isDead) return;
-        const arenaSize = this.arenaSize ?? 800;
+        if (held || this.cooldownTimer > 0 || this.drawingTrail() || !opponent || opponent.isDead) return;
         this.lasers.push({
-            x: this.x,
-            y: this.y,
-            angle: this.lastAngle,
-            length: 0,
-            maxLength: distanceToWall(this.x, this.y, this.lastAngle, arenaSize),
+            points: [{ x: this.x, y: this.y }],
             fixed: false,
             fixedTimer: LASER_FIXED_SECONDS,
             touching: new Map() // victim -> seconds in contact since the last tick
         });
         this.useAbility();
+        // useAbility() starts the cooldown, but it only runs once the trail touches a wall.
+        this.cooldownTimer = 0;
     }
 
-    // Returns false once the laser has finished and should be removed.
-    updateLaser(laser, dt, victims) {
-        if (!laser.fixed) {
-            laser.length = Math.min(laser.length + LASER_SPEED * dt, laser.maxLength);
-            if (laser.length >= laser.maxLength) {
-                laser.fixed = true;
-                if (this.particleSystem) {
-                    const tip = this.laserTip(laser);
-                    this.particleSystem.emit(tip.x, tip.y, "#ff5a7e", 14, { speed: 260, size: 2.6, life: 0.45 });
-                }
-            }
+    // Returns false once a fixed trail has lingered long enough and should be removed.
+    updateLaser(trail, dt, victims) {
+        if (!trail.fixed) {
+            this.recordPathPoint(trail);
         } else {
-            laser.fixedTimer -= dt;
-            if (laser.fixedTimer <= 0) return false;
+            trail.fixedTimer -= dt;
+            if (trail.fixedTimer <= 0) return false;
         }
-        this.applyLaserContact(laser, dt, victims);
+        this.applyLaserContact(trail, dt, victims);
         return true;
     }
 
-    laserTip(laser) {
-        return {
-            x: laser.x + Math.cos(laser.angle) * laser.length,
-            y: laser.y + Math.sin(laser.angle) * laser.length
-        };
+    recordPathPoint(trail) {
+        const last = trail.points[trail.points.length - 1];
+        if (Math.hypot(this.x - last.x, this.y - last.y) >= MIN_POINT_SPACING) {
+            trail.points.push({ x: this.x, y: this.y });
+        }
     }
 
     // Each fighter touched by the line takes 5 damage on first contact. While the
     // laser is fixed, anyone still touching it takes 1 damage every 0.25 seconds.
     // Leaving the line resets that fighter's contact, so re-entering hits again.
-    applyLaserContact(laser, dt, victims) {
-        const tip = this.laserTip(laser);
+    applyLaserContact(trail, dt, victims) {
         const touchingNow = new Set();
         for (const victim of victims) {
-            const distance = distanceToSegment(victim.x, victim.y, laser.x, laser.y, tip.x, tip.y);
+            const distance = distanceToPath(victim.x, victim.y, trail.points);
             if (distance >= victim.radius + LASER_HALF_WIDTH) continue;
             touchingNow.add(victim);
-            if (!laser.touching.has(victim)) {
-                laser.touching.set(victim, 0);
+            if (!trail.touching.has(victim)) {
+                trail.touching.set(victim, 0);
                 DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true });
                 continue;
             }
-            if (!laser.fixed) continue;
-            const accumulated = laser.touching.get(victim) + dt;
+            if (!trail.fixed) continue;
+            const accumulated = trail.touching.get(victim) + dt;
             if (accumulated >= TICK_SECONDS) {
-                laser.touching.set(victim, accumulated - TICK_SECONDS);
+                trail.touching.set(victim, accumulated - TICK_SECONDS);
                 DamageSystem.applyDamage(this, victim, TICK_DAMAGE, "Beam", { ignoreCooldown: true });
             } else {
-                laser.touching.set(victim, accumulated);
+                trail.touching.set(victim, accumulated);
             }
         }
-        for (const victim of laser.touching.keys()) {
-            if (!touchingNow.has(victim)) laser.touching.delete(victim);
+        for (const victim of trail.touching.keys()) {
+            if (!touchingNow.has(victim)) trail.touching.delete(victim);
         }
     }
 
     draw(ctx) {
         const alive = !(this.isDead || this.health <= 0);
-        if (alive) for (const laser of this.lasers) this.drawLaser(ctx, laser);
+        if (alive) for (const trail of this.lasers) this.drawLaser(ctx, trail);
         super.draw(ctx);
     }
 
-    drawLaser(ctx, laser) {
-        const tip = this.laserTip(laser);
+    drawLaser(ctx, trail) {
+        const head = trail.points[trail.points.length - 1];
+        const [first, ...rest] = trail.points;
         const flicker = 0.85 + 0.15 * Math.sin(this.animTime * 40);
-        const fade = laser.fixed ? Math.min(1, laser.fixedTimer / LASER_FADE_SECONDS) : 1;
+        const fade = trail.fixed ? Math.min(1, trail.fixedTimer / LASER_FADE_SECONDS) : 1;
         const layers = [
             { width: 22, color: "rgba(255, 40, 90, 0.25)", blur: 22 },
             { width: 9 * flicker, color: "#ff5a7e", blur: 14 },
@@ -144,26 +147,27 @@ export class LaserBeam extends FighterBase {
         ctx.save();
         ctx.globalAlpha = fade;
         ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         for (const layer of layers) {
             ctx.shadowBlur = layer.blur;
             ctx.shadowColor = "#ff2d55";
             ctx.strokeStyle = layer.color;
             ctx.lineWidth = layer.width;
             ctx.beginPath();
-            ctx.moveTo(laser.x, laser.y);
-            ctx.lineTo(tip.x, tip.y);
+            ctx.moveTo(first.x, first.y);
+            for (const p of rest) ctx.lineTo(p.x, p.y);
             ctx.stroke();
         }
         ctx.shadowBlur = 0;
 
-        const flareRadius = laser.fixed ? 12 + 3 * Math.sin(this.animTime * 12) : 9;
-        const flare = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, flareRadius * 1.8);
+        const flareRadius = trail.fixed ? 12 + 3 * Math.sin(this.animTime * 12) : 9;
+        const flare = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, flareRadius * 1.8);
         flare.addColorStop(0, "rgba(255, 255, 255, 1)");
         flare.addColorStop(0.4, "rgba(255, 90, 126, 0.85)");
         flare.addColorStop(1, "rgba(255, 45, 85, 0)");
         ctx.fillStyle = flare;
         ctx.beginPath();
-        ctx.arc(tip.x, tip.y, flareRadius * 1.8, 0, Math.PI * 2);
+        ctx.arc(head.x, head.y, flareRadius * 1.8, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }

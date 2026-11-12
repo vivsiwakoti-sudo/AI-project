@@ -37,49 +37,60 @@ function stepFrames(laser, opponent, seconds) {
   for (let i = 0; i < Math.round(seconds * 60); i++) laser.update(FRAME, opponent);
 }
 
-test('the Laser Beam fires right away, then only again after 5 seconds', () => {
+test('the Laser Beam starts drawing at fight start and keeps drawing until it touches a wall', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const opponent = new FighterBase(victimStats, 700, 400);
+  laser.vx = 1;
+  laser.vy = 0;
   laser.update(FRAME, opponent);
   assert.equal(laser.lasers.length, 1);
-  assert.equal(laser.cooldownTimer, 5);
+  assert.equal(laser.lasers[0].fixed, false);
 
-  stepFrames(laser, opponent, 4.9);
-  assert.equal(laser.lasers.length, 1, 'no second laser before 5 s');
-  stepFrames(laser, opponent, 0.2);
-  assert.equal(laser.lasers.length, 2, 'a second laser fires at 5 s');
+  stepFrames(laser, opponent, 6);
+  assert.equal(laser.lasers.length, 1, 'no second trail starts while one is still being drawn');
+  assert.equal(laser.lasers[0].fixed, false);
+  assert.equal(laser.cooldownTimer, 0, 'the cooldown does not run while drawing');
 });
 
-test('the laser stops at the wall and stays there for 5 seconds', () => {
+test('touching a wall ends the trail, starts the 5 second cooldown, and the trail lingers 5 seconds', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const opponent = new FighterBase(victimStats, 700, 400);
-  opponent.dodgeChance = 1;
+  laser.vx = 1;
+  laser.vy = 0;
   laser.update(FRAME, opponent);
-  const shot = laser.lasers[0];
+  stepFrames(laser, opponent, 1);
+  const trail = laser.lasers[0];
 
-  // Wall inset is 20 px, so an arena of 800 px stops the tip at x = 780.
-  assert.ok(Math.abs(shot.maxLength - (780 - shot.x)) < 1e-6);
-  for (let i = 0; i < 60 && !shot.fixed; i++) laser.update(FRAME, opponent);
-  assert.equal(shot.fixed, true);
-  assert.ok(Math.abs(shot.x + Math.cos(shot.angle) * shot.length - 780) < 1e-6, 'the tip rests on the wall');
+  laser.onWallHit('right');
+  assert.equal(trail.fixed, true);
+  assert.deepEqual(trail.points[trail.points.length - 1], { x: laser.x, y: laser.y }, 'the trail ends where the fighter hit the wall');
+  assert.equal(laser.cooldownTimer, 5, 'the cooldown starts at the wall');
 
   stepFrames(laser, opponent, 4.9);
-  assert.ok(laser.lasers.includes(shot), 'still lingering just before 5 s');
+  assert.ok(laser.lasers.includes(trail), 'still lingering before 5 s');
+  assert.equal(laser.lasers.length, 1, 'no new trail while cooling down');
   stepFrames(laser, opponent, 0.2);
-  assert.ok(!laser.lasers.includes(shot), 'gone after 5 s fixed');
+  assert.ok(!laser.lasers.includes(trail), 'gone after 5 s');
+  assert.equal(laser.lasers.length, 1, 'a new trail starts once the cooldown ends');
+  assert.equal(laser.lasers[0].fixed, false);
 });
 
-test('a laser does 5 damage on touch and then 1 damage every 0.25 seconds while fixed', () => {
+test('a trail does 5 damage on touch, then 1 damage every 0.25 seconds while it lingers', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const victim = new FighterBase(victimStats, 400, 400);
   victim.dodgeChance = 0;
+  laser.vx = 1;
+  laser.vy = 0;
   laser.update(FRAME, victim);
-  const shot = laser.lasers[0];
+  for (let i = 0; i < 300 && victim.health === 1000; i++) laser.update(FRAME, victim);
+  assert.equal(victim.health, 995, 'one 5 damage hit when the drawn trail first crosses the victim');
 
-  for (let i = 0; i < 600 && !shot.fixed; i++) laser.update(FRAME, victim);
-  assert.equal(victim.health, 1000 - 5, 'one 5 damage hit when the beam crosses the victim');
+  stepFrames(laser, victim, 0.5);
+  assert.equal(victim.health, 995, 'no more hits while the trail keeps moving past the victim');
 
+  laser.onWallHit('right');
+  const healthAtWall = victim.health;
   stepFrames(laser, victim, 2);
-  const ticks = 1000 - 5 - victim.health;
+  const ticks = healthAtWall - victim.health;
   assert.ok(ticks === 7 || ticks === 8, `about 8 ticks over 2 s, got ${ticks}`);
 });

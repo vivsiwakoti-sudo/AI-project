@@ -433,8 +433,8 @@ export const FIGHTER_CLASSES = {
     shape: "laser",
     attackType: "Trail",
     cooldown: 5,
-    description: "Fires a laser that burns its path until it hits a wall, then lingers.",
-    description2: "Every 5 seconds the Laser Beam fires a laser in the direction it faces. The beam travels at 900 px per second, drawing its line as it goes, and stops when it touches the wall. Each fighter it touches takes 5 damage. A stopped laser stays for 5 seconds, and anyone still touching it takes 1 damage every 0.25 seconds.",
+    description: "Drags a laser along its own path until it hits a wall, then the laser lingers.",
+    description2: "The Laser Beam leaves a laser line along its path as it moves. The laser stops when the Laser Beam touches a wall, and the 5 second cooldown starts at that moment. The stopped laser stays for 5 seconds. Each fighter it touches takes 5 damage, and anyone still touching the stopped laser takes 1 damage every 0.25 seconds.",
     keywords: ["laser", "beam", "trail", "wall", "burn"],
   }
 };

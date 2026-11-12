@@ -251,6 +251,17 @@ node index.js
 
     
 
+* **\- Striker**: Every 7 seconds, a plane flies toward the opponent and drops 4 bombs. Each bomb does 10 area damage with a radius of 120 pixels and strong knockback. Bombs drop every 0.2 seconds, and the plane is drawn at 2x size.  
+  *   \- Health: 100  
+  *   \- Damage: 10 per bomb (4 bombs)  
+  *   \- Effect: Area knockback  
+  *   \- Speed: 5 px/frame  
+  *   \- Attack Type: Beam  
+  *   \- Cooldown: 7 seconds  
+  *   \- Body Size: 40x40
+
+    
+
 * **\- Reaper**: Every time the Reaper's long scythe hits an enemy, its damage increases with no cap, multiplying its current damage by 1.5 after each successful hit. The scythe extends 20 pixels beyond the body. Against Mahoraga, this growth stops after 5 multiplications.  
   *   \- Health: 100  
   *   \- Damage: 5 \- Unlimited  
@@ -293,6 +304,17 @@ node index.js
   *   \- Attack Type: Trail  
   *   \- Cooldown: N/A  
   *   \- Body Size: 42x42
+
+    
+
+* **\- Laser Beam**: Leaves a laser line along its own path as it moves. The laser stops when the Laser Beam touches a wall, and the 5 second cooldown starts at that moment. The stopped laser stays for 5 seconds, doing 5 damage on touch and 1 damage every 0.25 seconds while a fighter is still touching it.  
+  *   \- Health: 100  
+  *   \- Damage: 5 on touch, then 1 every 0.25 seconds  
+  *   \- Effect: Lingering laser  
+  *   \- Speed: 4 px/frame  
+  *   \- Attack Type: Trail  
+  *   \- Cooldown: 5 seconds  
+  *   \- Body Size: 40x40
 
     
 
