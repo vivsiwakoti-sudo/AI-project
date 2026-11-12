@@ -4,9 +4,9 @@ import { DamageSystem } from "../../systems/DamageSystem.js";
 const LASER_HALF_WIDTH = 4;
 const LASER_FIXED_SECONDS = 5;
 const LASER_FADE_SECONDS = 0.5;
-const TOUCH_DAMAGE = 3;
-const TICK_DAMAGE = 1;
-const TICK_SECONDS = 0.25;
+const TOUCH_DAMAGE = 2;
+const TICK_DAMAGE = 2;
+const TICK_SECONDS = 0.5;
 const MIN_POINT_SPACING = 2; // px the fighter must travel before the path records a new point
 const LASER_WALL_BOUNCES = 2; // wall bounces before the laser stops and lingers
 
@@ -104,8 +104,8 @@ export class LaserBeam extends FighterBase {
         }
     }
 
-    // Each fighter takes 3 damage the first time the line touches it, once per laser.
-    // While the laser is fixed, anyone still touching it takes 1 damage every 0.25
+    // Each fighter takes 2 damage the first time the line touches it, once per laser.
+    // While the laser is fixed, anyone still touching it takes 2 damage every 0.5
     // seconds. Leaving the line resets that fighter's tick timer, so re-entering
     // does not repeat the touch damage.
     applyLaserContact(trail, dt, victims) {
