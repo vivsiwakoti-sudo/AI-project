@@ -80,7 +80,8 @@ const RANGED_CLASS_NAMES = new Set([
   "Meteor",
   "Black Hole",
   "Spider",
-  "Snake"
+  "Snake",
+  "Laser Beam"
 ]);
 
 // A ranged fighter has to aim at whoever is closest, because anything else means

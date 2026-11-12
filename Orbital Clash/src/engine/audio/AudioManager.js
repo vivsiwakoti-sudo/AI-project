@@ -723,6 +723,7 @@ class AudioManager {
         return;
       case "SolarBeam":
       case "BlackHole":
+      case "Laser Beam":
         // Energy weapons: a deep, humming zap.
         playZap(ctx, this.sfxGain, now, { gain: 0.28, freq: 1400 * jitter });
         playThump(ctx, this.sfxGain, now, 80, 0.3, { gain: 0.24, pitchDrop: 0.5 });

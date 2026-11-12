@@ -422,5 +422,19 @@ export const FIGHTER_CLASSES = {
     description: "Sends a plane that drops 4 bombs, each blasting 10 damage and throwing fighters away.",
     description2: "Every 7 seconds the Striker sends a plane flying in the direction it faces. The plane drops 4 bombs along its path. Each bomb lands as a 120 px radius blast that deals 10 AOE damage to every fighter inside it. A fighter that takes the hit is thrown straight away from the blast and surges at 3x speed for 0.25 seconds. Dodged or parried hits are not thrown.",
     keywords: ["plane", "bomb", "aoe", "knockback", "beam"],
+  },
+  "Laser Beam": {
+    name: "Laser Beam",
+    color: "#ff2d55",
+    health: 100,
+    damage: 5,
+    speed: 4,
+    bodySize: 40,
+    shape: "laser",
+    attackType: "Trail",
+    cooldown: 5,
+    description: "Fires a laser that burns its path until it hits a wall, then lingers.",
+    description2: "Every 5 seconds the Laser Beam fires a laser in the direction it faces. The beam travels at 900 px per second, drawing its line as it goes, and stops when it touches the wall. Each fighter it touches takes 5 damage. A stopped laser stays for 5 seconds, and anyone still touching it takes 1 damage every 0.25 seconds.",
+    keywords: ["laser", "beam", "trail", "wall", "burn"],
   }
 };

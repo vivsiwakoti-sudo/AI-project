@@ -29,6 +29,7 @@ const CLASS_ICONS = {
     "Yeti": "\u{1F43E}",
     "Dragon": "\u{1F409}",
     "Striker": "\u2708\uFE0F",
+    "Laser Beam": "\u26A1",
 };
 
 export const renderMotif = (ctx, x, y, className) => {

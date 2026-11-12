@@ -179,6 +179,11 @@ const SHAPES = {
     striker: {
         aim: true,
         points: [[1, 0], [0.35, 0.22], [0.1, 0.95], [-0.2, 0.95], [-0.15, 0.22], [-0.95, 0.5], [-0.95, -0.5], [-0.15, -0.22], [-0.2, -0.95], [0.1, -0.95], [0.35, -0.22]]
+    },
+    // Laser Beam - a lens-shaped emitter with a pointed muzzle that aims along its facing.
+    laser: {
+        aim: true,
+        points: [[1, 0], [0.3, 0.55], [-0.5, 0.6], [-1, 0.35], [-1, -0.35], [-0.5, -0.6], [0.3, -0.55]]
     }
 };
 
