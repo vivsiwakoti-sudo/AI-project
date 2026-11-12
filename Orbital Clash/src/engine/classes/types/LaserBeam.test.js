@@ -52,7 +52,7 @@ test('the Laser Beam starts drawing at fight start and keeps drawing until it to
   assert.equal(laser.cooldownTimer, 0, 'the cooldown does not run while drawing');
 });
 
-test('touching a wall ends the trail, starts the 5 second cooldown, and the trail lingers 5 seconds', () => {
+test('the second wall bounce ends the trail, starts the 5 second cooldown, and the trail lingers 5 seconds', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const opponent = new FighterBase(victimStats, 700, 400);
   laser.vx = 1;
@@ -62,9 +62,13 @@ test('touching a wall ends the trail, starts the 5 second cooldown, and the trai
   const trail = laser.lasers[0];
 
   laser.onWallHit('right');
-  assert.equal(trail.fixed, true);
+  assert.equal(trail.fixed, false, 'the first wall bounce keeps the laser drawing');
+  assert.equal(laser.cooldownTimer, 0, 'no cooldown after the first bounce');
+
+  laser.onWallHit('left');
+  assert.equal(trail.fixed, true, 'the second wall bounce ends the laser');
   assert.deepEqual(trail.points[trail.points.length - 1], { x: laser.x, y: laser.y }, 'the trail ends where the fighter hit the wall');
-  assert.equal(laser.cooldownTimer, 5, 'the cooldown starts at the wall');
+  assert.equal(laser.cooldownTimer, 5, 'the cooldown starts at the second wall');
 
   stepFrames(laser, opponent, 4.9);
   assert.ok(laser.lasers.includes(trail), 'still lingering before 5 s');
@@ -89,6 +93,7 @@ test('a trail does 5 damage on touch, then 1 damage every 0.25 seconds while it 
   assert.equal(victim.health, 995, 'no more hits while the trail keeps moving past the victim');
 
   laser.onWallHit('right');
+  laser.onWallHit('left');
   const healthAtWall = victim.health;
   stepFrames(laser, victim, 2);
   const ticks = healthAtWall - victim.health;

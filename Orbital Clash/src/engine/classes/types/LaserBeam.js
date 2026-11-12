@@ -8,6 +8,7 @@ const TOUCH_DAMAGE = 5;
 const TICK_DAMAGE = 1;
 const TICK_SECONDS = 0.25;
 const MIN_POINT_SPACING = 2; // px the fighter must travel before the path records a new point
+const LASER_WALL_BOUNCES = 2; // wall bounces before the laser stops and lingers
 
 // Distance from a point to the closest point on the segment ab.
 function distanceToSegment(px, py, ax, ay, bx, by) {
@@ -54,11 +55,13 @@ export class LaserBeam extends FighterBase {
         const trail = this.drawingTrail();
         if (!trail) return;
         trail.points.push({ x: this.x, y: this.y });
-        trail.fixed = true;
-        this.cooldownTimer = this.cooldown;
+        trail.wallHits += 1;
         if (this.particleSystem) {
             this.particleSystem.emit(this.x, this.y, "#ff5a7e", 14, { speed: 260, size: 2.6, life: 0.45 });
         }
+        if (trail.wallHits < LASER_WALL_BOUNCES) return;
+        trail.fixed = true;
+        this.cooldownTimer = this.cooldown;
     }
 
     drawingTrail() {
@@ -72,6 +75,7 @@ export class LaserBeam extends FighterBase {
         this.lasers.push({
             points: [{ x: this.x, y: this.y }],
             fixed: false,
+            wallHits: 0,
             fixedTimer: LASER_FIXED_SECONDS,
             touching: new Map() // victim -> seconds in contact since the last tick
         });

@@ -307,7 +307,7 @@ node index.js
 
     
 
-* **\- Laser Beam**: Leaves a laser line along its own path as it moves. The laser stops when the Laser Beam touches a wall, and the 5 second cooldown starts at that moment. The stopped laser stays for 5 seconds, doing 5 damage on touch and 1 damage every 0.25 seconds while a fighter is still touching it.  
+* **\- Laser Beam**: Leaves a laser line along its own path as it moves. The laser stops on the Laser Beam's second wall bounce, and the 5 second cooldown starts at that moment. The stopped laser stays for 5 seconds, doing 5 damage on touch and 1 damage every 0.25 seconds while a fighter is still touching it.  
   *   \- Health: 100  
   *   \- Damage: 5 on touch, then 1 every 0.25 seconds  
   *   \- Effect: Lingering laser  
