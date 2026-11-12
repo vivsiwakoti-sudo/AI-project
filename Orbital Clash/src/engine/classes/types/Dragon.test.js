@@ -136,7 +136,7 @@ test('Dragon speed drops 1% of base per HP lost, capped at an 80% reduction', ()
   assertSpeed(speedAtHealth(20), 1.6);
 });
 
-test('Dragon fireball flies 6 px per frame until it strikes something', () => {
+test('Dragon fireball flies 9 px per frame until it strikes something', () => {
   const { dragon, victim, ball } = releaseFireball();
   ball.x = 400;
   ball.y = 400;
@@ -149,7 +149,7 @@ test('Dragon fireball flies 6 px per frame until it strikes something', () => {
   assert.equal(dragon.fireballs.length, 1, 'the fireball is still in flight');
   assert.equal(dragon.fires.length, 0, 'no fire appears while the fireball flies');
   const travelled = Math.hypot(ball.x - start.x, ball.y - start.y);
-  assert.ok(Math.abs(travelled - 60) < 1e-6, `expected 60 px of travel, got ${travelled}`);
+  assert.ok(Math.abs(travelled - 90) < 1e-6, `expected 90 px of travel, got ${travelled}`);
 });
 
 test('Dragon fireball deals 10 on a direct hit, then its fire burns 1 after a 0.75 s delay', () => {
