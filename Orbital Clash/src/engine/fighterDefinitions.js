@@ -203,7 +203,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 7,
     description: "Randomly mutates and fluctuates stats.",
-    description2: "Mutates into a random stat line every 5 seconds: health 10-250, damage 10-100, always 5 px/frame. Health is preserved as a percentage, and its arms and body visibly grow or shrink with the roll.",
+    description2: "Mutates into a random stat line every 5 seconds: health 10-250, damage 10-100 (70% chance of 10-24, 20% of 25-70, 10% of 71-100), always 5 px/frame. Health is preserved as a percentage, and its arms and body visibly grow or shrink with the roll.",
     keywords: ["mutate", "random", "scaling", "body"],
   },
   "Knight": {

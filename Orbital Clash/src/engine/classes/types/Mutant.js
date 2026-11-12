@@ -31,7 +31,15 @@ export class Mutant extends FighterBase {
         const healthPercent = this.maxHealth > 0 ? this.health / this.maxHealth : 0;
 
         // Randomly change damage (and, for a normal Mutant, HP/max HP) within ranges.
-        this.damage = Math.floor(Math.random() * (100 - 10 + 1)) + 10;
+        // Damage is weighted: 70% 10-24, 20% 25-70, 10% 71-100.
+        const damageRoll = Math.random();
+        if (damageRoll < 0.7) {
+            this.damage = 10 + Math.floor(Math.random() * 15);
+        } else if (damageRoll < 0.9) {
+            this.damage = 25 + Math.floor(Math.random() * 46);
+        } else {
+            this.damage = 71 + Math.floor(Math.random() * 30);
+        }
 
         // A summoned Mutant keeps its summon HP: only its damage mutates.
         if (!this.owner) {

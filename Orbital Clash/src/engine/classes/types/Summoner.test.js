@@ -156,6 +156,28 @@ test('a top-level Mutant still rerolls its max HP', () => {
   assert.ok(changed, 'a normal Mutant can still change its max HP');
 });
 
+test('Mutant damage bands are 70% 10-24, 20% 25-70, 10% 71-100', () => {
+  const mutant = FighterFactory.createFighter('Mutant', 400, 400);
+  const realRandom = Math.random;
+  // First value picks the band, second picks the damage inside it; anything after is 0.
+  const damageFor = (bandRoll, withinBand) => {
+    const values = [bandRoll, withinBand];
+    Math.random = () => (values.length ? values.shift() : 0);
+    mutant.mutate();
+    return mutant.damage;
+  };
+  try {
+    assert.equal(damageFor(0, 0), 10);
+    assert.equal(damageFor(0.699, 0.999), 24);
+    assert.equal(damageFor(0.7, 0), 25);
+    assert.equal(damageFor(0.899, 0.999), 70);
+    assert.equal(damageFor(0.9, 0), 71);
+    assert.equal(damageFor(0.999, 0.999), 100);
+  } finally {
+    Math.random = realRandom;
+  }
+});
+
 test('teammates are never valid targets for each other', () => {
   const summoner = makeSummoner();
   for (let i = 0; i < SUMMON_INTERVAL; i++) summoner.update(1, null);
