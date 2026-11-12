@@ -174,6 +174,11 @@ const SHAPES = {
     // Yeti - a shaggy, jagged silhouette with a pale fur ruff.
     yeti: {
         points: polygon(16, { inner: 0.82 })
+    },
+    // Striker - a swept-wing plane silhouette that points along its facing.
+    striker: {
+        aim: true,
+        points: [[1, 0], [0.35, 0.22], [0.1, 0.95], [-0.2, 0.95], [-0.15, 0.22], [-0.95, 0.5], [-0.95, -0.5], [-0.15, -0.22], [-0.2, -0.95], [0.1, -0.95], [0.35, -0.22]]
     }
 };
 

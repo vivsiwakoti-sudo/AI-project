@@ -28,6 +28,7 @@ const CLASS_ICONS = {
     "Summoner": "\u{1F9DF}",
     "Yeti": "\u{1F43E}",
     "Dragon": "\u{1F409}",
+    "Striker": "\u2708\uFE0F",
 };
 
 export const renderMotif = (ctx, x, y, className) => {

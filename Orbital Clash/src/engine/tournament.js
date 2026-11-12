@@ -26,7 +26,7 @@ export const TOURNAMENT_SIZE = 26;
 export const BYE_COUNT = 6;
 // Classes kept out of tournament mode. The bracket is sized for a fixed roster,
 // so classes added after the base 26 stay excluded.
-export const TOURNAMENT_EXCLUDED_CLASSES = new Set(["Yeti", "Dragon"]);
+export const TOURNAMENT_EXCLUDED_CLASSES = new Set(["Yeti", "Dragon", "Striker"]);
 export function tournamentRoster() {
   return Object.keys(FIGHTER_CLASSES).filter(name => !TOURNAMENT_EXCLUDED_CLASSES.has(name));
 }

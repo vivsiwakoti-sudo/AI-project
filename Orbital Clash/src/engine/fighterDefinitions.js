@@ -408,5 +408,19 @@ export const FIGHTER_CLASSES = {
     description: "Hurls fireballs that burst into a 100 px circle of fire.",
     description2: "Every 6 seconds the Dragon hurls a fireball in the direction it faces. A fighter it strikes takes 10 fire damage. The fireball then bursts into a 100 px radius circle of fire where it lands, whether it hit a fighter or the wall. Anyone inside the fire takes 5 damage 0.75 seconds after entering, then 5 more every second for 5 seconds. The fire burns out after 5 seconds. Each HP the Dragon loses slows it by 1% of its base speed, up to 80%.",
     keywords: ["fire", "breath", "square", "burn", "wings"],
+  },
+  "Striker": {
+    name: "Striker",
+    color: "#1f8a8a",
+    health: 100,
+    damage: 10,
+    speed: 5,
+    bodySize: 40,
+    shape: "striker",
+    attackType: "Beam",
+    cooldown: 7,
+    description: "Sends a plane that drops 4 bombs, each blasting 10 damage and throwing fighters away.",
+    description2: "Every 7 seconds the Striker sends a plane flying in the direction it faces. The plane drops 4 bombs along its path. Each bomb lands as a 60 px radius blast that deals 10 AOE damage to every fighter inside it. A fighter that takes the hit is thrown straight away from the blast and surges at 3x speed for 0.25 seconds. Dodged or parried hits are not thrown.",
+    keywords: ["plane", "bomb", "aoe", "knockback", "beam"],
   }
 };

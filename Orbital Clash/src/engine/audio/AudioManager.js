@@ -717,6 +717,7 @@ class AudioManager {
       case "Alchemist":
       case "MineLayer":
       case "Meteor":
+      case "Striker":
         // Explosive / thrown ordnance.
         playExplosion(ctx, this.sfxGain, now, { gain: 0.44, freq: 95 * jitter });
         return;
