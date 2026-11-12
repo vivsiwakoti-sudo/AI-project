@@ -169,6 +169,8 @@ const SHAPES = {
             [...arc(0, 0, 0.3, 0, TAU, 12)]
         ]
     },
+    // Dragon - a crested body with a ring of dorsal spines.
+    dragon: { points: polygon(14, { inner: 0.72 }) },
     // Yeti - a shaggy, jagged silhouette with a pale fur ruff.
     yeti: {
         points: polygon(16, { inner: 0.82 })

@@ -394,5 +394,19 @@ export const FIGHTER_CLASSES = {
     description: "Leaps onto enemies for 10 AoE damage.",
     description2: "Every 5-10 seconds the Yeti leaps onto its opponent and slams the ground for 10 damage to everyone nearby. Each enemy struck has a 25% chance to be frozen in a block of ice for 2 seconds. Frozen fighters cannot move or attack, and a frozen Yeti cancels its leap.",
     keywords: ["leap", "aoe", "freeze", "ice", "slam"],
+  },
+  "Dragon": {
+    name: "Dragon",
+    color: "#c8321f",
+    health: 110,
+    damage: 5,
+    speed: 8,
+    bodySize: 58,
+    shape: "dragon",
+    attackType: "Area",
+    cooldown: 6,
+    description: "Breathes a 100x100 wall of fire for 5 damage per second.",
+    description2: "Every 6 seconds the Dragon breathes a 100x100 square of fire in the direction it faces. The fire deals 5 damage on touch and 5 more every second anyone stays inside, then burns out after 5 seconds. Each HP the Dragon loses slows it by 5% of its base speed, up to 80%.",
+    keywords: ["fire", "breath", "square", "burn", "wings"],
   }
 };

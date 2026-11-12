@@ -27,6 +27,7 @@ import { Vampire } from "./classes/types/Vampire.js";
 import { Mahoraga } from "./classes/types/Mahoraga.js";
 import { Summoner } from "./classes/types/Summoner.js";
 import { Yeti } from "./classes/types/Yeti.js";
+import { Dragon } from "./classes/types/Dragon.js";
 
 export class FighterFactory {
   static createFighter(className, x, y) {
@@ -39,7 +40,7 @@ export class FighterFactory {
         "Mine Layer": MineLayer, "Duplicator": Duplicator, "Ghost": Ghost, "Alchemist": Alchemist, "Mutant": Mutant,
         "Solar Beam": SolarBeam, "Berserker": Berserker, "Spider": Spider, "Tunneler": Tunneler, "Tornado": Tornado,
         "Meteor": Meteor, "Black Hole": BlackHole, "Reaper": Reaper, "Vampire": Vampire, "Mahoraga": Mahoraga,
-        "Summoner": Summoner, "Yeti": Yeti
+        "Summoner": Summoner, "Yeti": Yeti, "Dragon": Dragon
     };
     
     if (mapping[className]) return new mapping[className](data, x, y);

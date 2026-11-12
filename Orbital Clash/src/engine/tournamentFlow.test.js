@@ -60,7 +60,9 @@ test('the bracket uses exactly the 26 tournament classes, 10 prelim matches + 6 
 
   assert.equal(roster.length, TOURNAMENT_SIZE);
   assert.equal(roster.includes('Yeti'), false, 'the Yeti is excluded from tournament mode');
+  assert.equal(roster.includes('Dragon'), false, 'the Dragon is excluded from tournament mode');
   assert.equal(Object.keys(FIGHTER_CLASSES).includes('Yeti'), true, 'the Yeti is still a playable class');
+  assert.equal(Object.keys(FIGHTER_CLASSES).includes('Dragon'), true, 'the Dragon is still a playable class');
   assert.deepEqual(validateTournament(bracket), []);
 
   const prelim = bracket.rounds.preliminary.matches;
