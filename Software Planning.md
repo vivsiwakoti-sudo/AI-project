@@ -311,7 +311,7 @@ node index.js
   *   \- Health: 100  
   *   \- Damage: 5 on touch, then 1 every 0.25 seconds  
   *   \- Effect: Lingering laser  
-  *   \- Speed: 4 px/frame  
+  *   \- Speed: 10 px/frame  
   *   \- Attack Type: Trail  
   *   \- Cooldown: 5 seconds  
   *   \- Body Size: 40x40

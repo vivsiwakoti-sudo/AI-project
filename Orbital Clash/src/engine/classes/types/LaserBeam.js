@@ -161,14 +161,19 @@ export class LaserBeam extends FighterBase {
         ctx.shadowBlur = 0;
 
         const flareRadius = trail.fixed ? 12 + 3 * Math.sin(this.animTime * 12) : 9;
-        const flare = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, flareRadius * 1.8);
+        this.drawFlare(ctx, head, flareRadius);
+        this.drawFlare(ctx, first, flareRadius);
+        ctx.restore();
+    }
+
+    drawFlare(ctx, point, radius) {
+        const flare = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius * 1.8);
         flare.addColorStop(0, "rgba(255, 255, 255, 1)");
         flare.addColorStop(0.4, "rgba(255, 90, 126, 0.85)");
         flare.addColorStop(1, "rgba(255, 45, 85, 0)");
         ctx.fillStyle = flare;
         ctx.beginPath();
-        ctx.arc(head.x, head.y, flareRadius * 1.8, 0, Math.PI * 2);
+        ctx.arc(point.x, point.y, radius * 1.8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
     }
 }
