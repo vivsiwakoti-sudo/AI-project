@@ -4,12 +4,13 @@ import { DamageSystem } from "../../systems/DamageSystem.js";
 const PLANE_SPEED = 5; // px per frame
 const PLANE_LENGTH = 34;
 const PLANE_WING = 26;
+const PLANE_SCALE = 2;
 const PLANE_MARGIN = 40;
 const BOMBS_PER_PLANE = 4;
-const BOMB_INTERVAL = 0.4; // seconds between drops, about 120 px apart at plane speed
+const BOMB_INTERVAL = 0.2; // seconds between drops, about 60 px apart at plane speed
 const BOMB_FALL_SECONDS = 0.6;
 const BOMB_DROP_HEIGHT = 46;
-const BOMB_RADIUS = 60;
+const BOMB_RADIUS = 120;
 const BOMB_DAMAGE = 10;
 const KNOCKBACK_SPEED_MULTIPLIER = 3;
 const KNOCKBACK_SECONDS = 0.25;
@@ -168,6 +169,7 @@ export class Striker extends FighterBase {
         ctx.save();
         ctx.translate(plane.x, plane.y);
         ctx.rotate(plane.angle);
+        ctx.scale(PLANE_SCALE, PLANE_SCALE);
 
         ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
         ctx.lineWidth = 3;
