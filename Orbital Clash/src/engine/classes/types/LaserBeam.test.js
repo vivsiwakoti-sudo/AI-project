@@ -79,6 +79,23 @@ test('the second wall bounce ends the trail, starts the 5 second cooldown, and t
   assert.equal(laser.lasers[0].fixed, false);
 });
 
+test('a dodged touch does not count, so the next contact deals the touch damage', () => {
+  const laser = new LaserBeam(laserStats, 200, 400);
+  const victim = new FighterBase(victimStats, 200, 400);
+  victim.dodgeChance = 1;
+  laser.vx = 0;
+  laser.vy = 0;
+  laser.update(FRAME, victim);
+  assert.equal(victim.health, 1000, 'the first contact is dodged');
+
+  victim.dodgeChance = 0;
+  victim.y = 100;
+  laser.update(FRAME, victim);
+  victim.y = 400;
+  laser.update(FRAME, victim);
+  assert.equal(victim.health, 998, 'the next contact deals the touch damage');
+});
+
 test('a fighter takes 2 touch damage once per laser, then 2 damage every 0.5 seconds while touching the lingering laser', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const victim = new FighterBase(victimStats, 400, 400);

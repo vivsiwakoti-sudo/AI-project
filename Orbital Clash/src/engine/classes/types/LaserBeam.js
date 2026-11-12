@@ -116,9 +116,9 @@ export class LaserBeam extends FighterBase {
             touchingNow.add(victim);
             if (!trail.touching.has(victim)) {
                 trail.touching.set(victim, 0);
-                if (!trail.hitVictims.has(victim)) {
+                if (!trail.hitVictims.has(victim) &&
+                    DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true })) {
                     trail.hitVictims.add(victim);
-                    DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true });
                 }
                 continue;
             }
