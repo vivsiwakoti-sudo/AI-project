@@ -30,31 +30,51 @@ const stepOverVictim = (snake, dt, victim) => {
   snake.update(dt, victim);
 };
 
-test('Snake trail deals 2 damage per second of contact', () => {
+test('Snake trail deals 2 damage on touch, then 2 damage per second of contact', () => {
   const snake = new Snake(stats('Snake'), 100, 100);
   const victim = new FighterBase(stats('Dummy'), 100, 100);
 
-  for (let i = 0; i < 60; i++) stepOverVictim(snake, 1 / 60, victim);
+  stepOverVictim(snake, 0.5, victim);
+  assert.equal(victim.totalDamageTaken, 2, 'touching the venom should deal 2 damage immediately');
 
-  assert.equal(victim.totalDamageTaken, 2, 'one second of contact should deal 2 damage');
+  stepOverVictim(snake, 0.5, victim);
+  stepOverVictim(snake, 0.5, victim);
+  assert.equal(victim.totalDamageTaken, 4, 'first tick lands one second after touch');
+
+  stepOverVictim(snake, 0.5, victim);
+  stepOverVictim(snake, 0.5, victim);
+  assert.equal(victim.totalDamageTaken, 6, 'second tick lands one second later');
 });
 
-test('Each fighter in the venom keeps its own 1-second tick', () => {
+test('Each fighter in the venom gets its own touch hit and 1-second tick', () => {
   const snake = new Snake(stats('Snake'), 100, 100);
   const first = new FighterBase(stats('Dummy A'), 100, 100);
   const second = new FighterBase(stats('Dummy B'), 100, 100);
   snake.victims = [first, second];
 
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 3; i++) {
     snake.x = 100;
     snake.y = 100;
     snake.vx = 0;
     snake.vy = 0;
     snake.trail = [{ x: 100, y: 100, age: 0 }];
     snake.dropTimer = 10;
-    snake.update(1 / 60, first);
+    snake.update(0.5, first);
   }
 
-  assert.equal(first.totalDamageTaken, 2, 'first fighter should take 2 damage in one second');
-  assert.equal(second.totalDamageTaken, 2, 'second fighter should take 2 damage in one second');
+  assert.equal(first.totalDamageTaken, 4, 'first fighter should take touch damage plus one tick');
+  assert.equal(second.totalDamageTaken, 4, 'second fighter should take touch damage plus one tick');
+});
+
+test('Leaving and re-entering the venom deals touch damage again', () => {
+  const snake = new Snake(stats('Snake'), 100, 100);
+  const victim = new FighterBase(stats('Dummy'), 100, 100);
+
+  stepOverVictim(snake, 0.5, victim);
+  snake.trail = [{ x: 500, y: 500, age: 0 }];
+  snake.dropTimer = 10;
+  snake.update(0.5, victim);
+  stepOverVictim(snake, 0.5, victim);
+
+  assert.equal(victim.totalDamageTaken, 4, 'each new touch should deal 2 damage');
 });

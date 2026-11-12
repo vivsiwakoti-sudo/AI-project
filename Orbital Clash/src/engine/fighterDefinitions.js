@@ -24,7 +24,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Trail",
     cooldown: 0,
     description: "Leaves a poisonous, slowing trail.",
-    description2: "Continuously drops a venom trail that slows anything crossing it by 50% and deals 2 damage per second. Old segments evaporate after 15 seconds, so the arena fills up slowly.",
+    description2: "Continuously drops a venom trail that slows anything crossing it by 50%. Each fighter takes 2 damage on touch and 2 damage per second while standing in it. Old segments evaporate after 15 seconds, so the arena fills up slowly.",
     keywords: ["poison", "trail", "slow", "dot"],
   },
   "Ninja": {
