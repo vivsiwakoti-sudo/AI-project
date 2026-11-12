@@ -52,7 +52,7 @@ test('the Laser Beam starts drawing at fight start and keeps drawing until it to
   assert.equal(laser.cooldownTimer, 0, 'the cooldown does not run while drawing');
 });
 
-test('the second wall bounce ends the trail, starts the 5 second cooldown, and the trail lingers 5 seconds', () => {
+test('the fourth wall bounce ends the trail, starts the 5 second cooldown, and the trail lingers 5 seconds', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const opponent = new FighterBase(victimStats, 700, 400);
   laser.vx = 1;
@@ -62,13 +62,15 @@ test('the second wall bounce ends the trail, starts the 5 second cooldown, and t
   const trail = laser.lasers[0];
 
   laser.onWallHit('right');
-  assert.equal(trail.fixed, false, 'the first wall bounce keeps the laser drawing');
-  assert.equal(laser.cooldownTimer, 0, 'no cooldown after the first bounce');
+  laser.onWallHit('left');
+  laser.onWallHit('right');
+  assert.equal(trail.fixed, false, 'the first three wall bounces keep the laser drawing');
+  assert.equal(laser.cooldownTimer, 0, 'no cooldown before the fourth bounce');
 
   laser.onWallHit('left');
-  assert.equal(trail.fixed, true, 'the second wall bounce ends the laser');
+  assert.equal(trail.fixed, true, 'the fourth wall bounce ends the laser');
   assert.deepEqual(trail.points[trail.points.length - 1], { x: laser.x, y: laser.y }, 'the trail ends where the fighter hit the wall');
-  assert.equal(laser.cooldownTimer, 5, 'the cooldown starts at the second wall');
+  assert.equal(laser.cooldownTimer, 5, 'the cooldown starts at the fourth wall');
 
   stepFrames(laser, opponent, 4.9);
   assert.ok(laser.lasers.includes(trail), 'still lingering before 5 s');
@@ -96,7 +98,7 @@ test('a dodged touch does not count, so the next contact deals the touch damage'
   assert.equal(victim.health, 998, 'the next contact deals the touch damage');
 });
 
-test('a fighter takes 2 touch damage once per laser, then 2 damage every 0.5 seconds while touching the lingering laser', () => {
+test('a fighter takes 2 touch damage on each entry into the laser, then 2 damage every 0.5 seconds while touching', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const victim = new FighterBase(victimStats, 400, 400);
   victim.dodgeChance = 0;
@@ -111,6 +113,8 @@ test('a fighter takes 2 touch damage once per laser, then 2 damage every 0.5 sec
 
   laser.onWallHit('right');
   laser.onWallHit('left');
+  laser.onWallHit('right');
+  laser.onWallHit('left');
   const healthAtWall = victim.health;
   stepFrames(laser, victim, 2);
   const damage = healthAtWall - victim.health;
@@ -121,5 +125,5 @@ test('a fighter takes 2 touch damage once per laser, then 2 damage every 0.5 sec
   const healthBeforeReentry = victim.health;
   victim.y = 400;
   stepFrames(laser, victim, 0.2);
-  assert.equal(victim.health, healthBeforeReentry, 're-entering the lingering laser does not repeat the touch damage');
+  assert.equal(victim.health, healthBeforeReentry - 2, 're-entering the lingering laser deals the 2 touch damage again');
 });

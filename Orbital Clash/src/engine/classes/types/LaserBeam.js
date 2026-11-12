@@ -8,7 +8,7 @@ const TOUCH_DAMAGE = 2;
 const TICK_DAMAGE = 2;
 const TICK_SECONDS = 0.5;
 const MIN_POINT_SPACING = 2; // px the fighter must travel before the path records a new point
-const LASER_WALL_BOUNCES = 2; // wall bounces before the laser stops and lingers
+const LASER_WALL_BOUNCES = 4; // wall bounces before the laser stops and lingers
 
 // Distance from a point to the closest point on the segment ab.
 function distanceToSegment(px, py, ax, ay, bx, by) {
@@ -77,8 +77,7 @@ export class LaserBeam extends FighterBase {
             fixed: false,
             wallHits: 0,
             fixedTimer: LASER_FIXED_SECONDS,
-            touching: new Map(), // victim -> seconds in contact since the last tick
-            hitVictims: new Set() // fighters that already took the touch damage from this laser
+            touching: new Map() // victim -> seconds in contact since the last tick
         });
         this.useAbility();
         // useAbility() starts the cooldown, but it only runs once the trail touches a wall.
@@ -104,10 +103,10 @@ export class LaserBeam extends FighterBase {
         }
     }
 
-    // Each fighter takes 2 damage the first time the line touches it, once per laser.
-    // While the laser is fixed, anyone still touching it takes 2 damage every 0.5
-    // seconds. Leaving the line resets that fighter's tick timer, so re-entering
-    // does not repeat the touch damage.
+    // Each time a fighter enters the line it takes 2 touch damage. While the laser is
+    // fixed, anyone still touching it takes 2 damage every 0.5 seconds. A touch that is
+    // dodged or blocked is retried each frame until it lands, while the fighter is still
+    // touching the line.
     applyLaserContact(trail, dt, victims) {
         const touchingNow = new Set();
         for (const victim of victims) {
@@ -115,10 +114,8 @@ export class LaserBeam extends FighterBase {
             if (distance >= victim.radius + LASER_HALF_WIDTH) continue;
             touchingNow.add(victim);
             if (!trail.touching.has(victim)) {
-                trail.touching.set(victim, 0);
-                if (!trail.hitVictims.has(victim) &&
-                    DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true })) {
-                    trail.hitVictims.add(victim);
+                if (DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true })) {
+                    trail.touching.set(victim, 0);
                 }
                 continue;
             }
