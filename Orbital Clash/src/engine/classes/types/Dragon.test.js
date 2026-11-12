@@ -53,19 +53,25 @@ function igniteAt(x, y) {
   return { dragon, victim, fire: dragon.fires[0] };
 }
 
-test('Dragon fire deals 5 on touch and 5 more every second while the victim stays inside', () => {
+test('Dragon fire waits 0.75 s, then burns 1 per second for 5 seconds', () => {
   const { dragon, victim, fire } = igniteAt(400, 400);
   victim.x = fire.x;
   victim.y = fire.y;
 
+  for (let i = 0; i < 2; i++) dragon.update(STEP, victim);
+  assert.equal(victim.totalDamageTaken, 0, 'no damage before the 0.75 s delay ends');
+
   dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 5, 'touching the fire deals 5 immediately');
+  assert.equal(victim.totalDamageTaken, 1, 'the first burn lands 0.75 s after entering the fire');
 
   for (let i = 0; i < 3; i++) dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 5, 'no tick until a full second has passed');
+  assert.equal(victim.totalDamageTaken, 1, 'the next tick waits a full second');
 
   dragon.update(STEP, victim);
-  assert.equal(victim.totalDamageTaken, 10, 'the first tick lands one second after touch');
+  assert.equal(victim.totalDamageTaken, 2, 'the second tick lands at 1.75 s');
+
+  for (let i = 0; i < 12; i++) dragon.update(STEP, victim);
+  assert.equal(victim.totalDamageTaken, 5, 'five ticks in total by 4.75 s');
 });
 
 test('Dragon fire vanishes 5 seconds after it bursts', () => {
@@ -78,20 +84,37 @@ test('Dragon fire vanishes 5 seconds after it bursts', () => {
 
   dragon.update(STEP, victim);
   assert.equal(dragon.fires.length, 0, 'the fire is gone at 5 s');
-  assert.equal(victim.totalDamageTaken, 25, 'no damage is dealt after the fire expires');
+  assert.equal(victim.totalDamageTaken, 5, 'no damage is dealt after the fire expires');
 });
 
-// Places the victim `distance` px from the fire's centre, then reports the damage it takes.
+test('Dragon fire burn restarts its 0.75 s delay when a victim re-enters the circle', () => {
+  const { dragon, victim, fire } = igniteAt(400, 400);
+  victim.x = fire.x;
+  victim.y = fire.y;
+  for (let i = 0; i < 2; i++) dragon.update(STEP, victim);
+
+  victim.x = fire.x + 500;
+  dragon.update(STEP, victim);
+
+  victim.x = fire.x;
+  for (let i = 0; i < 2; i++) dragon.update(STEP, victim);
+  assert.equal(victim.totalDamageTaken, 0, 'the delay starts over after leaving the fire');
+
+  dragon.update(STEP, victim);
+  assert.equal(victim.totalDamageTaken, 1, 'the burn lands 0.75 s after re-entering');
+});
+
+// Places the victim `distance` px from the fire's centre, then reports the damage it takes after the burn delay.
 function damageFromFireAt(distance) {
   const { dragon, victim, fire } = igniteAt(400, 400);
   victim.x = fire.x + distance;
   victim.y = fire.y;
-  dragon.update(STEP, victim);
+  for (let i = 0; i < 3; i++) dragon.update(STEP, victim);
   return victim.totalDamageTaken;
 }
 
 test('Dragon fire only hits fighters that overlap its 100 px radius circle', () => {
-  assert.equal(damageFromFireAt(119), 5, 'a victim overlapping the rim is hit');
+  assert.equal(damageFromFireAt(119), 1, 'a victim overlapping the rim is burned');
   assert.equal(damageFromFireAt(121), 0, 'a victim just past the rim is missed');
 });
 
@@ -115,6 +138,11 @@ test('Dragon speed drops 1% of base per HP lost, capped at an 80% reduction', ()
 
 test('Dragon fireball flies 6 px per frame until it strikes something', () => {
   const { dragon, victim, ball } = releaseFireball();
+  ball.x = 400;
+  ball.y = 400;
+  ball.angle = 0;
+  victim.x = 400;
+  victim.y = 700;
   const start = { x: ball.x, y: ball.y };
   for (let i = 0; i < 10; i++) dragon.update(FRAME, victim);
 
@@ -124,18 +152,24 @@ test('Dragon fireball flies 6 px per frame until it strikes something', () => {
   assert.ok(Math.abs(travelled - 60) < 1e-6, `expected 60 px of travel, got ${travelled}`);
 });
 
-test('Dragon fireball deals 10 on a direct hit, then its fire burns for 5 more', () => {
+test('Dragon fireball deals 10 on a direct hit, then its fire burns 1 after a 0.75 s delay', () => {
   const { dragon, victim, ball } = releaseFireball();
-  victim.x = ball.x + Math.cos(ball.angle) * 12;
-  victim.y = ball.y + Math.sin(ball.angle) * 12;
+  ball.x = 400;
+  ball.y = 400;
+  ball.angle = 0;
+  victim.x = 412;
+  victim.y = 400;
 
   dragon.update(FRAME, victim);
   assert.equal(dragon.fireballs.length, 0, 'the fireball is spent on contact');
   assert.equal(dragon.fires.length, 1, 'contact leaves a fire behind');
   assert.equal(victim.totalDamageTaken, 10, 'the direct hit deals 10');
 
-  dragon.update(FRAME, victim);
-  assert.equal(victim.totalDamageTaken, 15, 'the new fire then touch-burns for 5');
+  for (let i = 0; i < 2; i++) dragon.update(STEP, victim);
+  assert.equal(victim.totalDamageTaken, 10, 'the fire waits before burning');
+
+  dragon.update(STEP, victim);
+  assert.equal(victim.totalDamageTaken, 11, 'the fire burn lands 0.75 s after the fire starts');
 });
 
 test('Dragon fireball bursts at the arena wall and keeps its fire on the map', () => {

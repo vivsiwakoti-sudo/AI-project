@@ -406,7 +406,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 6,
     description: "Hurls fireballs that burst into a 100 px circle of fire.",
-    description2: "Every 6 seconds the Dragon hurls a fireball in the direction it faces. A fighter it strikes takes 10 fire damage. The fireball then bursts into a 100 px radius circle of fire where it lands, whether it hit a fighter or the wall. The fire deals 5 damage on touch and 5 more every second anyone stays inside, then burns out after 5 seconds. Each HP the Dragon loses slows it by 1% of its base speed, up to 80%.",
+    description2: "Every 6 seconds the Dragon hurls a fireball in the direction it faces. A fighter it strikes takes 10 fire damage. The fireball then bursts into a 100 px radius circle of fire where it lands, whether it hit a fighter or the wall. Anyone inside the fire takes 1 damage 0.75 seconds after entering, then 1 more every second for 5 seconds. The fire burns out after 5 seconds. Each HP the Dragon loses slows it by 1% of its base speed, up to 80%.",
     keywords: ["fire", "breath", "square", "burn", "wings"],
   }
 };

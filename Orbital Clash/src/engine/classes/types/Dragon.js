@@ -2,7 +2,9 @@ import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
 const FIRE_RADIUS = 100;
-const FIRE_DAMAGE = 5;
+const FIRE_TICK_DAMAGE = 1;
+const FIRE_BURN_DELAY = 0.75;
+const FIRE_BURN_TICKS = 5;
 const FIRE_DURATION = 5;
 const FIRE_FADE_SECONDS = 0.6;
 const FIRE_APPEAR_SECONDS = 0.2;
@@ -38,7 +40,7 @@ function createFire(x, y) {
         rate: 0.4 + Math.random() * 0.5,
         wobble: Math.random() * TAU
     }));
-    return { x, y, age: 0, accumulators: new Map(), flames, embers };
+    return { x, y, age: 0, burns: new Map(), flames, embers };
 }
 
 // Each flame's length rises and falls out of step with its neighbours.
@@ -83,25 +85,22 @@ export class Dragon extends FighterBase {
         for (const fire of this.fires) fire.age += dt;
         this.fires = this.fires.filter(fire => fire.age < FIRE_DURATION);
 
-        // Fire is an area hazard, so every living fighter inside it is tested.
+        // Fire is an area hazard, so every living fighter inside it is tested. A victim
+        // burns only after FIRE_BURN_DELAY seconds inside, then takes one tick per second.
         const victims = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead);
         for (const fire of this.fires) {
             for (const victim of victims) {
                 if (!fireCovers(fire, victim)) {
-                    fire.accumulators.delete(victim);
+                    fire.burns.delete(victim);
                     continue;
                 }
-                if (!fire.accumulators.has(victim)) {
-                    fire.accumulators.set(victim, 0);
-                    DamageSystem.applyDamage(this, victim, FIRE_DAMAGE, "AOE", { ignoreCooldown: true });
-                    continue;
-                }
-                const accumulated = fire.accumulators.get(victim) + dt;
-                if (accumulated >= FIRE_TICK_SECONDS) {
-                    fire.accumulators.set(victim, accumulated - FIRE_TICK_SECONDS);
-                    DamageSystem.applyDamage(this, victim, FIRE_DAMAGE, "AOE", { ignoreCooldown: true });
-                } else {
-                    fire.accumulators.set(victim, accumulated);
+                const burn = fire.burns.get(victim) ?? { elapsed: 0, ticks: 0 };
+                fire.burns.set(victim, burn);
+                burn.elapsed += dt;
+                while (burn.ticks < FIRE_BURN_TICKS
+                    && burn.elapsed >= FIRE_BURN_DELAY + burn.ticks * FIRE_TICK_SECONDS) {
+                    burn.ticks += 1;
+                    DamageSystem.applyDamage(this, victim, FIRE_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
                 }
             }
         }
