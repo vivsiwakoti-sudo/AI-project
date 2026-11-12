@@ -14,7 +14,7 @@ const FIREBALL_RADIUS = 9;
 const FIREBALL_DAMAGE = 10;
 const WALL_INSET = 20; // matches the arena's inner border in CollisionSystem
 const FIRE_FLAMES = 24;
-const SPEED_LOSS_PER_HP = 0.05;
+const SPEED_LOSS_PER_HP = 0.01;
 const MAX_SPEED_LOSS = 0.8;
 const TAU = Math.PI * 2;
 
@@ -67,7 +67,7 @@ export class Dragon extends FighterBase {
         this.updateBreath(dt, opponent);
     }
 
-    // Each HP point lost costs 5% of base speed, capped at an 80% reduction.
+    // Each HP point lost costs 1% of base speed, capped at an 80% reduction.
     currentSpeed() {
         const lostHp = Math.max(0, this.maxHealth - this.health);
         const loss = Math.min(MAX_SPEED_LOSS, lostHp * SPEED_LOSS_PER_HP);
