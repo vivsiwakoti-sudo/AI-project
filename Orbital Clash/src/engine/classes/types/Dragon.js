@@ -1,8 +1,7 @@
 import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
-const FIRE_SIZE = 100;
-const FIRE_HALF = FIRE_SIZE / 2;
+const FIRE_RADIUS = 100;
 const FIRE_DAMAGE = 5;
 const FIRE_DURATION = 5;
 const FIRE_FADE_SECONDS = 0.6;
@@ -12,50 +11,41 @@ const BREATH_WINDUP = 0.5;
 const MUZZLE_GAP = 6;
 const FIREBALL_SPEED = 6; // px per frame, the same pace as the Fireball class
 const FIREBALL_RADIUS = 9;
+const FIREBALL_DAMAGE = 10;
 const WALL_INSET = 20; // matches the arena's inner border in CollisionSystem
-const FIRE_LANES = 16;
+const FIRE_FLAMES = 24;
 const SPEED_LOSS_PER_HP = 0.05;
 const MAX_SPEED_LOSS = 0.8;
 const TAU = Math.PI * 2;
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
-// Circle-vs-square overlap: the fire square is rotated to the breath direction,
-// so the victim's offset is brought into that frame and its centre is clamped
-// onto the square. The victim touches the fire when that nearest point is
-// within its radius.
+// The victim touches the fire when its body reaches into the fire's circle.
 function fireCovers(fire, victim) {
-    const dx = victim.x - fire.x;
-    const dy = victim.y - fire.y;
-    const cos = Math.cos(fire.angle);
-    const sin = Math.sin(fire.angle);
-    const along = dx * cos + dy * sin;
-    const across = -dx * sin + dy * cos;
-    const nearestX = clamp(along, -FIRE_HALF, FIRE_HALF);
-    const nearestY = clamp(across, -FIRE_HALF, FIRE_HALF);
-    return Math.hypot(along - nearestX, across - nearestY) < victim.radius;
+    return Math.hypot(victim.x - fire.x, victim.y - fire.y) < FIRE_RADIUS + victim.radius;
 }
 
-function createFire(x, y, angle) {
-    const lanes = Array.from({ length: FIRE_LANES }, (_, i) => ({
-        lane: -FIRE_HALF + (i + 0.5) * (FIRE_SIZE / FIRE_LANES),
+function createFire(x, y) {
+    const flames = Array.from({ length: FIRE_FLAMES }, (_, i) => ({
+        angle: (i / FIRE_FLAMES) * TAU + (Math.random() - 0.5) * 0.15,
         phase: Math.random() * TAU,
         width: 0.8 + Math.random() * 0.4
     }));
-    const embers = Array.from({ length: 22 }, () => ({
-        lane: (Math.random() - 0.5) * FIRE_SIZE,
+    const embers = Array.from({ length: 26 }, () => ({
+        angle: Math.random() * TAU,
+        dist: Math.sqrt(Math.random()) * FIRE_RADIUS,
         phase: Math.random(),
         rate: 0.4 + Math.random() * 0.5,
         wobble: Math.random() * TAU
     }));
-    return { x, y, angle, age: 0, accumulators: new Map(), lanes, embers };
+    return { x, y, age: 0, accumulators: new Map(), flames, embers };
 }
 
-// Each lane's flame length rises and falls out of step with its neighbours.
-function flameReach(lane, t) {
-    const pulse = 0.5 + 0.5 * Math.sin(t * 4.2 + lane.phase);
-    const flicker = Math.sin(t * 13 + lane.phase * 2.7);
-    return clamp(FIRE_SIZE * (0.4 + 0.45 * pulse) + flicker * 8, 12, FIRE_SIZE);
+// Each flame's length rises and falls out of step with its neighbours.
+function flameLength(flame, t) {
+    const pulse = 0.5 + 0.5 * Math.sin(t * 4.2 + flame.phase);
+    const flicker = Math.sin(t * 13 + flame.phase * 2.7);
+    return clamp(FIRE_RADIUS * (0.55 + 0.4 * pulse) + flicker * 8, 20, FIRE_RADIUS);
 }
 
 export class Dragon extends FighterBase {
@@ -117,7 +107,7 @@ export class Dragon extends FighterBase {
         }
     }
 
-    // A fireball flies until it strikes a fighter or reaches the wall, then bursts into fire.
+    // A fireball flies until it strikes a fighter (10 damage) or reaches the wall, then bursts into fire.
     updateFireballs(dt, opponent) {
         const arenaSize = this.arenaSize ?? 800;
         const victims = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead);
@@ -127,11 +117,12 @@ export class Dragon extends FighterBase {
             ball.y += Math.sin(ball.angle) * step;
         }
         this.fireballs = this.fireballs.filter(ball => {
-            const struck = victims.some(f => Math.hypot(ball.x - f.x, ball.y - f.y) < f.radius + FIREBALL_RADIUS);
+            const struck = victims.find(f => Math.hypot(ball.x - f.x, ball.y - f.y) < f.radius + FIREBALL_RADIUS);
             const atWall = ball.x <= WALL_INSET || ball.x >= arenaSize - WALL_INSET
                 || ball.y <= WALL_INSET || ball.y >= arenaSize - WALL_INSET;
             if (!struck && !atWall) return true;
-            this.explode(ball.x, ball.y, ball.angle);
+            if (struck) DamageSystem.applyDamage(this, struck, FIREBALL_DAMAGE, "AOE", { ignoreCooldown: true });
+            this.explode(ball.x, ball.y);
             return false;
         });
     }
@@ -168,12 +159,14 @@ export class Dragon extends FighterBase {
         }
     }
 
-    // The fire square is centred on the impact point and kept on the map.
-    explode(x, y, angle) {
+    // The fire circle is centred on the impact point and kept inside the playable area.
+    explode(x, y) {
         const arenaSize = this.arenaSize ?? 800;
-        const cx = clamp(x, FIRE_HALF, arenaSize - FIRE_HALF);
-        const cy = clamp(y, FIRE_HALF, arenaSize - FIRE_HALF);
-        this.fires.push(createFire(cx, cy, angle));
+        const low = WALL_INSET + FIRE_RADIUS;
+        const high = arenaSize - WALL_INSET - FIRE_RADIUS;
+        const cx = clamp(x, low, high);
+        const cy = clamp(y, low, high);
+        this.fires.push(createFire(cx, cy));
         if (this.particleSystem) {
             this.particleSystem.emit(x, y, "#ffb347", 60, { speed: 520, size: 4, life: 0.8 });
             this.particleSystem.emit(x, y, "#ff4d1a", 30, { speed: 300, size: 3, life: 0.6 });
@@ -204,49 +197,52 @@ export class Dragon extends FighterBase {
 
         ctx.save();
         ctx.translate(fire.x, fire.y);
-        ctx.rotate(fire.angle);
         ctx.globalAlpha = strength;
 
         ctx.save();
         ctx.beginPath();
-        ctx.rect(-FIRE_HALF, -FIRE_HALF, FIRE_SIZE, FIRE_SIZE);
+        ctx.arc(0, 0, FIRE_RADIUS, 0, TAU);
         ctx.clip();
 
-        // A bed of coals: hottest at the centre, dark red toward the corners.
-        const bed = ctx.createRadialGradient(0, 0, 4, 0, 0, FIRE_HALF * 1.45);
+        // A bed of coals: hottest at the centre, dark red toward the rim.
+        const bed = ctx.createRadialGradient(0, 0, 4, 0, 0, FIRE_RADIUS);
         bed.addColorStop(0, "rgba(255, 175, 70, 0.95)");
         bed.addColorStop(0.45, "rgba(235, 75, 15, 0.9)");
         bed.addColorStop(1, "rgba(95, 12, 6, 0.95)");
         ctx.fillStyle = bed;
-        ctx.fillRect(-FIRE_HALF, -FIRE_HALF, FIRE_SIZE, FIRE_SIZE);
+        ctx.fillRect(-FIRE_RADIUS, -FIRE_RADIUS, FIRE_RADIUS * 2, FIRE_RADIUS * 2);
 
-        // Each flame lane has three layers (dark outer, orange body, white-hot core).
-        // Additive blending makes them glow where they overlap.
+        // Flames rise from the centre and fan out in every direction. Each has three
+        // layers (dark outer, orange body, white-hot core); additive blending makes
+        // them glow where they overlap.
         ctx.globalCompositeOperation = "lighter";
         const t = fire.age;
-        for (const lane of fire.lanes) {
-            const reach = flameReach(lane, t);
-            const tipX = -FIRE_HALF + reach;
-            const tipY = lane.lane + Math.sin(t * 5 + lane.phase) * 5;
-            const halfWidth = 7 * lane.width;
-            this.fillTongue(ctx, -FIRE_HALF, lane.lane, tipX, tipY, reach, halfWidth, "rgba(190, 40, 10, 0.55)");
-            this.fillTongue(ctx, -FIRE_HALF, lane.lane, -FIRE_HALF + reach * 0.8, tipY, reach * 0.8, halfWidth * 0.7, "rgba(255, 125, 30, 0.6)");
-            this.fillTongue(ctx, -FIRE_HALF, lane.lane, -FIRE_HALF + reach * 0.5, tipY, reach * 0.5, halfWidth * 0.3, "rgba(255, 245, 190, 0.75)");
+        for (const flame of fire.flames) {
+            const reach = flameLength(flame, t);
+            const sway = Math.sin(t * 5 + flame.phase) * 5;
+            const halfWidth = 9 * flame.width;
+            ctx.save();
+            ctx.rotate(flame.angle);
+            this.fillTongue(ctx, 0, 0, reach, sway, reach, halfWidth, "rgba(190, 40, 10, 0.55)");
+            this.fillTongue(ctx, 0, 0, reach * 0.8, sway, reach * 0.8, halfWidth * 0.7, "rgba(255, 125, 30, 0.6)");
+            this.fillTongue(ctx, 0, 0, reach * 0.5, sway, reach * 0.5, halfWidth * 0.3, "rgba(255, 245, 190, 0.75)");
+            ctx.restore();
         }
 
-        // Burnt-out smoke gathers at the far edge.
+        // Burnt-out smoke gathers toward the rim.
         ctx.globalCompositeOperation = "source-over";
-        const smoke = ctx.createLinearGradient(-FIRE_HALF, 0, FIRE_HALF, 0);
-        smoke.addColorStop(0.55, "rgba(25, 6, 3, 0)");
+        const smoke = ctx.createRadialGradient(0, 0, FIRE_RADIUS * 0.5, 0, 0, FIRE_RADIUS);
+        smoke.addColorStop(0, "rgba(25, 6, 3, 0)");
         smoke.addColorStop(1, "rgba(25, 6, 3, 0.5)");
         ctx.fillStyle = smoke;
-        ctx.fillRect(-FIRE_HALF, -FIRE_HALF, FIRE_SIZE, FIRE_SIZE);
+        ctx.fillRect(-FIRE_RADIUS, -FIRE_RADIUS, FIRE_RADIUS * 2, FIRE_RADIUS * 2);
 
-        // Sparks lifted off the flames, drifting forward and fading out.
+        // Sparks lifted off the flames, drifting outward and fading out.
         for (const ember of fire.embers) {
             const progress = (t * ember.rate + ember.phase) % 1;
-            const x = -FIRE_HALF + 6 + progress * (FIRE_SIZE - 6);
-            const y = ember.lane + Math.sin(t * 6 + ember.wobble) * 5;
+            const r = ember.dist * (0.5 + 0.5 * progress) + Math.sin(t * 6 + ember.wobble) * 3;
+            const x = Math.cos(ember.angle) * r;
+            const y = Math.sin(ember.angle) * r;
             ctx.fillStyle = `rgba(255, 220, 130, ${(1 - progress) * 0.95})`;
             ctx.beginPath();
             ctx.arc(x, y, 0.8 + (1 - progress) * 1.6, 0, TAU);
@@ -254,12 +250,14 @@ export class Dragon extends FighterBase {
         }
         ctx.restore();
 
-        // Glowing rim so the square reads clearly against the arena.
+        // Glowing rim so the circle reads clearly against the arena.
         ctx.strokeStyle = "rgba(255, 150, 60, 0.85)";
         ctx.lineWidth = 2;
         ctx.shadowBlur = 14;
         ctx.shadowColor = "#ff6a1a";
-        ctx.strokeRect(-FIRE_HALF, -FIRE_HALF, FIRE_SIZE, FIRE_SIZE);
+        ctx.beginPath();
+        ctx.arc(0, 0, FIRE_RADIUS, 0, TAU);
+        ctx.stroke();
         ctx.restore();
     }
 

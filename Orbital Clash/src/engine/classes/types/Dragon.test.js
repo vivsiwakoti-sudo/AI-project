@@ -44,17 +44,17 @@ function releaseFireball() {
   return { dragon, victim, ball: dragon.fireballs[0] };
 }
 
-// Bursts a fire square directly. A long cooldown stops the dragon breathing again mid-test.
-function igniteAt(x, y, angle) {
+// Bursts a fire circle directly. A long cooldown stops the dragon breathing again mid-test.
+function igniteAt(x, y) {
   const dragon = new Dragon(dragonStats, 400, 400);
   dragon.cooldownTimer = 60;
   const victim = new FighterBase(victimStats, 700, 700);
-  dragon.explode(x, y, angle);
+  dragon.explode(x, y);
   return { dragon, victim, fire: dragon.fires[0] };
 }
 
 test('Dragon fire deals 5 on touch and 5 more every second while the victim stays inside', () => {
-  const { dragon, victim, fire } = igniteAt(400, 400, 0);
+  const { dragon, victim, fire } = igniteAt(400, 400);
   victim.x = fire.x;
   victim.y = fire.y;
 
@@ -69,7 +69,7 @@ test('Dragon fire deals 5 on touch and 5 more every second while the victim stay
 });
 
 test('Dragon fire vanishes 5 seconds after it bursts', () => {
-  const { dragon, victim, fire } = igniteAt(400, 400, 0);
+  const { dragon, victim, fire } = igniteAt(400, 400);
   victim.x = fire.x;
   victim.y = fire.y;
 
@@ -81,20 +81,18 @@ test('Dragon fire vanishes 5 seconds after it bursts', () => {
   assert.equal(victim.totalDamageTaken, 25, 'no damage is dealt after the fire expires');
 });
 
-// Places the victim relative to the fire's own axes, then reports the damage it takes.
-function damageFromFireAt(along, across) {
-  const { dragon, victim, fire } = igniteAt(400, 400, Math.PI / 4);
-  const cos = Math.cos(fire.angle);
-  const sin = Math.sin(fire.angle);
-  victim.x = fire.x + along * cos - across * sin;
-  victim.y = fire.y + along * sin + across * cos;
+// Places the victim `distance` px from the fire's centre, then reports the damage it takes.
+function damageFromFireAt(distance) {
+  const { dragon, victim, fire } = igniteAt(400, 400);
+  victim.x = fire.x + distance;
+  victim.y = fire.y;
   dragon.update(STEP, victim);
   return victim.totalDamageTaken;
 }
 
-test('Dragon fire only hits fighters that overlap its 100x100 square', () => {
-  assert.equal(damageFromFireAt(0, 69), 5, 'a victim overlapping the edge is hit');
-  assert.equal(damageFromFireAt(0, 71), 0, 'a victim just past the edge is missed');
+test('Dragon fire only hits fighters that overlap its 100 px radius circle', () => {
+  assert.equal(damageFromFireAt(119), 5, 'a victim overlapping the rim is hit');
+  assert.equal(damageFromFireAt(121), 0, 'a victim just past the rim is missed');
 });
 
 test('Dragon speed drops 5% of base per HP lost, capped at an 80% reduction', () => {
@@ -125,7 +123,7 @@ test('Dragon fireball flies 6 px per frame until it strikes something', () => {
   assert.ok(Math.abs(travelled - 60) < 1e-6, `expected 60 px of travel, got ${travelled}`);
 });
 
-test('Dragon fireball bursts into fire when it strikes a fighter', () => {
+test('Dragon fireball deals 10 on a direct hit, then its fire burns for 5 more', () => {
   const { dragon, victim, ball } = releaseFireball();
   victim.x = ball.x + Math.cos(ball.angle) * 12;
   victim.y = ball.y + Math.sin(ball.angle) * 12;
@@ -133,15 +131,16 @@ test('Dragon fireball bursts into fire when it strikes a fighter', () => {
   dragon.update(FRAME, victim);
   assert.equal(dragon.fireballs.length, 0, 'the fireball is spent on contact');
   assert.equal(dragon.fires.length, 1, 'contact leaves a fire behind');
+  assert.equal(victim.totalDamageTaken, 10, 'the direct hit deals 10');
 
   dragon.update(FRAME, victim);
-  assert.equal(victim.totalDamageTaken, 5, 'the victim is burned by the new fire');
+  assert.equal(victim.totalDamageTaken, 15, 'the new fire then touch-burns for 5');
 });
 
 test('Dragon fireball bursts at the arena wall and keeps its fire on the map', () => {
   const cases = [
-    { x: 22, angle: Math.PI, expectedX: 50 },
-    { x: 778, angle: 0, expectedX: 750 }
+    { x: 22, angle: Math.PI, expectedX: 120 },
+    { x: 778, angle: 0, expectedX: 680 }
   ];
   for (const { x, angle, expectedX } of cases) {
     const { dragon, victim, ball } = releaseFireball();
@@ -152,6 +151,6 @@ test('Dragon fireball bursts at the arena wall and keeps its fire on the map', (
 
     assert.equal(dragon.fireballs.length, 0, 'the fireball is spent at the wall');
     assert.equal(dragon.fires.length, 1, 'the wall hit leaves a fire behind');
-    assert.equal(dragon.fires[0].x, expectedX, 'the fire square is pulled back onto the map');
+    assert.equal(dragon.fires[0].x, expectedX, 'the fire circle is pulled back so it stays on the map');
   }
 });
