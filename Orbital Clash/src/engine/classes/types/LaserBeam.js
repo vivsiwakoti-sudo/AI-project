@@ -4,7 +4,7 @@ import { DamageSystem } from "../../systems/DamageSystem.js";
 const LASER_HALF_WIDTH = 4;
 const LASER_FIXED_SECONDS = 5;
 const LASER_FADE_SECONDS = 0.5;
-const TOUCH_DAMAGE = 5;
+const TOUCH_DAMAGE = 3;
 const TICK_DAMAGE = 1;
 const TICK_SECONDS = 0.25;
 const MIN_POINT_SPACING = 2; // px the fighter must travel before the path records a new point
@@ -77,7 +77,8 @@ export class LaserBeam extends FighterBase {
             fixed: false,
             wallHits: 0,
             fixedTimer: LASER_FIXED_SECONDS,
-            touching: new Map() // victim -> seconds in contact since the last tick
+            touching: new Map(), // victim -> seconds in contact since the last tick
+            hitVictims: new Set() // fighters that already took the touch damage from this laser
         });
         this.useAbility();
         // useAbility() starts the cooldown, but it only runs once the trail touches a wall.
@@ -103,9 +104,10 @@ export class LaserBeam extends FighterBase {
         }
     }
 
-    // Each fighter touched by the line takes 5 damage on first contact. While the
-    // laser is fixed, anyone still touching it takes 1 damage every 0.25 seconds.
-    // Leaving the line resets that fighter's contact, so re-entering hits again.
+    // Each fighter takes 3 damage the first time the line touches it, once per laser.
+    // While the laser is fixed, anyone still touching it takes 1 damage every 0.25
+    // seconds. Leaving the line resets that fighter's tick timer, so re-entering
+    // does not repeat the touch damage.
     applyLaserContact(trail, dt, victims) {
         const touchingNow = new Set();
         for (const victim of victims) {
@@ -114,7 +116,10 @@ export class LaserBeam extends FighterBase {
             touchingNow.add(victim);
             if (!trail.touching.has(victim)) {
                 trail.touching.set(victim, 0);
-                DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true });
+                if (!trail.hitVictims.has(victim)) {
+                    trail.hitVictims.add(victim);
+                    DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true });
+                }
                 continue;
             }
             if (!trail.fixed) continue;

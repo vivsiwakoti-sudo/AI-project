@@ -79,7 +79,7 @@ test('the second wall bounce ends the trail, starts the 5 second cooldown, and t
   assert.equal(laser.lasers[0].fixed, false);
 });
 
-test('a trail does 5 damage on touch, then 1 damage every 0.25 seconds while it lingers', () => {
+test('a fighter takes 3 touch damage once per laser, then 1 damage every 0.25 seconds while touching the lingering laser', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const victim = new FighterBase(victimStats, 400, 400);
   victim.dodgeChance = 0;
@@ -87,10 +87,10 @@ test('a trail does 5 damage on touch, then 1 damage every 0.25 seconds while it 
   laser.vy = 0;
   laser.update(FRAME, victim);
   for (let i = 0; i < 300 && victim.health === 1000; i++) laser.update(FRAME, victim);
-  assert.equal(victim.health, 995, 'one 5 damage hit when the drawn trail first crosses the victim');
+  assert.equal(victim.health, 997, 'one 3 damage hit when the drawn trail first crosses the victim');
 
   stepFrames(laser, victim, 0.5);
-  assert.equal(victim.health, 995, 'no more hits while the trail keeps moving past the victim');
+  assert.equal(victim.health, 997, 'no more hits while the trail keeps moving past the victim');
 
   laser.onWallHit('right');
   laser.onWallHit('left');
@@ -98,4 +98,11 @@ test('a trail does 5 damage on touch, then 1 damage every 0.25 seconds while it 
   stepFrames(laser, victim, 2);
   const ticks = healthAtWall - victim.health;
   assert.ok(ticks === 7 || ticks === 8, `about 8 ticks over 2 s, got ${ticks}`);
+
+  victim.y = 100;
+  stepFrames(laser, victim, 0.5);
+  const healthBeforeReentry = victim.health;
+  victim.y = 400;
+  stepFrames(laser, victim, 0.2);
+  assert.equal(victim.health, healthBeforeReentry, 're-entering the lingering laser does not repeat the touch damage');
 });
