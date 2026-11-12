@@ -419,8 +419,8 @@ export const FIGHTER_CLASSES = {
     shape: "striker",
     attackType: "Beam",
     cooldown: 7,
-    description: "Sends a plane that drops 4 bombs, each blasting 10 damage and throwing fighters away.",
-    description2: "Every 7 seconds the Striker sends a plane flying in the direction it faces. The plane drops 4 bombs along its path. Each bomb lands as a 120 px radius blast that deals 10 AOE damage to every fighter inside it. A fighter that takes the hit is thrown straight away from the blast and surges at 3x speed for 0.25 seconds. Dodged or parried hits are not thrown.",
+    description: "Sends a plane that drops 6 bombs, each blasting 10 damage and throwing fighters away.",
+    description2: "Every 7 seconds the Striker sends a plane flying in the direction it faces. The plane drops 6 bombs along its path. Each bomb lands as a 120 px radius blast that deals 10 AOE damage to every fighter inside it. A fighter that takes the hit is thrown straight away from the blast and surges at 3x speed for 0.25 seconds. Dodged or parried hits are not thrown.",
     keywords: ["plane", "bomb", "aoe", "knockback", "beam"],
   },
   "Laser Beam": {

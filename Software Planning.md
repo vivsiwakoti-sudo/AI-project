@@ -251,9 +251,9 @@ node index.js
 
     
 
-* **\- Striker**: Every 7 seconds, a plane flies toward the opponent and drops 4 bombs. Each bomb does 10 area damage with a radius of 120 pixels and strong knockback. Bombs drop every 0.2 seconds, and the plane is drawn at 2x size.  
+* **\- Striker**: Every 7 seconds, a plane flies toward the opponent and drops 6 bombs. Each bomb does 10 area damage with a radius of 120 pixels and strong knockback. Bombs drop every 0.25 seconds, and the plane is drawn at 2x size.  
   *   \- Health: 100  
-  *   \- Damage: 10 per bomb (4 bombs)  
+  *   \- Damage: 10 per bomb (6 bombs)  
   *   \- Effect: Area knockback  
   *   \- Speed: 5 px/frame  
   *   \- Attack Type: Beam  

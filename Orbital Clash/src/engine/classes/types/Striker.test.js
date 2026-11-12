@@ -69,7 +69,7 @@ test('the Striker launches a plane right away, then only again after 7 seconds',
   assert.ok(striker.planes.some(plane => plane !== first), 'a second plane launches at 7 s');
 });
 
-test('a plane drops four bombs about 0.2 s apart and then stops dropping', () => {
+test('a plane drops six bombs about 0.25 s apart and then stops dropping', () => {
   const striker = new Striker(strikerStats, 200, 400);
   const opponent = new FighterBase(victimStats, 700, 400);
   const drops = [];
@@ -84,10 +84,10 @@ test('a plane drops four bombs about 0.2 s apart and then stops dropping', () =>
     striker.update(FRAME, opponent);
   }
 
-  assert.equal(drops.length, 4);
-  assert.ok(Math.abs(drops[0] - 0.2) < 0.05, 'the first bomb falls after 0.2 s');
+  assert.equal(drops.length, 6);
+  assert.ok(Math.abs(drops[0] - 0.25) < 0.05, 'the first bomb falls after 0.25 s');
   for (let i = 1; i < drops.length; i++) {
-    assert.ok(Math.abs(drops[i] - drops[i - 1] - 0.2) < 0.05, 'bombs fall 0.2 s apart');
+    assert.ok(Math.abs(drops[i] - drops[i - 1] - 0.25) < 0.05, 'bombs fall 0.25 s apart');
   }
 });
 
