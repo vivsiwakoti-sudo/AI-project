@@ -14,7 +14,7 @@ export class Duplicator extends FighterBase {
         this.health = initialHealth ?? data.health;
         this.maxHealth = this.health;
         this.clones = [];
-        this.cloneCooldown = 0;
+        this.touchingVictims = new Set(); // Victims in contact last frame; a clone spawns only when one newly enters contact.
         this.root = null;          // Set to the original Duplicator for every clone.
         this.totalClones = 0;      // Shared clone cap across the whole swarm.
         this.cloneLimit = data.cloneLimit ?? 50;
@@ -30,35 +30,34 @@ export class Duplicator extends FighterBase {
         // others used to be able to sit inside the Duplicator for free.
         // `this.opponent` is the fallback for a fighter driven outside the arena.
         const victims = this.touchVictims?.length ? this.touchVictims : (this.opponent ? [this.opponent] : []);
+        const touching = new Set();
         for (const victim of victims) {
             if (victim.isDead || victim.health <= 0) continue;
-            // A clone must spawn on contact regardless of whether the touch was
-            // allowed to deal damage (parried, dodged, invulnerable...). The clone
-            // spawn is gated only on the actual hitbox overlap below, so contact
-            // always duplicates; `onTouchOpponent` is deliberately called even when
-            // `applyDamage` refuses the hit.
             if (!DamageSystem.checkHitbox(this, victim, "Overlap")) continue;
+            touching.add(victim);
+            // A clone spawns on each new contact regardless of whether the touch was
+            // allowed to deal damage (parried, dodged, invulnerable...).
             const dealtDamage = this.damageCooldown <= 0
                 ? DamageSystem.applyDamage(this, victim, this.damage, "Body")
                 : false;
-            this.onTouchOpponent(victim, dealtDamage);
+            this.onTouchOpponent(victim, dealtDamage, !this.touchingVictims.has(victim));
         }
+        this.touchingVictims = touching;
     }
 
-    onTouchOpponent(opponent, dealtDamage = true) {
-        // Clone spawning is unconditional on contact: it is NOT gated on the touch
-        // landing damage. Only the impact sparks are tied to a real hit.
+    onTouchOpponent(opponent, dealtDamage = true, isNewTouch = true) {
+        // Only the impact sparks are tied to a real hit.
         if (dealtDamage && opponent.particleSystem) {
             opponent.particleSystem.emitImpact(opponent.x, opponent.y, this.color, 10);
         }
+        // One clone per new touch: staying in contact does not spawn more.
+        if (!isNewTouch) return;
         const root = this.root || this;
-        // The clone cap is a designed limit, not a chance roll, so it is the only
-        // remaining condition that can still suppress a spawn.
+        // The clone cap is a hard stop: at 50 clones the chance to duplicate is 0%.
         if (root.totalClones >= this.cloneLimit) return;
-        if (this.cloneCooldown > 0) return;
         root.spawnClone();
-        this.cloneCooldown = 2;
     }
+
 
     killCloneTree() {
         this.isDead = true;
@@ -133,7 +132,6 @@ export class Duplicator extends FighterBase {
             return;
         }
         super.update(dt, opponent);
-        if (this.cloneCooldown > 0) this.cloneCooldown -= dt;
 
         this.checkTouchDamage(opponent);
 

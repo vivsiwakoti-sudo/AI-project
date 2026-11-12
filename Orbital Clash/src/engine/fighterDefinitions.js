@@ -137,7 +137,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 0,
     description: "Creates clones on touch.",
-    description2: "Touching the opponent deals 2 damage and spawns a clone at 75% of the parent's health. Clones fight on their own and can split again, up to 50 clones. Killing the original destroys every clone at once.",
+    description2: "Touching the opponent deals 2 damage and always spawns a clone at 75% of the parent's health, one clone per new touch. Clones fight on their own and can split again, up to 50 clones; at 50, touches no longer clone. Killing the original destroys every clone at once.",
     keywords: ["clones", "body", "swarm", "split"],
   },
   "Ghost": {
