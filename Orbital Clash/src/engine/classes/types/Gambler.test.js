@@ -6,11 +6,12 @@ import { installTestAudio } from '../../audio/testAudioStub.js';
 installTestAudio();
 
 const { Gambler } = await import('./Gambler.js');
+const { FighterFactory } = await import('../../FighterFactory.js');
 
 const makeGambler = () => new Gambler({
   name: 'Gambler',
   color: '#FFFFFF',
-  health: 110,
+  health: 150,
   damage: 15,
   speed: 5,
   bodySize: 44,
@@ -63,6 +64,12 @@ const throwDieOnto = (gambler, victim) => {
   die.y = victim.y;
   gambler.cooldownTimer = 999; // no second throw during this update
 };
+
+test('a Gambler created by the factory starts with 150 health', () => {
+  const gambler = FighterFactory.createFighter('Gambler', 100, 100);
+  assert.equal(gambler.health, 150);
+  assert.equal(gambler.maxHealth, 150);
+});
 
 test('a die travels 8.75 pixels per frame at 60 fps', () => {
   const gambler = makeGambler();
@@ -135,5 +142,5 @@ test('the self 15% face damages the Gambler by 15% of its max HP', () => {
 
   gambler.applyFace('selfPercent', gambler);
 
-  assert.equal(gambler.health, 110 - 110 * 0.15);
+  assert.equal(gambler.health, 150 - 150 * 0.15);
 });

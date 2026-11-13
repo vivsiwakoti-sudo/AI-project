@@ -440,7 +440,7 @@ export const FIGHTER_CLASSES = {
   "Gambler": {
     name: "Gambler",
     color: "#f2c94c",
-    health: 110,
+    health: 150,
     damage: 15,
     speed: 5,
     bodySize: 44,
