@@ -30,6 +30,7 @@ const CLASS_ICONS = {
     "Dragon": "\u{1F409}",
     "Striker": "\u2708\uFE0F",
     "Laser Beam": "\u26A1",
+    "Gambler": "\u{1F3B2}",
 };
 
 export const renderMotif = (ctx, x, y, className) => {

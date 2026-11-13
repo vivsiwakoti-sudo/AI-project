@@ -436,5 +436,19 @@ export const FIGHTER_CLASSES = {
     description: "Drags a laser along its own path until it bounces off a wall four times, then the laser lingers.",
     description2: "The Laser Beam leaves a laser line along its path as it moves. The laser stops on the Laser Beam's fourth wall bounce, and the 5 second cooldown starts at that moment. The stopped laser stays for 5 seconds. Each fighter it touches takes 2 damage each time it touches the line, and anyone still touching the stopped laser takes 2 damage every 0.5 seconds.",
     keywords: ["laser", "beam", "trail", "wall", "burn"],
+  },
+  "Gambler": {
+    name: "Gambler",
+    color: "#f2c94c",
+    health: 110,
+    damage: 15,
+    speed: 5,
+    bodySize: 44,
+    shape: "dice",
+    attackType: "Projectile",
+    cooldown: 5,
+    description: "Throws a die that rolls a random face when it lands.",
+    description2: "Every 5 seconds the Gambler throws a 44 px die at the nearest opponent. The die deals 15 damage when it lands, then rolls one of six faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), or deal 15% of the target's max HP. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, or set itself on fire (5 burn damage over 5 seconds). A parried or dodged die does not roll. A die that misses the arena does not roll.",
+    keywords: ["dice", "gamble", "luck", "stun", "burn", "projectile"],
   }
 };
