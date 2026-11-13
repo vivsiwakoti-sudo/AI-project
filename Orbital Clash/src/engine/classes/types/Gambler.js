@@ -6,8 +6,8 @@ import { audioManager } from "../../audio/AudioManager.js";
 
 const DIE_SIZE = 44;
 const DIE_RADIUS = DIE_SIZE / 2;
-// Projectile.update moves vx * dt * 100 px per step, so vx 3 is 5 px per frame at 60 fps.
-const DIE_SPEED = 3;
+// Projectile.update scales velocity by 100, giving 8.75 px per frame at 60 fps.
+const DIE_SPEED = 5.25;
 const DIE_DAMAGE = 15;
 const STUN_DURATION = 2;
 const BURN_DURATION = 5;

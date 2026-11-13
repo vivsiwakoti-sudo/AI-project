@@ -64,6 +64,19 @@ const throwDieOnto = (gambler, victim) => {
   gambler.cooldownTimer = 999; // no second throw during this update
 };
 
+test('a die travels 8.75 pixels per frame at 60 fps', () => {
+  const gambler = makeGambler();
+  gambler.throwDie(makeVictim(200));
+  const die = gambler.dice[0];
+  const startX = die.x;
+  const startY = die.y;
+
+  die.update(1 / 60);
+
+  assert.equal(die.x - startX, 8.75);
+  assert.equal(die.y, startY);
+});
+
 test('a die that lands deals 15 damage and rolls a face on the victim', () => {
   const gambler = makeGambler();
   const victim = makeVictim(200);
