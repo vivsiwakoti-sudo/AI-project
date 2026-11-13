@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ARENA_SIZE_OPTIONS } from "../engine/config";
-import { ROUND_LABELS, TOTAL_MATCHES, TOURNAMENT_SIZE, BYE_COUNT } from "../engine/tournament";
+import { roundLabelFor, tournamentFormat, tournamentTotalMatches } from "../engine/tournament";
 import { audioManager } from "../engine/audio/AudioManager";
 import TournamentBracket from "./TournamentBracket";
 
@@ -15,7 +15,7 @@ const OVERHEAD_HEIGHT = 172;
 const COLUMN_GAP = 16;
 const SIDE_COLUMN_UNITS = [1.2, 0.8, 0.8, 0.8];
 const BRACKET_PADDING = 12;
-const PRELIM_MATCHES = 9;
+const PRELIM_MATCHES = 16;
 const MIN_COLS = 2;
 const MAX_COLS = 6;
 // This only caps how far a small bracket may be scaled UP on a very large window.
@@ -53,6 +53,9 @@ const REDUCED_MOTION_MS = 300;
 // `onBegin` fires when the tournament should start running (underneath the fading
 // overview); `onFinished` fires when the overview has fully gone and can unmount.
 export default function TournamentOverview({ tournament, arenaSize, focusMatch, onArenaSize, onBegin, onFinished, onExit }) {
+  const format = tournamentFormat(tournament);
+  const totalMatches = tournamentTotalMatches(tournament);
+  const byeCount = format.byeCount;
   const stageRef = useRef(null);
   const bracketRef = useRef(null);
   const timersRef = useRef([]);
@@ -139,7 +142,7 @@ export default function TournamentOverview({ tournament, arenaSize, focusMatch, 
         <div className="tournament-overview-title">
           <span className="tournament-badge">TOURNAMENT</span>
           <h2>THE FULL BRACKET</h2>
-          <p>{TOURNAMENT_SIZE} classes · {BYE_COUNT} byes · {TOTAL_MATCHES} single-elimination matches</p>
+          <p>{format.size} classes · {byeCount} byes · {totalMatches} single-elimination matches</p>
         </div>
         <button type="button" className="tournament-control tournament-control-exit" onClick={onExit} disabled={leaving}>
           ← BACK
@@ -160,7 +163,7 @@ export default function TournamentOverview({ tournament, arenaSize, focusMatch, 
         <div className="tournament-overview-next">
           {focusMatch ? (
             <>
-              <span>FIRST MATCH · {(ROUND_LABELS[focusMatch.round] ?? focusMatch.round).toUpperCase()}</span>
+              <span>FIRST MATCH · {roundLabelFor(tournament, focusMatch.round).toUpperCase()}</span>
               <b>{focusMatch.first} <em>VS</em> {focusMatch.second}</b>
             </>
           ) : null}

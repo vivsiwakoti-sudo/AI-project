@@ -134,7 +134,10 @@ export class Duplicator extends FighterBase {
         super.update(dt, opponent);
 
         this.checkTouchDamage(opponent);
+        this.updateClones(dt, opponent);
+    }
 
+    updateClones(dt, opponent) {
         // A clone needs the same victim list and opponent reference as a real
         // fighter: without them it could only ever hit the one opponent the
         // parent was aiming at, and only when standing exactly on it.
@@ -180,7 +183,18 @@ export class Duplicator extends FighterBase {
         // Each generation keeps 75% of its parent's health, per the class spec.
         const cloneHealth = Math.max(5, this.health * 0.75);
         const clone = new Duplicator(
-            this,
+            this.name === "Mimic" ? {
+                name: "Duplicator",
+                color: this.color,
+                health: this.health,
+                damage: this.damage,
+                speed: this.speed,
+                bodySize: this.bodySize,
+                shape: this.shape,
+                attackType: "Body",
+                cooldown: this.cooldown,
+                cloneLimit: this.cloneLimit
+            } : this,
             this.x + (Math.random() - 0.5) * 40,
             this.y + (Math.random() - 0.5) * 40,
             this.generation + 1,
@@ -195,25 +209,8 @@ export class Duplicator extends FighterBase {
 
     draw(ctx) {
         if (this.isDead || this.health <= 0) return;
-        // Draw clones first (behind main body)
-        this.clones.forEach(c => {
-            ctx.globalAlpha = 0.3 + (1 - (c.generation * 0.1)) * 0.3;
-            c.draw(ctx);
-            
-            // Connection line to parent
-            if (this.clones.indexOf(c) < 3) { // Only show for first few clones
-                ctx.strokeStyle = `rgba(100, 255, 100, ${0.2 * (1 - c.generation * 0.1)})`;
-                ctx.lineWidth = 1;
-                ctx.setLineDash([3, 3]);
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(c.x, c.y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-        });
-        ctx.globalAlpha = 1.0;
-        
+        this.drawClones(ctx);
+
         // Draw main body
         super.draw(ctx);
         
@@ -241,5 +238,25 @@ export class Duplicator extends FighterBase {
         }
         
         ctx.restore();
+    }
+
+    drawClones(ctx) {
+        this.clones.forEach(c => {
+            ctx.globalAlpha = 0.3 + (1 - (c.generation * 0.1)) * 0.3;
+            c.draw(ctx);
+            
+            // Connection line to parent
+            if (this.clones.indexOf(c) < 3) { // Only show for first few clones
+                ctx.strokeStyle = `rgba(100, 255, 100, ${0.2 * (1 - c.generation * 0.1)})`;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(c.x, c.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        });
+        ctx.globalAlpha = 1.0;
     }
 }

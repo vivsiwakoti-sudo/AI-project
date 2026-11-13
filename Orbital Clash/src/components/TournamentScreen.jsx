@@ -3,13 +3,12 @@ import { flushSync } from "react-dom";
 import { audioManager } from "../engine/audio/AudioManager";
 import {
   MATCH_CLOCK_SECONDS,
-  ROUND_LABELS,
-  TOTAL_MATCHES,
   applyMatchResult,
   createTournamentBout,
   nextPendingMatch,
   sanitizeArenaSize,
   saveActiveTournament,
+  roundLabelFor,
   tournamentProgress,
   validateTournament,
   withArenaSize
@@ -24,7 +23,7 @@ import StatsPanel from "./StatsPanel";
 
 const SPEEDS = [1, 2, 4, 8];
 // How long the result card stays up between matches. Short on purpose: watching
-// 24 bouts should not drag, but a winner needs a beat to register.
+// a full tournament should not drag, but a winner needs a beat to register.
 const RESULT_HOLD_MS = 2600;
 // How long the arena keeps the deciding frame on screen before the result card
 // covers it, so the killing explosion is actually seen (the arena's own beat).
@@ -185,7 +184,7 @@ function TournamentScreenView({
   const currentMatchId = pending?.id ?? null;
   // The bout on the stage: the one being fought, or the next one waiting.
   const stageMatch = activeMatch || pending;
-  const roundLabel = stageMatch ? (ROUND_LABELS[stageMatch.round] ?? stageMatch.round) : "";
+  const roundLabel = stageMatch ? roundLabelFor(tournament, stageMatch.round) : "";
 
   // The fighter panels: the live bout's own instances while it runs, otherwise
   // the two classes about to walk into the arena (name + colour is all the HUD
@@ -617,8 +616,8 @@ function TournamentScreenView({
   const clockLabel = formatClock(inFight ? matchClock : MATCH_CLOCK_SECONDS);
   // The header counts decided matches; the result card already shows its winner,
   // so it is included the moment the fight ends.
-  const resolvedCount = Math.min(progress.resolved + (phase === "result" ? 1 : 0), TOTAL_MATCHES);
-  const progressLabel = `${resolvedCount}/${TOTAL_MATCHES}`;
+  const resolvedCount = Math.min(progress.resolved + (phase === "result" ? 1 : 0), progress.total);
+  const progressLabel = `${resolvedCount}/${progress.total}`;
   const leftFighters = stageFighters.filter(item => item.index % 2 === 0);
   const rightFighters = stageFighters.filter(item => item.index % 2 === 1);
 
@@ -739,7 +738,7 @@ function TournamentScreenView({
                         <div><span>DAMAGE DEALT</span><b>{matchResult.winner.damageDealt}</b></div>
                       </div>
                       <p className="tournament-result-next">
-                        {resolvedCount >= TOTAL_MATCHES ? "TOURNAMENT COMPLETE" : "ADVANCING…"}
+                        {resolvedCount >= progress.total ? "TOURNAMENT COMPLETE" : "ADVANCING…"}
                       </p>
                     </div>
                   </div>

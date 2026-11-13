@@ -615,7 +615,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
         // it early-returns on `isDead`, but every subclass then draws its weapon,
         // trail, spawn or aura AFTER calling super.draw() and outside that guard.
         // That left corpses swinging swords and dragging poison trails across the
-        // arena for the rest of the match. Gating here covers all 26 classes (and
+        // arena for the rest of the match. Gating here covers all fighter classes (and
         // Duplicator's clones, which recurse back through this same draw) in one
         // place instead of needing a guard in every class.
         if (f.isDead || f.health <= 0) return;

@@ -31,10 +31,12 @@ import { Dragon } from "./classes/types/Dragon.js";
 import { Striker } from "./classes/types/Striker.js";
 import { LaserBeam } from "./classes/types/LaserBeam.js";
 import { Gambler } from "./classes/types/Gambler.js";
+import { Mimic } from "./classes/types/Mimic.js";
 
 export class FighterFactory {
-  static createFighter(className, x, y) {
-    const data = FIGHTER_CLASSES[className];
+  static createFighter(className, x, y, overrides = null) {
+    const definition = FIGHTER_CLASSES[className];
+    const data = definition && overrides ? { ...definition, ...overrides } : definition;
     if (!data) throw new Error(`Unknown fighter class: ${className}`);
     
     const mapping = {
@@ -44,7 +46,7 @@ export class FighterFactory {
         "Solar Beam": SolarBeam, "Berserker": Berserker, "Spider": Spider, "Tunneler": Tunneler, "Tornado": Tornado,
         "Meteor": Meteor, "Black Hole": BlackHole, "Reaper": Reaper, "Vampire": Vampire, "Mahoraga": Mahoraga,
         "Summoner": Summoner, "Yeti": Yeti, "Dragon": Dragon, "Striker": Striker,
-        "Laser Beam": LaserBeam, "Gambler": Gambler
+        "Laser Beam": LaserBeam, "Gambler": Gambler, "Mimic": Mimic
     };
     
     if (mapping[className]) return new mapping[className](data, x, y);

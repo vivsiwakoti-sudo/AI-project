@@ -1,5 +1,5 @@
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
-import { ROUND_DEFINITIONS, ROUND_ORDER, TOURNAMENT_SIZE, BYE_COUNT } from "../engine/tournament";
+import { ROUND_ORDER, roundDefinitionsFor, tournamentFormat } from "../engine/tournament";
 
 // Colour lookup so a bracket slot reads the same as the class card it came from.
 function classColor(name) {
@@ -105,28 +105,33 @@ export default function TournamentBracket({ tournament, currentMatchId, onSelect
 
   const byes = tournament.byes || [];
   const champion = tournament.champion;
+  const { size, byeCount } = tournamentFormat(tournament);
+  const roundDefinitions = roundDefinitionsFor(tournament);
+  const firstRound = roundDefinitions[0];
 
   return (
     <div className={`tournament-bracket ${compact ? "tournament-bracket-compact" : ""}`}>
-      <div className="tb-bye-strip">
-        <div className="tb-bye-label">
-          <span>BYES INTO ROUND OF 16</span>
-          <strong>{byes.length} / {BYE_COUNT}</strong>
+      {byeCount > 0 ? (
+        <div className="tb-bye-strip">
+          <div className="tb-bye-label">
+            <span>BYES INTO ROUND OF 16</span>
+            <strong>{byes.length} / {byeCount}</strong>
+          </div>
+          <div className="tb-bye-list">
+            {byes.map(bye => (
+              <span key={bye.name} className="tb-bye-chip" style={{ "--slot-color": classColor(bye.name) }}>
+                <span className="tb-slot-chip" aria-hidden="true" />
+                {bye.name}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="tb-bye-list">
-          {byes.map(bye => (
-            <span key={bye.name} className="tb-bye-chip" style={{ "--slot-color": classColor(bye.name) }}>
-              <span className="tb-slot-chip" aria-hidden="true" />
-              {bye.name}
-            </span>
-          ))}
-        </div>
-      </div>
+      ) : null}
 
       <div className="tb-rounds">
         {ROUND_ORDER.map(roundKey => {
           const round = tournament.rounds?.[roundKey];
-          const definition = ROUND_DEFINITIONS.find(item => item.key === roundKey);
+          const definition = roundDefinitions.find(item => item.key === roundKey);
           const matches = round?.matches || [];
           const done = matches.filter(match => match.status === "resolved").length;
           return (
@@ -154,7 +159,7 @@ export default function TournamentBracket({ tournament, currentMatchId, onSelect
                 ) : (
                   <div className="tb-round-pending">
                     {roundKey === "round16"
-                      ? `${ROUND_DEFINITIONS[0].matches} preliminary winners + ${BYE_COUNT} byes`
+                      ? `${firstRound.matches} ${firstRound.label.toLowerCase()} winners${byeCount ? ` + ${byeCount} byes` : ""}`
                       : "Awaiting previous round"}
                   </div>
                 )}
@@ -165,7 +170,7 @@ export default function TournamentBracket({ tournament, currentMatchId, onSelect
       </div>
 
       <div className="tb-entrant-count">
-        <span>{TOURNAMENT_SIZE} classes entered</span>
+        <span>{size} classes entered</span>
         <span>{byes.length} byes</span>
         <span>{tournament.eliminated?.length || 0} eliminated</span>
       </div>

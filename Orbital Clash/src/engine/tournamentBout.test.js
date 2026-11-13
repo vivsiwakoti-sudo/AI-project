@@ -116,7 +116,7 @@ test('the headless runner and a watched bout use the same shared combat step', (
 });
 
 test('every match ends well inside the match clock and always names a winner', () => {
-  // A tournament runs 24 bouts back to back, so a single pairing that cannot hurt
+  // A tournament runs 31 bouts back to back, so a single pairing that cannot hurt
   // each other (or that out-heals the other) must still be decided quickly - the
   // sudden-death drain is what guarantees it. Without that, a spectator could sit
   // through the full clock on one stubborn matchup.

@@ -450,5 +450,19 @@ export const FIGHTER_CLASSES = {
     description: "Throws a die that rolls a random face when it lands.",
     description2: "Every 5 seconds the Gambler throws a 44 px die at the nearest opponent. The die deals 15 damage when it lands, then rolls one of six faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), or deal 15% of the target's max HP. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, or set itself on fire (5 burn damage over 5 seconds). A parried or dodged die does not roll. A die that misses the arena does not roll.",
     keywords: ["dice", "gamble", "luck", "stun", "burn", "projectile"],
+  },
+  "Mimic": {
+    name: "Mimic",
+    color: "#b18cff",
+    health: 125,
+    damage: 5,
+    speed: 5,
+    bodySize: 40,
+    shape: "round",
+    attackType: "Body",
+    cooldown: 5,
+    description: "Copies a random fighter's abilities and weapons temporarily.",
+    description2: "Starts in base form. After 5 seconds, copies a random class's abilities and weapons for 11 seconds, then returns to base form for 5 seconds and repeats. Keeps its own health, damage and speed rather than copying the other class's stats. Cannot copy Mimic, Mahoraga or Mutant. Duplicator clones and Summoner minions remain until they or the Mimic die.",
+    keywords: ["copy", "transform", "random", "weapon", "body"],
   }
 };

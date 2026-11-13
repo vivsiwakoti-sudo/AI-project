@@ -386,7 +386,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             onClick={() => { audioManager.playUiClick(); setCanResumeTournament(false); onStartTournament?.(); }}
             title={canResumeTournament
               ? "Continue the tournament you left unfinished"
-              : "Watch all 26 classes fight a single-elimination tournament"}
+              : "Watch all fighter classes fight a single-elimination tournament"}
           >
             🏆 {canResumeTournament ? "RESUME TOURNAMENT" : "TOURNAMENT MODE"}
           </button>

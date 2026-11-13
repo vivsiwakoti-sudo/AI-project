@@ -39,11 +39,13 @@ const {
   matchDetails,
   nextPendingMatch,
   resolvedMatches,
+  roundDefinitionsFor,
   runTournamentMatch,
   sanitizeArenaSize,
   saveActiveTournament,
   validateTournament,
-  withArenaSize
+  withArenaSize,
+  tournamentProgress
 } = await import('./tournament.js');
 
 // Deterministic RNG so the bracket shape assertions are repeatable.
@@ -54,22 +56,22 @@ function seeded(seed) {
   };
 }
 
-test('the bracket uses exactly the 26 tournament classes, 10 prelim matches + 6 byes', () => {
+test('all 32 classes enter the Round of 32 with no byes', () => {
   const bracket = buildTournamentBracket({ random: seeded(7) });
   const roster = tournamentRoster();
 
+  assert.equal(TOURNAMENT_SIZE, 32);
+  assert.equal(BYE_COUNT, 0);
   assert.equal(roster.length, TOURNAMENT_SIZE);
-  assert.equal(roster.includes('Yeti'), false, 'the Yeti is excluded from tournament mode');
-  assert.equal(roster.includes('Dragon'), false, 'the Dragon is excluded from tournament mode');
-  assert.equal(Object.keys(FIGHTER_CLASSES).includes('Yeti'), true, 'the Yeti is still a playable class');
-  assert.equal(Object.keys(FIGHTER_CLASSES).includes('Dragon'), true, 'the Dragon is still a playable class');
+  assert.deepEqual(roster, Object.keys(FIGHTER_CLASSES), 'no playable class is excluded');
+  assert.ok(roster.includes('Mimic'), 'Mimic participates in tournament mode');
   assert.deepEqual(validateTournament(bracket), []);
 
-  const prelim = bracket.rounds.preliminary.matches;
-  assert.equal(prelim.length, 10);
-  assert.equal(bracket.byes.length, BYE_COUNT);
+  const openingRound = bracket.rounds.preliminary.matches;
+  assert.equal(openingRound.length, 16);
+  assert.equal(bracket.byes.length, 0);
 
-  const entrants = [...prelim.flatMap(m => [m.first, m.second]), ...bracket.byes.map(b => b.name)];
+  const entrants = openingRound.flatMap(m => [m.first, m.second]);
   assert.equal(entrants.length, TOURNAMENT_SIZE);
   assert.deepEqual([...entrants].sort(), [...roster].sort(), 'every class enters exactly once');
 });
@@ -96,9 +98,9 @@ test('an active save records the bout on stage, its round, eliminations and who 
   assert.equal(loadActiveTournament().currentMatchId, next.id, 'restoring resumes the same bout');
 });
 
-test('round sizes are 10 / 8 / 4 / 2 / 1 = 25 matches', () => {
-  assert.deepEqual(ROUND_DEFINITIONS.map(r => r.matches), [10, 8, 4, 2, 1]);
-  assert.equal(TOTAL_MATCHES, 25);
+test('round sizes are 16 / 8 / 4 / 2 / 1 = 31 matches', () => {
+  assert.deepEqual(ROUND_DEFINITIONS.map(r => r.matches), [16, 8, 4, 2, 1]);
+  assert.equal(TOTAL_MATCHES, 31);
 });
 
 test('playing every match produces a champion, and the save survives a "close and reopen"', () => {
@@ -124,7 +126,7 @@ test('playing every match produces a champion, and the save survives a "close an
     // continue from the restored copy, as App.jsx does on startTournament().
     const restored = loadActiveTournament();
     if (tournament.status === 'complete') {
-      // The 25th match finishes the tournament; a finished bracket is deliberately
+      // The 31st match finishes the tournament; a finished bracket is deliberately
       // not resumable (see the dedicated test below).
       assert.equal(restored, null);
       break;
@@ -136,7 +138,7 @@ test('playing every match produces a champion, and the save survives a "close an
     closedAndReopened += 1;
   }
 
-  assert.equal(closedAndReopened, TOTAL_MATCHES - 1, 'closed and reopened after each of the 24 unfinished states');
+  assert.equal(closedAndReopened, TOTAL_MATCHES - 1, 'closed and reopened after each unfinished state');
   assert.equal(played, TOTAL_MATCHES);
   assert.equal(resolvedMatches(tournament).length, TOTAL_MATCHES);
   assert.equal(tournament.status, 'complete');
@@ -164,7 +166,7 @@ test('a played match exposes its length, winner and each fighter\'s final number
 
   const details = matchDetails(tournament, first.id);
   assert.equal(details.id, first.id);
-  assert.equal(details.roundLabel, 'Preliminary Round');
+  assert.equal(details.roundLabel, 'Round of 32');
   assert.ok(details.durationSeconds > 0, 'the length of the match is recorded');
   assert.equal(details.hasStats, true);
   assert.deepEqual(details.combatants.map(c => c.name), [first.first, first.second], 'fighters come back in bracket order');
@@ -207,7 +209,7 @@ test('a hand-edited/broken save is discarded instead of resuming a corrupt brack
   assert.equal(loadActiveTournament(), null);
 });
 
-test('a save from the old roster (extra names) still resumes the full bracket', () => {
+test('a save with unknown extra entrants still resumes the supported bracket', () => {
   store.clear();
   const bracket = buildTournamentBracket({ random: seeded(9) });
   bracket.participants.push('Retired Class');
@@ -216,6 +218,58 @@ test('a save from the old roster (extra names) still resumes the full bracket', 
   assert.ok(restored);
   assert.equal(restored.participants.length, TOURNAMENT_SIZE);
   assert.ok(!restored.participants.includes('Retired Class'));
+});
+
+test('a legacy 26-class tournament save resumes with its original byes and round sizes', () => {
+  store.clear();
+  const legacyRoster = tournamentRoster().slice(0, 26);
+  const legacyBracket = {
+    id: 'legacy-tournament',
+    createdAt: 1,
+    participants: legacyRoster,
+    byes: legacyRoster.slice(20).map((name, seed) => ({ name, seed })),
+    rounds: {
+      preliminary: {
+        matches: Array.from({ length: 10 }, (_, index) => ({
+          id: `prelim-${index + 1}`,
+          first: legacyRoster[index * 2],
+          second: legacyRoster[index * 2 + 1],
+          winner: index === 0 ? legacyRoster[0] : null,
+          status: index === 0 ? 'resolved' : 'pending'
+        }))
+      },
+      round16: { matches: [] },
+      quarterfinal: { matches: [] },
+      semifinal: { matches: [] },
+      final: { matches: [] }
+    },
+    eliminated: [legacyRoster[1]],
+    currentRound: 'preliminary',
+    status: 'active'
+  };
+  store.set(TOURNAMENT_SAVE_KEY, JSON.stringify(legacyBracket));
+
+  const restored = loadActiveTournament();
+  assert.ok(restored);
+  assert.equal(restored.participants.length, 26);
+  assert.equal(restored.byes.length, 6);
+  assert.equal(restored.rounds.preliminary.matches.length, 10);
+  assert.equal(nextPendingMatch(restored).id, 'prelim-2');
+  assert.deepEqual(roundDefinitionsFor(restored).map(round => round.matches), [10, 8, 4, 2, 1]);
+  assert.equal(tournamentProgress(restored).total, 25);
+
+  let resumed = restored;
+  while (resumed.currentRound === 'preliminary') {
+    const match = nextPendingMatch(resumed);
+    resumed = applyMatchResult(resumed, match, {
+      winner: { name: match.first },
+      loser: { name: match.second },
+      durationSeconds: 1
+    }).tournament;
+  }
+  assert.equal(resumed.rounds.round16.matches.length, 8, 'the legacy preliminary winners join the saved byes');
+  saveActiveTournament(resumed);
+  assert.equal(loadActiveTournament().currentRound, 'round16', 'the restored legacy bracket keeps advancing');
 });
 
 test('an unfinished save mid-final resumes with only the final left', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
-import { ROUND_LABELS, TOTAL_MATCHES, allMatches, matchDetails } from "../engine/tournament";
+import { allMatches, matchDetails, roundLabelFor, tournamentTotalMatches } from "../engine/tournament";
 import TournamentBracket from "./TournamentBracket";
 import MatchDetails from "./MatchDetails";
 import FighterCanvas from "./MenuComponents/ClassCard";
@@ -22,7 +22,7 @@ function championPath(tournament, champion) {
     if (match.winner !== champion && match.loser !== champion) continue;
     path.push({
       kind: "match",
-      label: ROUND_LABELS[match.round] ?? match.round,
+      label: roundLabelFor(tournament, match.round),
       detail: `${match.winner} def. ${match.loser}`,
       opponent: match.winner === champion ? match.loser : match.winner,
       won: match.winner === champion,
@@ -68,6 +68,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
 
   const champion = tournament?.champion;
   const runnerUp = tournament?.runnerUp;
+  const totalMatches = tournamentTotalMatches(tournament);
   const finalMatch = useMemo(
     () => allMatches(tournament).find(m => m.round === "final"),
     [tournament]
@@ -101,7 +102,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
           <div><span>FINAL DURATION</span><b>{finalMatch && Number.isFinite(finalMatch.durationSeconds) ? `${Math.round(finalMatch.durationSeconds)}s` : "—"}</b></div>
           <div><span>MATCHES PLAYED</span><b>{path.filter(p => p.kind === "match").length}</b></div>
           <div><span>TOURNAMENT RECORD</span><b>{record ? `${record.wins}-${record.losses}` : "—"}</b></div>
-          <div><span>TOTAL MATCHES</span><b>{TOTAL_MATCHES}</b></div>
+          <div><span>TOTAL MATCHES</span><b>{totalMatches}</b></div>
         </div>
       </div>
 
@@ -133,7 +134,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
       )}
 
       <section className="champion-bracket-section">
-        <h2>FULL BRACKET · {TOTAL_MATCHES} MATCHES</h2>
+        <h2>FULL BRACKET · {totalMatches} MATCHES</h2>
         <p className="champion-bracket-hint">Right-click any match for its details</p>
         <TournamentBracket
           tournament={tournament}
@@ -148,7 +149,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
         <div className="champion-matches-list">
           {allMatches(tournament).map(match => (
             <div key={match.id} className="champion-match-row">
-              <span className="champion-match-round">{ROUND_LABELS[match.round] ?? match.round}</span>
+              <span className="champion-match-round">{roundLabelFor(tournament, match.round)}</span>
               <span className="champion-match-id">{match.id}</span>
               <span className="champion-match-fight">
                 <b style={{ color: classColor(match.winner) }}>{match.winner}</b>

@@ -19,27 +19,62 @@ import { stepBattle } from "./systems/BattleSimulation.js";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE } from "./config.js";
 
 // --- Tournament shape -------------------------------------------------------
-// 26 classes -> 10 preliminary matches (20 fighters) + 6 byes = 16 in the Round
-// of 16, then 8 + 4 + 2 + 1 = 25 matches in total. These are the rules, so they
-// are constants rather than magic numbers scattered through the code.
-export const TOURNAMENT_SIZE = 26;
-export const BYE_COUNT = 6;
-// Classes kept out of tournament mode. The bracket is sized for a fixed roster,
-// so classes added after the base 26 stay excluded.
-export const TOURNAMENT_EXCLUDED_CLASSES = new Set(["Yeti", "Dragon", "Striker", "Laser Beam"]);
-export function tournamentRoster() {
-  return Object.keys(FIGHTER_CLASSES).filter(name => !TOURNAMENT_EXCLUDED_CLASSES.has(name));
-}
-export const ROUND_DEFINITIONS = [
+// All 32 fighters enter the opening round: 16 matches, then 8 + 4 + 2 + 1.
+// The 26-fighter format is retained only to resume tournaments saved by older
+// versions of the game.
+export const TOURNAMENT_SIZE = 32;
+export const BYE_COUNT = 0;
+const LEGACY_TOURNAMENT_SIZE = 26;
+const LEGACY_BYE_COUNT = 6;
+const LEGACY_ROUND_DEFINITIONS = [
   { key: "preliminary", label: "Preliminary Round", short: "PRELIM", matches: 10 },
   { key: "round16", label: "Round of 16", short: "R16", matches: 8 },
   { key: "quarterfinal", label: "Quarterfinals", short: "QF", matches: 4 },
   { key: "semifinal", label: "Semifinals", short: "SF", matches: 2 },
   { key: "final", label: "Grand Final", short: "FINAL", matches: 1 }
 ];
-export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + round.matches, 0); // 25
+export function tournamentRoster() {
+  return Object.keys(FIGHTER_CLASSES);
+}
+export const ROUND_DEFINITIONS = [
+  { key: "preliminary", label: "Round of 32", short: "R32", matches: 16 },
+  { key: "round16", label: "Round of 16", short: "R16", matches: 8 },
+  { key: "quarterfinal", label: "Quarterfinals", short: "QF", matches: 4 },
+  { key: "semifinal", label: "Semifinals", short: "SF", matches: 2 },
+  { key: "final", label: "Grand Final", short: "FINAL", matches: 1 }
+];
+export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + round.matches, 0);
 export const ROUND_LABELS = Object.fromEntries(ROUND_DEFINITIONS.map(round => [round.key, round.label]));
 export const ROUND_ORDER = ROUND_DEFINITIONS.map(round => round.key);
+
+function formatForSize(size) {
+  if (size === LEGACY_TOURNAMENT_SIZE) {
+    return {
+      size: LEGACY_TOURNAMENT_SIZE,
+      byeCount: LEGACY_BYE_COUNT,
+      roundDefinitions: LEGACY_ROUND_DEFINITIONS
+    };
+  }
+  return { size: TOURNAMENT_SIZE, byeCount: BYE_COUNT, roundDefinitions: ROUND_DEFINITIONS };
+}
+
+export function tournamentFormat(tournament) {
+  const size = tournament?.participants?.length
+    ?? (tournament?.rounds?.preliminary?.matches?.length === 10 ? LEGACY_TOURNAMENT_SIZE : TOURNAMENT_SIZE);
+  return formatForSize(size);
+}
+
+export function roundDefinitionsFor(tournament) {
+  return tournamentFormat(tournament).roundDefinitions;
+}
+
+export function roundLabelFor(tournament, roundKey) {
+  return roundDefinitionsFor(tournament).find(round => round.key === roundKey)?.label ?? roundKey;
+}
+
+export function tournamentTotalMatches(tournament) {
+  return roundDefinitionsFor(tournament).reduce((sum, round) => sum + round.matches, 0);
+}
 
 // Every bout of ONE tournament is fought on the same square map, chosen before
 // the first match and stored on the tournament (`tournament.arenaSize`) so a
@@ -64,7 +99,7 @@ export function withArenaSize(tournament, size) {
 // the same fight.
 //
 // A tournament match runs on a SHORTER clock than a free-for-all. A tournament is
-// 24 bouts back to back, so at the arena's five-minute limit a single stubborn
+// 31 bouts back to back, so at the arena's five-minute limit a single stubborn
 // pairing (two classes that cannot hurt each other) could hold up a spectator for
 // minutes. Ninety seconds is long enough for every normal matchup to resolve on
 // its own - measured across the roster, real fights end well inside it - after
@@ -471,21 +506,17 @@ function shuffle(list, random) {
   return result;
 }
 
-// Builds a fresh, fully random single-elimination bracket from the existing class
-// list. Six classes are drawn for byes first, then the remaining 20 are paired
-// into the 10 preliminary matches. No strength, seed or win rate is consulted -
-// byes are random by design.
+// Builds a fresh, fully random single-elimination bracket from every fighter
+// class. No strength, seed or win rate is consulted.
 export function buildTournamentBracket({ random = Math.random, timestamp = Date.now(), arenaSize = TOURNAMENT_ARENA_SIZE } = {}) {
   const allNames = tournamentRoster();
   if (allNames.length !== TOURNAMENT_SIZE) {
-    // The tournament format is defined for a fixed roster size. A changed roster
-    // should be an explicit decision, not a silently malformed bracket.
     throw new Error(`Tournament mode needs ${TOURNAMENT_SIZE} classes, but the roster has ${allNames.length}.`);
   }
 
   const order = shuffle(allNames, random);
-  const byes = order.slice(0, BYE_COUNT);
-  const playing = order.slice(BYE_COUNT);
+  const byes = [];
+  const playing = order;
 
   const preliminaryMatches = [];
   for (let i = 0; i < playing.length; i += 2) {
@@ -547,7 +578,7 @@ function createRoundMatches(tournament, roundKey, entrants) {
   // Idempotent: a tournament restored mid-round already has its matches, and
   // rebuilding them would wipe recorded results.
   if (round.matches.length > 0) return;
-  const definition = ROUND_DEFINITIONS.find(item => item.key === roundKey);
+  const definition = roundDefinitionsFor(tournament).find(item => item.key === roundKey);
   const expected = definition?.matches ?? Math.floor(entrants.length / 2);
   for (let i = 0; i < expected; i++) {
     round.matches.push({
@@ -576,7 +607,7 @@ function entrantsForRound(tournament, roundKey) {
   const previous = tournament.rounds[previousKey];
   if (!previous || previous.matches.length === 0) return null;
 
-  // The preliminary round's winners join the bye classes to form the Round of 16.
+  // The opening round's winners join any saved legacy byes to form the Round of 16.
   if (roundKey === "round16") {
     const winners = previous.matches.map(match => match.winner).filter(Boolean);
     if (winners.length !== previous.matches.length) return null;
@@ -648,7 +679,7 @@ export function matchDetails(tournament, matchId) {
   return {
     id: match.id,
     round: match.round,
-    roundLabel: ROUND_LABELS[match.round] ?? match.round,
+    roundLabel: roundLabelFor(tournament, match.round),
     winner: match.winner,
     loser: match.loser,
     durationSeconds: match.durationSeconds,
@@ -918,7 +949,7 @@ export function applyMatchResult(tournament, match, result) {
       {
         id: match.id,
         round: match.round,
-        roundLabel: ROUND_LABELS[match.round] ?? match.round,
+        roundLabel: roundLabelFor(tournament, match.round),
         first: match.first,
         second: match.second,
         winner: winnerName,
@@ -1082,7 +1113,7 @@ export function championPath(tournament) {
     .map(match => ({
       id: match.id,
       round: match.round,
-      roundLabel: ROUND_LABELS[match.round] ?? match.round,
+      roundLabel: roundLabelFor(tournament, match.round),
       opponent: match.first === tournament.champion ? match.second : match.first,
       won: match.winner === tournament.champion,
       durationSeconds: match.durationSeconds
@@ -1123,7 +1154,7 @@ export function battleSnapshot(tournament) {
   return {
     matchId: match?.id ?? null,
     round,
-    roundLabel: ROUND_LABELS[round] ?? round,
+    roundLabel: roundLabelFor(tournament, round),
     first: match?.first ?? null,
     second: match?.second ?? null,
     arenaSize: sanitizeArenaSize(tournament.arenaSize),
@@ -1179,12 +1210,17 @@ export function loadActiveTournament() {
   try {
     const raw = JSON.parse(window.localStorage.getItem(TOURNAMENT_SAVE_KEY) || "null");
     if (!raw || typeof raw !== "object") return null;
+    const participants = Array.isArray(raw.participants)
+      ? raw.participants.filter(name => typeof name === "string" && FIGHTER_CLASSES[name])
+      : [];
+    if (participants.length !== TOURNAMENT_SIZE && participants.length !== LEGACY_TOURNAMENT_SIZE) return null;
+    const format = formatForSize(participants.length);
     const rounds = {};
     for (const roundKey of ROUND_ORDER) {
       const stored = raw.rounds?.[roundKey]?.matches;
       rounds[roundKey] = {
         key: roundKey,
-        label: ROUND_LABELS[roundKey],
+        label: format.roundDefinitions.find(round => round.key === roundKey)?.label ?? roundKey,
         matches: (Array.isArray(stored) ? stored : []).map((match, index) => sanitizeMatch(match, roundKey, index)).filter(Boolean)
       };
     }
@@ -1196,7 +1232,7 @@ export function loadActiveTournament() {
     const all = ROUND_ORDER.flatMap(key => rounds[key].matches);
     if (all.length === 0) return null;
     const shapeBroken = ROUND_ORDER.some(key => {
-      const expected = ROUND_DEFINITIONS.find(item => item.key === key)?.matches ?? 0;
+      const expected = format.roundDefinitions.find(item => item.key === key)?.matches ?? 0;
       const actual = rounds[key].matches.length;
       return actual !== 0 && actual !== expected;
     });
@@ -1204,18 +1240,13 @@ export function loadActiveTournament() {
 
     // Only classes that still exist can be resumed. A save written by a longer
     // roster would otherwise put a class the engine no longer knows into a match.
-    const participants = Array.isArray(raw.participants)
-      ? raw.participants.filter(name => typeof name === "string" && FIGHTER_CLASSES[name])
-      : [];
-    if (participants.length !== TOURNAMENT_SIZE) return null;
-
     // Normalise a bye that was written as a bare string to the same object shape
     // the live bracket uses, so every consumer can read `bye.name` safely.
     const byes = Array.isArray(raw.byes)
       ? raw.byes.map(bye => (typeof bye === "string" ? { name: bye, seed: 0 } : { name: bye?.name, seed: sanitizeNumber(bye?.seed) }))
         .filter(bye => knownClass(bye.name))
       : [];
-    if (byes.length !== BYE_COUNT) return null;
+    if (byes.length !== format.byeCount) return null;
 
     const tournament = {
       id: typeof raw.id === "string" ? raw.id : `tournament-${Date.now()}`,
@@ -1273,6 +1304,8 @@ export function loadActiveTournament() {
 export function validateTournament(tournament, { requireComplete = false } = {}) {
   const problems = [];
   if (!tournament || typeof tournament !== "object") return ["Tournament data is missing."];
+  const format = tournamentFormat(tournament);
+  const definitions = format.roundDefinitions;
 
   const matches = allMatches(tournament);
   if (matches.length === 0) problems.push("The bracket has no matches.");
@@ -1287,7 +1320,7 @@ export function validateTournament(tournament, { requireComplete = false } = {})
   });
 
   for (const roundKey of ROUND_ORDER) {
-    const definition = ROUND_DEFINITIONS.find(item => item.key === roundKey);
+    const definition = definitions.find(item => item.key === roundKey);
     const round = tournament.rounds[roundKey];
     if (!round) {
       problems.push(`Round "${roundKey}" is missing.`);
@@ -1298,8 +1331,8 @@ export function validateTournament(tournament, { requireComplete = false } = {})
     }
   }
 
-  if (tournament.byes.length !== BYE_COUNT) {
-    problems.push(`The bracket has ${tournament.byes.length} byes, expected ${BYE_COUNT}.`);
+  if (tournament.byes.length !== format.byeCount) {
+    problems.push(`The bracket has ${tournament.byes.length} byes, expected ${format.byeCount}.`);
   }
 
   // Every class must appear exactly once in the bracket's first slots: either in
@@ -1309,15 +1342,16 @@ export function validateTournament(tournament, { requireComplete = false } = {})
     ...tournament.byes.map(bye => bye.name)
   ].filter(Boolean);
   const uniqueEntrants = new Set(entrants);
-  if (entrants.length !== TOURNAMENT_SIZE || uniqueEntrants.size !== TOURNAMENT_SIZE) {
-    problems.push(`The bracket has ${uniqueEntrants.size} unique entrants, expected ${TOURNAMENT_SIZE}.`);
+  if (entrants.length !== format.size || uniqueEntrants.size !== format.size) {
+    problems.push(`The bracket has ${uniqueEntrants.size} unique entrants, expected ${format.size}.`);
   }
 
   if (requireComplete) {
     if (tournament.status !== "complete") problems.push("The tournament is not complete.");
     if (!tournament.champion) problems.push("The tournament has no champion.");
-    if (resolvedMatches(tournament).length !== TOTAL_MATCHES) {
-      problems.push(`The tournament resolved ${resolvedMatches(tournament).length} matches, expected ${TOTAL_MATCHES}.`);
+    const totalMatches = tournamentTotalMatches(tournament);
+    if (resolvedMatches(tournament).length !== totalMatches) {
+      problems.push(`The tournament resolved ${resolvedMatches(tournament).length} matches, expected ${totalMatches}.`);
     }
     // No class may win a match after it has been knocked out. Walk the bracket in
     // order (preliminary -> final) and remember who has already lost: a winner that
@@ -1343,7 +1377,8 @@ export function validateTournament(tournament, { requireComplete = false } = {})
 export function tournamentProgress(tournament) {
   const matches = allMatches(tournament);
   const resolved = matches.filter(match => match.status === "resolved").length;
-  return { resolved, total: TOTAL_MATCHES, remaining: TOTAL_MATCHES - resolved };
+  const total = tournamentTotalMatches(tournament);
+  return { resolved, total, remaining: total - resolved };
 }
 
 export const TOURNAMENT_INTERNALS = {
