@@ -37,6 +37,7 @@ export class Mimic extends FighterBase {
         this.mimicForm = null;
         this.mimicPrototype = null;
         this.mimicSavedFields = null;
+        this.mimicAbilityCleaned = false;
         this.clones = [];
         this.summons = [];
         this.root = null;
@@ -47,6 +48,7 @@ export class Mimic extends FighterBase {
 
     update(dt, opponent) {
         if (this.isDead || this.health <= 0) {
+            this.cleanupCopiedAbility();
             this.clearUnits();
             return;
         }
@@ -57,6 +59,11 @@ export class Mimic extends FighterBase {
             const form = this.mimicForm;
             const update = this.mimicPrototype?.update ?? FighterBase.prototype.update;
             update.call(this, step, opponent);
+            if (this.isDead || this.health <= 0) {
+                this.cleanupCopiedAbility();
+                this.clearUnits();
+                return;
+            }
             if (form !== "Duplicator" && this.clones.length) this.updateClones(step, opponent);
             if (form !== "Summoner") {
                 this.summons = this.summons.filter(summon => {
@@ -94,17 +101,28 @@ export class Mimic extends FighterBase {
         }
         // A fresh Summoner normally waits 15 seconds, longer than a copied form.
         if (name === "Summoner") this.summonTimer = 0;
-        for (const key of ["speed", "damage"]) saved.set(key, { value: this[key] });
+        for (const key of ["speed", "damage", "dodgeChance", "isCharging", "chargeProgress"]) {
+            if (!saved.has(key)) saved.set(key, Object.hasOwn(this, key) ? { value: this[key] } : null);
+        }
         this.mimicSavedFields = saved;
         this.mimicForm = name;
+        this.mimicAbilityCleaned = false;
         this.mimicPrototype = Object.getPrototypeOf(template);
         this.mimicTimer = COPY_SECONDS;
         Object.setPrototypeOf(this, prototypeFor(this.mimicPrototype));
     }
 
-    endCopiedForm() {
+    cleanupCopiedAbility() {
+        if (this.mimicAbilityCleaned || !this.mimicForm) return;
+        this.mimicAbilityCleaned = true;
         if (this.mimicForm === "Ghost" && this.isGhost) this.isInvulnerable = false;
         if (this.mimicForm === "Tunneler" && this.isUnderground) this.isUntargetable = false;
+        if (this.mimicForm === "Black Hole") {
+            this.stopHoleLoop();
+            if (this.activeHole) {
+                for (const victim of this.victims ?? []) victim.isPulledIn = false;
+            }
+        }
         if (this.mimicForm === "Yeti" && this.leapState === "leap") this.cancelLeap();
         if (this.mimicForm === "Vampire" && this.dashState !== "idle") this.endBloodDash(true);
         if (this.mimicForm === "Grappler" && this.latched && this.hookTarget) this.hookTarget.releasePin();
@@ -120,6 +138,10 @@ export class Mimic extends FighterBase {
                 spear.stuckTarget.isStunned = false;
             }
         }
+    }
+
+    endCopiedForm() {
+        this.cleanupCopiedAbility();
         for (const [key, previous] of this.mimicSavedFields) {
             if (previous) this[key] = previous.value;
             else delete this[key];
@@ -144,6 +166,7 @@ export class Mimic extends FighterBase {
     }
 
     killCloneTree() {
+        this.cleanupCopiedAbility();
         this.isDead = true;
         this.health = 0;
         this.clearUnits();
@@ -152,6 +175,7 @@ export class Mimic extends FighterBase {
     die(particles) {
         const die = this.mimicPrototype?.die ?? FighterBase.prototype.die;
         die.call(this, particles);
+        this.cleanupCopiedAbility();
         this.clearUnits();
     }
 

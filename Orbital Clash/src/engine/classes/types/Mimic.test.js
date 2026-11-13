@@ -53,6 +53,31 @@ test('Mimic cannot copy itself, Mahoraga, or Mutant', () => {
   }
 });
 
+test('copied temporary stat boosts and dodge do not persist in base form', () => {
+  const mimic = makeMimic();
+  mimic.startCopiedForm('Vampire');
+  mimic.evolve();
+  assert.equal(mimic.dodgeChance, 0.25);
+  mimic.endCopiedForm();
+  assert.equal(mimic.speed, 5);
+  assert.equal(mimic.damage, 5);
+  assert.equal(mimic.dodgeChance, undefined);
+});
+
+test('ending a Black Hole copy stops its sound and releases pulled fighters', () => {
+  const mimic = makeMimic();
+  const victim = FighterFactory.createFighter('Knight', 250, 200);
+  mimic.victims = [victim];
+  mimic.startCopiedForm('Black Hole');
+  let stopped = false;
+  mimic.holeLoopStop = () => { stopped = true; };
+  mimic.activeHole = {};
+  victim.isPulledIn = true;
+  mimic.endCopiedForm();
+  assert.equal(stopped, true);
+  assert.equal(victim.isPulledIn, false);
+});
+
 test('Duplicator clones remain ordinary clones after Mimic changes form', () => {
   const mimic = makeMimic();
   const opponent = FighterFactory.createFighter('Knight', 200, 200);
@@ -66,6 +91,12 @@ test('Duplicator clones remain ordinary clones after Mimic changes form', () => 
   mimic.endCopiedForm();
   mimic.update(0.1, null);
   assert.equal(mimic.clones[0], clone);
+  clone.x = opponent.x;
+  clone.y = opponent.y;
+  clone.touchVictims = [opponent];
+  clone.checkTouchDamage(opponent);
+  assert.equal(mimic.clones.length, 2);
+  assert.equal(mimic.clones[1].name, 'Duplicator');
   mimic.die();
   assert.equal(clone.isDead, true);
 });
@@ -96,8 +127,8 @@ test('each eligible copied form runs in the battle loop with Mimic stats', () =>
     const mimic = makeMimic();
     const opponent = FighterFactory.createFighter('Knight', 450, 450);
     opponent.damage = 0;
-    opponent.health = 10000;
-    opponent.maxHealth = 10000;
+    opponent.health = 1000000000;
+    opponent.maxHealth = 1000000000;
     mimic.startCopiedForm(name);
     assert.equal(mimic.maxHealth, 125, name);
     assert.equal(mimic.damage, 5, name);
