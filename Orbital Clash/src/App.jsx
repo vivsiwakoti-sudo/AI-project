@@ -16,6 +16,7 @@ import {
   addPrediction,
   resolveBattlePrediction,
   resolveTournamentPrediction,
+  skipPrediction,
   voidTournamentPrediction
 } from "./engine/predictions";
 import {
@@ -83,6 +84,11 @@ function App() {
         addPrediction({ kind: "tournament", tournamentId: next.id, guesses });
         setPendingPrediction(null);
         enterTournament(next);
+      },
+      onSkip: () => {
+        skipPrediction("tournament");
+        setPendingPrediction(null);
+        enterTournament(buildTournamentBracket({ arenaSize }));
       }
     });
   };
@@ -123,18 +129,27 @@ function App() {
   // so the transition wrapper can keep showing the old one for the length of its
   // exit animation. `screen` still drives it exactly as before.
   const screens = {
-    menu: <Menu intro={rosterIntro} onStart={(f, size) => setPendingPrediction({
-      kind: "battle",
-      fighters: f.map(({ name, color }) => ({ name, color })),
-      onConfirm: guesses => {
-        addPrediction({ kind: "battle", guesses });
+    menu: <Menu intro={rosterIntro} onStart={(f, size) => {
+      const startBattle = () => {
         setPendingPrediction(null);
         setSelectedFighters(f);
         setArenaSize(size);
         setRosterIntro(false);
         setScreen("game");
-      }
-    })} onStartTournament={startTournament} />,
+      };
+      setPendingPrediction({
+        kind: "battle",
+        fighters: f.map(({ name, color }) => ({ name, color })),
+        onConfirm: guesses => {
+          addPrediction({ kind: "battle", guesses });
+          startBattle();
+        },
+        onSkip: () => {
+          skipPrediction("battle");
+          startBattle();
+        }
+      });
+    }} onStartTournament={startTournament} />,
     game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => {
       const aborted = Boolean(meta?.aborted);
       resolveBattlePrediction({ winner: res?.find(f => f.placement === 1)?.name ?? null, aborted });
@@ -223,6 +238,7 @@ function App() {
               kind={pendingPrediction.kind}
               fighters={pendingPrediction.fighters}
               onConfirm={guesses => pendingPrediction.onConfirm(guesses)}
+              onSkip={() => pendingPrediction.onSkip()}
               onCancel={() => setPendingPrediction(null)}
             />
           )}

@@ -8,6 +8,7 @@ import {
   loadPredictions,
   resolveBattlePrediction,
   resolveTournamentPrediction,
+  skipPrediction,
   tallyPredictions,
   voidTournamentPrediction
 } from './predictions.js';
@@ -87,6 +88,16 @@ test('the tally counts each guesser separately and only settled picks', () => {
   assert.deepEqual(tally.overall, { correct: 1, total: 4 });
   assert.deepEqual(tally.guessers.find(s => s.guesser === 'G1'), { guesser: 'G1', correct: 1, total: 2 });
   assert.deepEqual(tally.guessers.find(s => s.guesser === 'G2'), { guesser: 'G2', correct: 0, total: 2 });
+});
+
+test('skipping stores nothing and voids the older pending prediction of its kind', () => {
+  installStorage();
+  addPrediction({ kind: 'battle', guesses: ['Gunner'] });
+  skipPrediction('battle');
+  assert.equal(loadPredictions().length, 1);
+  // The skipped battle's result must not settle the earlier pending pick.
+  const [entry] = resolveBattlePrediction({ winner: 'Gunner' });
+  assert.equal(entry.status, 'void');
 });
 
 test('clearing predictions removes the stored list', () => {

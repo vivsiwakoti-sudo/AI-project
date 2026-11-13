@@ -76,9 +76,21 @@ function writePredictions(entries) {
   }
 }
 
+function normalizeKind(kind) {
+  return kind === PREDICTION_KINDS.tournament ? PREDICTION_KINDS.tournament : PREDICTION_KINDS.battle;
+}
+
 // Only one battle and one tournament can be awaiting an outcome at a time, so a
-// new prediction of a kind voids any older still-pending one of that kind. That
+// new prediction or a skip voids any older still-pending entry of that kind. That
 // covers a battle or tournament that was started without finishing.
+function voidPendingOfKind(list, kind) {
+  return list.map(existing =>
+    existing.kind === kind && existing.status === "pending"
+      ? { ...existing, status: "void" }
+      : existing
+  );
+}
+
 export function addPrediction({ kind, tournamentId = null, guesses }) {
   const picks = (Array.isArray(guesses) ? guesses : [])
     .filter(pick => typeof pick === "string" && pick.length > 0)
@@ -86,7 +98,7 @@ export function addPrediction({ kind, tournamentId = null, guesses }) {
     .map((pick, index) => ({ guesser: `G${index + 1}`, pick, correct: null }));
   if (picks.length === 0) return loadPredictions();
 
-  const resolvedKind = kind === PREDICTION_KINDS.tournament ? PREDICTION_KINDS.tournament : PREDICTION_KINDS.battle;
+  const resolvedKind = normalizeKind(kind);
   const now = Date.now();
   const entry = {
     id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
@@ -98,12 +110,16 @@ export function addPrediction({ kind, tournamentId = null, guesses }) {
     guesses: picks
   };
 
-  const superseded = loadPredictions().map(existing =>
-    existing.kind === resolvedKind && existing.status === "pending"
-      ? { ...existing, status: "void" }
-      : existing
-  );
-  const next = [entry, ...superseded].slice(0, MAX_PREDICTION_ENTRIES);
+  const next = [entry, ...voidPendingOfKind(loadPredictions(), resolvedKind)].slice(0, MAX_PREDICTION_ENTRIES);
+  writePredictions(next);
+  return next;
+}
+
+// Starts a battle or bracket without a prediction. Nothing new is stored, but an
+// older pending entry of that kind is still voided, otherwise the skipped run's
+// result would settle it.
+export function skipPrediction(kind) {
+  const next = voidPendingOfKind(loadPredictions(), normalizeKind(kind));
   writePredictions(next);
   return next;
 }

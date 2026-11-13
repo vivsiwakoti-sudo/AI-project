@@ -4,8 +4,9 @@ import { MAX_GUESSERS } from "../engine/predictions";
 
 // Two steps: first how many people are guessing, then one pick per guesser in
 // guess order (G1, G2, ...). The picks are handed to onConfirm only once the
-// last guesser has chosen, so cancelling part-way stores nothing.
-export default function PredictionModal({ kind, fighters, onConfirm, onCancel }) {
+// last guesser has chosen, so cancelling part-way stores nothing. SKIP hands
+// control to onSkip, which starts the battle or bracket without a prediction.
+export default function PredictionModal({ kind, fighters, onConfirm, onSkip, onCancel }) {
   const [guesserCount, setGuesserCount] = useState(null);
   const [picks, setPicks] = useState([]);
 
@@ -68,7 +69,10 @@ export default function PredictionModal({ kind, fighters, onConfirm, onCancel })
           </>
         )}
 
-        <button type="button" className="prediction-cancel-button" onClick={onCancel}>CANCEL</button>
+        <div className="prediction-footer">
+          <button type="button" className="prediction-skip-button" onClick={onSkip}>SKIP PREDICTION</button>
+          <button type="button" className="prediction-cancel-button" onClick={onCancel}>CANCEL</button>
+        </div>
       </div>
     </div>
   );

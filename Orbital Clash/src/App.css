@@ -1323,9 +1323,15 @@
 
 .prediction-pick-button:hover { box-shadow: 0 0 16px color-mix(in srgb, var(--fighter-color) 45%, transparent); }
 
-.prediction-cancel-button {
+.prediction-footer {
+  display: flex;
+  gap: 10px;
   margin-top: 16px;
-  width: 100%;
+}
+
+.prediction-skip-button,
+.prediction-cancel-button {
+  flex: 1;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1334,6 +1340,8 @@
   letter-spacing: 0.08em;
   cursor: pointer;
 }
+
+.prediction-skip-button:hover { color: var(--cyan); border-color: var(--cyan); }
 
 .prediction-cancel-button:hover { color: var(--danger); border-color: var(--danger); }
 
