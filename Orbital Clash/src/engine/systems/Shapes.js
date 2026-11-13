@@ -188,6 +188,10 @@ const SHAPES = {
     // Gambler - a chamfered six-sided die block.
     dice: {
         points: [[-0.75, -1], [0.75, -1], [1, -0.75], [1, 0.75], [0.75, 1], [-0.75, 1], [-1, 0.75], [-1, -0.75]]
+    },
+    // Mimic - a theatrical mask with raised corners and a pointed chin.
+    mask: {
+        points: [[-1, -0.9], [-0.55, -0.72], [0, -0.95], [0.55, -0.72], [1, -0.9], [0.9, 0.35], [0.55, 0.75], [0, 1], [-0.55, 0.75], [-0.9, 0.35]]
     }
 };
 

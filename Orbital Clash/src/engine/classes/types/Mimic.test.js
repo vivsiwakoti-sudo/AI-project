@@ -7,8 +7,35 @@ installTestAudio();
 const { FighterFactory } = await import('../../FighterFactory.js');
 const { MIMIC_CLASSES } = await import('./Mimic.js');
 const { stepBattle } = await import('../../systems/BattleSimulation.js');
+const { hasShape } = await import('../../systems/Shapes.js');
 
 const makeMimic = () => FighterFactory.createFighter('Mimic', 200, 200);
+const makeContext = () => {
+  const gradient = { addColorStop() {} };
+  return new Proxy({ globalAlpha: 1 }, {
+    get(target, key) {
+      if (key in target) return target[key];
+      if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => gradient;
+      return () => {};
+    }
+  });
+};
+
+test('Mimic keeps its distinct appearance when copying Summoner', () => {
+  const mimic = makeMimic();
+  const summoner = FighterFactory.createFighter('Summoner', 300, 200);
+  const context = makeContext();
+  const { color, shape } = mimic;
+  assert.notEqual(color, summoner.color);
+  assert.notEqual(shape, summoner.shape);
+  assert.equal(hasShape(shape), true);
+
+  mimic.draw(context);
+  mimic.startCopiedForm('Summoner');
+  assert.equal(mimic.color, color);
+  assert.equal(mimic.shape, shape);
+  mimic.draw(context);
+});
 
 test('Mimic repeats five seconds in base form and eleven in a copied form', () => {
   const mimic = makeMimic();
@@ -115,14 +142,7 @@ test('Summoner minions survive the end of the copied form and die with Mimic', (
 });
 
 test('each eligible copied form runs in the battle loop with Mimic stats', () => {
-  const gradient = { addColorStop() {} };
-  const context = new Proxy({}, {
-    get(target, key) {
-      if (key in target) return target[key];
-      if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => gradient;
-      return () => {};
-    }
-  });
+  const context = makeContext();
   for (const name of MIMIC_CLASSES) {
     const mimic = makeMimic();
     const opponent = FighterFactory.createFighter('Knight', 450, 450);

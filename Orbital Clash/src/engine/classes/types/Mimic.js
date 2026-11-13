@@ -189,6 +189,26 @@ export class Mimic extends FighterBase {
         }
         const draw = this.mimicPrototype?.draw ?? FighterBase.prototype.draw;
         draw.call(this, ctx);
+        if (!this.mimicForm && !this.isFrozen) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.globalAlpha *= this.isUntargetable ? 0.35 : 1;
+            ctx.fillStyle = "#242020";
+            for (const side of [-1, 1]) {
+                ctx.beginPath();
+                ctx.moveTo(side * this.radius * 0.15, -this.radius * 0.12);
+                ctx.lineTo(side * this.radius * 0.65, -this.radius * 0.3);
+                ctx.lineTo(side * this.radius * 0.45, this.radius * 0.05);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.strokeStyle = "#242020";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, this.radius * 0.28, this.radius * 0.3, 0.15, Math.PI - 0.15);
+            ctx.stroke();
+            ctx.restore();
+        }
         if (this.mimicForm) {
             ctx.save();
             ctx.fillStyle = "#ffffff";
