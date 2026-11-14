@@ -95,10 +95,10 @@ test('a dodged touch does not count, so the next contact deals the touch damage'
   laser.update(FRAME, victim);
   victim.y = 400;
   laser.update(FRAME, victim);
-  assert.equal(victim.health, 998, 'the next contact deals the touch damage');
+  assert.equal(victim.health, 997, 'the next contact deals the touch damage');
 });
 
-test('a fighter takes 2 touch damage on each entry into the laser, then 2 damage every 0.5 seconds while touching', () => {
+test('a fighter takes 3 touch damage on each entry into the laser, then 3 damage every 0.5 seconds while touching', () => {
   const laser = new LaserBeam(laserStats, 200, 400);
   const victim = new FighterBase(victimStats, 400, 400);
   victim.dodgeChance = 0;
@@ -106,10 +106,10 @@ test('a fighter takes 2 touch damage on each entry into the laser, then 2 damage
   laser.vy = 0;
   laser.update(FRAME, victim);
   for (let i = 0; i < 300 && victim.health === 1000; i++) laser.update(FRAME, victim);
-  assert.equal(victim.health, 998, 'one 2 damage hit when the drawn trail first crosses the victim');
+  assert.equal(victim.health, 997, 'one 3 damage hit when the drawn trail first crosses the victim');
 
   stepFrames(laser, victim, 0.5);
-  assert.equal(victim.health, 998, 'no more hits while the trail keeps moving past the victim');
+  assert.equal(victim.health, 997, 'no more hits while the trail keeps moving past the victim');
 
   laser.onWallHit('right');
   laser.onWallHit('left');
@@ -118,12 +118,12 @@ test('a fighter takes 2 touch damage on each entry into the laser, then 2 damage
   const healthAtWall = victim.health;
   stepFrames(laser, victim, 2);
   const damage = healthAtWall - victim.health;
-  assert.ok(damage === 6 || damage === 8, `about 4 ticks of 2 over 2 s, got ${damage}`);
+  assert.ok(damage === 9 || damage === 12, `about 4 ticks of 3 over 2 s, got ${damage}`);
 
   victim.y = 100;
   stepFrames(laser, victim, 0.5);
   const healthBeforeReentry = victim.health;
   victim.y = 400;
   stepFrames(laser, victim, 0.2);
-  assert.equal(victim.health, healthBeforeReentry - 2, 're-entering the lingering laser deals the 2 touch damage again');
+  assert.equal(victim.health, healthBeforeReentry - 3, 're-entering the lingering laser deals the 3 touch damage again');
 });
