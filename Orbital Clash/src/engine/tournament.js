@@ -747,7 +747,7 @@ function sanitizeNumber(value, fallback = 0) {
 
 function sanitizeClassStats(raw) {
   const source = raw && typeof raw === "object" ? raw : {};
-  const best = sanitizeNumber(source.bestPlacement, null);
+  const best = source.bestPlacement == null ? null : sanitizeNumber(source.bestPlacement, null);
   return {
     matches: Math.max(0, Math.floor(sanitizeNumber(source.matches))),
     wins: Math.max(0, Math.floor(sanitizeNumber(source.wins))),
@@ -756,7 +756,7 @@ function sanitizeClassStats(raw) {
     championships: Math.max(0, Math.floor(sanitizeNumber(source.championships))),
     runnerUps: Math.max(0, Math.floor(sanitizeNumber(source.runnerUps))),
     appearances: Math.max(0, Math.floor(sanitizeNumber(source.appearances))),
-    bestPlacement: best == null ? null : Math.max(1, Math.floor(best)),
+    bestPlacement: best == null || best < 1 ? null : Math.floor(best),
     totalMatchSeconds: Math.max(0, sanitizeNumber(source.totalMatchSeconds)),
     totalSurvivalSeconds: Math.max(0, sanitizeNumber(source.totalSurvivalSeconds))
   };
@@ -786,6 +786,10 @@ function sanitizeHeadToHead(raw) {
   const result = {};
   Object.entries(source).forEach(([from, opponents]) => {
     if (!opponents || typeof opponents !== "object") return;
+    if (from === "__tournaments") {
+      result[from] = Object.fromEntries(Object.entries(opponents).filter(([, recorded]) => recorded === true));
+      return;
+    }
     const row = {};
     Object.entries(opponents).forEach(([to, record]) => {
       if (!record || typeof record !== "object") return;
@@ -831,7 +835,24 @@ export function loadTournamentStats() {
   if (!storageAvailable()) return createEmptyTournamentStats();
   try {
     const raw = JSON.parse(window.localStorage.getItem(TOURNAMENT_STATS_KEY) || "null");
-    return sanitizeStatsDocument(raw);
+    const stats = sanitizeStatsDocument(raw);
+    const affected = Object.entries(stats.classes).filter(([, entry]) =>
+      entry.bestPlacement === 1 && entry.championships === 0
+    );
+    if (affected.length > 0) {
+      const history = loadTournamentHistory().slice(0, stats.tournamentsCompleted);
+      const completeHistory = stats.tournamentsCompleted > 0 && history.length === stats.tournamentsCompleted;
+      for (const [name, entry] of affected) {
+        const finishes = history.flatMap(tournament => tournament.matches
+          .filter(match => match.loser === name)
+          .map(match => PLACEMENT_BY_ROUND[match.round])
+          .filter(Number.isFinite));
+        const bestKnown = finishes.length ? Math.min(...finishes) : null;
+        entry.bestPlacement = entry.runnerUps > 0 ? 2
+          : completeHistory || bestKnown === 3 ? bestKnown : null;
+      }
+    }
+    return stats;
   } catch {
     // A corrupted document is treated as a fresh one rather than thrown, so one
     // bad write cannot lock the player out of tournament mode.

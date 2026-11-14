@@ -27,8 +27,10 @@ const {
   BYE_COUNT,
   ROUND_DEFINITIONS,
   TOTAL_MATCHES,
+  TOURNAMENT_HISTORY_KEY,
   TOURNAMENT_SAVE_KEY,
   TOURNAMENT_SIZE,
+  TOURNAMENT_STATS_KEY,
   allMatches,
   applyMatchResult,
   buildTournamentBracket,
@@ -36,9 +38,11 @@ const {
   hasResumableTournament,
   tournamentRoster,
   loadActiveTournament,
+  loadTournamentStats,
   matchDetails,
   nextPendingMatch,
   resolvedMatches,
+  recordTournamentResult,
   roundDefinitionsFor,
   runTournamentMatch,
   sanitizeArenaSize,
@@ -55,6 +59,75 @@ function seeded(seed) {
     return seed / 4294967296;
   };
 }
+
+function completeBracket(seed, preferredChampion = null) {
+  let tournament = buildTournamentBracket({ random: seeded(seed), timestamp: seed });
+  let match;
+  while ((match = nextPendingMatch(tournament))) {
+    const winner = [match.first, match.second].includes(preferredChampion) ? preferredChampion : match.first;
+    const loser = winner === match.first ? match.second : match.first;
+    tournament = applyMatchResult(tournament, match, {
+      winner: { name: winner }, loser: { name: loser }, durationSeconds: 10
+    }).tournament;
+  }
+  return tournament;
+}
+
+test('completed tournaments persist and improve best finishes without duplicate counting', () => {
+  store.clear();
+  const initial = loadTournamentStats();
+  assert.equal(initial.classes.Gunner.bestPlacement, null);
+
+  const first = completeBracket(101);
+  const preliminaryLoser = first.rounds.preliminary.matches[0].loser;
+  const semifinalLoser = first.rounds.semifinal.matches[0].loser;
+  recordTournamentResult(first);
+  let stats = loadTournamentStats();
+  assert.equal(stats.classes[first.champion].bestPlacement, 1);
+  assert.equal(stats.classes[first.runnerUp].bestPlacement, 2);
+  assert.equal(stats.classes[semifinalLoser].bestPlacement, 3);
+  assert.equal(stats.classes[preliminaryLoser].bestPlacement, 17);
+  assert.equal(stats.tournamentsCompleted, 1);
+  assert.equal(recordTournamentResult(first).tournamentsCompleted, 1);
+
+  const second = completeBracket(102, preliminaryLoser);
+  recordTournamentResult(second);
+  stats = loadTournamentStats();
+  assert.equal(stats.classes[preliminaryLoser].bestPlacement, 1);
+  assert.equal(stats.classes[first.champion].bestPlacement, 1, 'a worse finish cannot replace first place');
+  assert.equal(stats.tournamentsCompleted, 2);
+  assert.equal(recordTournamentResult(first).tournamentsCompleted, 2, 'older tournament IDs remain recorded');
+});
+
+test('incorrect first-place finishes are recovered from saved tournament history', () => {
+  store.clear();
+  const tournament = completeBracket(103);
+  recordTournamentResult(tournament);
+  const saved = JSON.parse(store.get(TOURNAMENT_STATS_KEY));
+  const loser = tournament.rounds.preliminary.matches[0].loser;
+  saved.classes[loser].bestPlacement = 1;
+  store.set(TOURNAMENT_STATS_KEY, JSON.stringify(saved));
+
+  const stats = loadTournamentStats();
+  assert.equal(stats.classes[loser].bestPlacement, 17);
+  assert.equal(stats.classes[tournament.champion].bestPlacement, 1);
+  assert.equal(stats.classes[loser].appearances, 1);
+});
+
+test('an incorrect first-place finish without enough history is unavailable', () => {
+  store.clear();
+  const tournament = completeBracket(104);
+  recordTournamentResult(tournament);
+  const saved = JSON.parse(store.get(TOURNAMENT_STATS_KEY));
+  const loser = tournament.rounds.preliminary.matches[0].loser;
+  saved.classes[loser].bestPlacement = 1;
+  store.set(TOURNAMENT_STATS_KEY, JSON.stringify(saved));
+  store.delete(TOURNAMENT_HISTORY_KEY);
+
+  const stats = loadTournamentStats();
+  assert.equal(stats.classes[loser].bestPlacement, null);
+  assert.equal(stats.classes[tournament.runnerUp].bestPlacement, 2);
+});
 
 test('all 32 classes enter the Round of 32 with no byes', () => {
   const bracket = buildTournamentBracket({ random: seeded(7) });
