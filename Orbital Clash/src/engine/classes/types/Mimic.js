@@ -38,6 +38,7 @@ export class Mimic extends FighterBase {
         this.mimicPrototype = null;
         this.mimicSavedFields = null;
         this.mimicAbilityCleaned = false;
+        this.placedAttacks = [];
         this.clones = [];
         this.summons = [];
         this.root = null;
@@ -57,6 +58,7 @@ export class Mimic extends FighterBase {
         while (remaining > 0 && !this.isDead && this.health > 0) {
             const step = Math.min(remaining, this.mimicTimer);
             const form = this.mimicForm;
+            this.updatePlacedAttacks(step, opponent);
             const update = this.mimicPrototype?.update ?? FighterBase.prototype.update;
             update.call(this, step, opponent);
             if (this.isDead || this.health <= 0) {
@@ -116,6 +118,7 @@ export class Mimic extends FighterBase {
         if (this.mimicAbilityCleaned || !this.mimicForm) return;
         this.mimicAbilityCleaned = true;
         if (this.mimicForm === "Ghost" && this.isGhost) this.isInvulnerable = false;
+        if (this.mimicForm === "Samurai" && this.isInvisible) this.isInvulnerable = false;
         if (this.mimicForm === "Tunneler" && this.isUnderground) this.isUntargetable = false;
         if (this.mimicForm === "Black Hole") {
             this.stopHoleLoop();
@@ -141,6 +144,7 @@ export class Mimic extends FighterBase {
     }
 
     endCopiedForm() {
+        this.preservePlacedAttacks();
         this.cleanupCopiedAbility();
         for (const [key, previous] of this.mimicSavedFields) {
             if (previous) this[key] = previous.value;
@@ -153,6 +157,66 @@ export class Mimic extends FighterBase {
         Object.setPrototypeOf(this, Mimic.prototype);
     }
 
+    preservePlacedAttacks() {
+        const fields = { "Mine Layer": "mines", Spider: "webs", Snake: "trail", "Laser Beam": "lasers", Dragon: "fires" };
+        const field = fields[this.mimicForm];
+        if (!field || !this[field]?.length) return;
+        const owner = Object.assign(Object.create(this.mimicPrototype), {
+            [field]: this[field],
+            damage: this.damage,
+            particleSystem: this.particleSystem,
+            MINE_RADIUS: this.MINE_RADIUS,
+            trailLife: this.trailLife,
+            dotAccumulators: this.dotAccumulators,
+            animTime: this.animTime
+        });
+        if (field === "lasers") {
+            for (const laser of owner.lasers) {
+                if (!laser.fixed) {
+                    laser.points.push({ x: this.x, y: this.y });
+                    laser.fixed = true;
+                }
+            }
+        }
+        this.placedAttacks.push({ form: this.mimicForm, owner });
+    }
+
+    updatePlacedAttacks(dt, opponent) {
+        this.placedAttacks = this.placedAttacks.filter(({ form, owner }) => {
+            if (form === "Mine Layer") {
+                owner.updateMines(dt, opponent, this);
+                return owner.mines.length > 0;
+            }
+            if (form === "Spider") {
+                owner.updateWebs(dt, opponent, this);
+                return owner.webs.length > 0;
+            }
+            if (form === "Snake") {
+                owner.updateTrail(dt, opponent, this);
+                return owner.trail.length > 0;
+            }
+            if (form === "Dragon") {
+                owner.animTime += dt;
+                owner.updateFires(dt, opponent, this);
+                return owner.fires.length > 0;
+            }
+            owner.animTime += dt;
+            const victims = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead);
+            owner.lasers = owner.lasers.filter(laser => owner.updateLaser(laser, dt, victims, this));
+            return owner.lasers.length > 0;
+        });
+    }
+
+    drawPlacedAttacks(ctx) {
+        for (const { form, owner } of this.placedAttacks) {
+            if (form === "Mine Layer") owner.drawMines(ctx);
+            else if (form === "Spider") owner.drawWebs(ctx);
+            else if (form === "Snake") owner.drawTrail(ctx);
+            else if (form === "Dragon") for (const fire of owner.fires) owner.drawFire(ctx, fire);
+            else for (const laser of owner.lasers) owner.drawLaser(ctx, laser);
+        }
+    }
+
     updateClones(dt, opponent) { Duplicator.prototype.updateClones.call(this, dt, opponent); }
     applyCloneCombatHits(clone, opponent) { Duplicator.prototype.applyCloneCombatHits.call(this, clone, opponent); }
     resolveCloneCollisions(clones, victims) { Duplicator.prototype.resolveCloneCollisions.call(this, clones, victims); }
@@ -160,6 +224,7 @@ export class Mimic extends FighterBase {
     spawnClone() { Duplicator.prototype.spawnClone.call(this); }
 
     clearUnits() {
+        this.placedAttacks = [];
         for (const clone of this.clones) clone.killCloneTree();
         this.clones = [];
         Summoner.prototype.killSummons.call(this);
@@ -181,6 +246,7 @@ export class Mimic extends FighterBase {
 
     draw(ctx) {
         if (this.isDead || this.health <= 0) return;
+        this.drawPlacedAttacks(ctx);
         if (this.mimicForm !== "Duplicator") Duplicator.prototype.drawClones.call(this, ctx);
         if (this.mimicForm !== "Summoner") {
             for (const summon of this.summons) {

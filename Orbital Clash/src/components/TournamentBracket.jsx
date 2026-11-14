@@ -1,5 +1,5 @@
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
-import { ROUND_ORDER, roundDefinitionsFor, tournamentFormat } from "../engine/tournament";
+import { ROUND_COLORS, ROUND_ORDER, roundDefinitionsFor, tournamentFormat } from "../engine/tournament";
 
 // Colour lookup so a bracket slot reads the same as the class card it came from.
 function classColor(name) {
@@ -135,7 +135,7 @@ export default function TournamentBracket({ tournament, currentMatchId, onSelect
           const matches = round?.matches || [];
           const done = matches.filter(match => match.status === "resolved").length;
           return (
-            <section key={roundKey} className="tb-round" data-round={roundKey}>
+            <section key={roundKey} className="tb-round" data-round={roundKey} style={{ "--round-color": ROUND_COLORS[roundKey] }}>
               <header className="tb-round-head">
                 <h3>{definition?.label || roundKey}</h3>
                 <span className="tb-round-count">

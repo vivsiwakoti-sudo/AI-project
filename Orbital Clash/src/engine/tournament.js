@@ -31,6 +31,7 @@ const LEGACY_ROUND_DEFINITIONS = [
   { key: "round16", label: "Round of 16", short: "R16", matches: 8 },
   { key: "quarterfinal", label: "Quarterfinals", short: "QF", matches: 4 },
   { key: "semifinal", label: "Semifinals", short: "SF", matches: 2 },
+  { key: "thirdplace", label: "Third Place", short: "3RD", matches: 1 },
   { key: "final", label: "Grand Final", short: "FINAL", matches: 1 }
 ];
 export function tournamentRoster() {
@@ -41,8 +42,17 @@ export const ROUND_DEFINITIONS = [
   { key: "round16", label: "Round of 16", short: "R16", matches: 8 },
   { key: "quarterfinal", label: "Quarterfinals", short: "QF", matches: 4 },
   { key: "semifinal", label: "Semifinals", short: "SF", matches: 2 },
+  { key: "thirdplace", label: "Third Place", short: "3RD", matches: 1 },
   { key: "final", label: "Grand Final", short: "FINAL", matches: 1 }
 ];
+export const ROUND_COLORS = {
+  preliminary: "#34d8eb",
+  round16: "#7d9cff",
+  quarterfinal: "#c780ff",
+  semifinal: "#ff75ac",
+  thirdplace: "#e5a65b",
+  final: "#ffd54a"
+};
 export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + round.matches, 0);
 export const ROUND_LABELS = Object.fromEntries(ROUND_DEFINITIONS.map(round => [round.key, round.label]));
 export const ROUND_ORDER = ROUND_DEFINITIONS.map(round => round.key);
@@ -546,6 +556,7 @@ export function buildTournamentBracket({ random = Math.random, timestamp = Date.
       round16: { key: "round16", label: ROUND_LABELS.round16, matches: [] },
       quarterfinal: { key: "quarterfinal", label: ROUND_LABELS.quarterfinal, matches: [] },
       semifinal: { key: "semifinal", label: ROUND_LABELS.semifinal, matches: [] },
+      thirdplace: { key: "thirdplace", label: ROUND_LABELS.thirdplace, matches: [] },
       final: { key: "final", label: ROUND_LABELS.final, matches: [] }
     },
     // Every class in the bracket, in the order it first appears. Filled in as the
@@ -600,6 +611,13 @@ function createRoundMatches(tournament, roundKey, entrants) {
 // Returns the ordered list of entrants for a round, or null when the round's
 // entrants are not known yet (its feeder round has not finished).
 function entrantsForRound(tournament, roundKey) {
+  if (roundKey === "thirdplace" || roundKey === "final") {
+    const semifinals = tournament.rounds.semifinal?.matches ?? [];
+    if (semifinals.length !== 2 || semifinals.some(match => match.status !== "resolved")) return null;
+    if (roundKey === "final" && (tournament.rounds.thirdplace?.matches.length !== 1
+      || tournament.rounds.thirdplace.matches[0].status !== "resolved")) return null;
+    return semifinals.map(match => roundKey === "thirdplace" ? match.loser : match.winner);
+  }
   const index = ROUND_ORDER.indexOf(roundKey);
   if (index <= 0) return null;
 
@@ -695,6 +713,7 @@ export function matchDetails(tournament, matchId) {
 export const PLACEMENT_BY_ROUND = {
   final: 2,
   semifinal: 3,
+  thirdplace: 4,
   quarterfinal: 5,
   round16: 9,
   preliminary: 17
@@ -709,6 +728,11 @@ export function bestRoundForPlacement(placement) {
 
 function finishFor(tournament, className) {
   if (tournament.champion === className) return { placement: 1, round: "Champion" };
+  const thirdPlace = tournament.rounds.thirdplace?.matches[0];
+  if (thirdPlace?.status === "resolved") {
+    if (thirdPlace.winner === className) return { placement: 3, round: ROUND_LABELS.thirdplace };
+    if (thirdPlace.loser === className) return { placement: 4, round: ROUND_LABELS.thirdplace };
+  }
   const loss = allMatches(tournament).find(match => match.loser === className);
   const placement = loss ? PLACEMENT_BY_ROUND[loss.round] ?? null : null;
   return { placement, round: placement == null ? null : roundLabelFor(tournament, loss.round) };
@@ -758,7 +782,8 @@ function sanitizeClassStats(raw) {
   const placement = best == null || best < 1 ? null : Math.floor(best);
   const allowedRounds = placement === 17
     ? [ROUND_LABELS.preliminary, LEGACY_ROUND_DEFINITIONS[0].label]
-    : [bestRoundForPlacement(placement)];
+    : placement === 3 ? [ROUND_LABELS.semifinal, ROUND_LABELS.thirdplace]
+      : [bestRoundForPlacement(placement)];
   return {
     matches: Math.max(0, Math.floor(sanitizeNumber(source.matches))),
     wins: Math.max(0, Math.floor(sanitizeNumber(source.wins))),
@@ -1094,7 +1119,7 @@ export function recordTournamentResult(tournament, { timestamp = Date.now() } = 
       ...loser,
       matches: loser.matches + 1,
       losses: loser.losses + 1,
-      eliminations: loser.eliminations + 1,
+      eliminations: loser.eliminations + (matchResult.round === "thirdplace" ? 0 : 1),
       totalMatchSeconds: loser.totalMatchSeconds + matchResult.durationSeconds,
       totalSurvivalSeconds: loser.totalSurvivalSeconds + matchResult.durationSeconds
     });
@@ -1324,6 +1349,11 @@ export function loadActiveTournament() {
     // the champion screen for it rather than replaying the bracket.
     if (tournament.status === "complete") return tournament;
 
+    // Older active saves may already have a final but no third-place match.
+    if (!tournament.rounds.thirdplace.matches.length) {
+      const entrants = entrantsForRound(tournament, "thirdplace");
+      if (entrants) createRoundMatches(tournament, "thirdplace", entrants);
+    }
     const pending = nextPendingMatch(tournament);
     if (!pending) {
       // Every recorded match is resolved but the final was never closed out (the
@@ -1412,7 +1442,7 @@ export function validateTournament(tournament, { requireComplete = false } = {})
     const knockedOut = new Set();
     for (const match of matches) {
       if (match.status !== "resolved") continue;
-      if (knockedOut.has(match.winner)) {
+      if (match.round !== "thirdplace" && knockedOut.has(match.winner)) {
         problems.push(`Eliminated class "${match.winner}" won match "${match.id}".`);
       }
       if (match.winner) knockedOut.add(match.loser);

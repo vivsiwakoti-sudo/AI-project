@@ -34,16 +34,17 @@ test('A fireball hit deals no impact damage and its burn totals 5 over 5 seconds
   fireball.update(1 / 60, victim);
   assert.equal(victim.totalDamageTaken, 0, 'the impact itself should deal no damage');
 
-  // 6 seconds comfortably covers the 5-second burn.
-  for (let i = 0; i < 360; i++) {
+  for (let i = 0; i < 300; i++) {
     victim.x = 300;
     victim.y = 400;
     victim.vx = 0;
     victim.vy = 0;
     victim.update(1 / 60, fireball);
     fireball.update(1 / 60, victim);
+    if ((i + 1) % 60 === 0) {
+      assert.equal(victim.totalDamageTaken, (i + 1) / 60, 'each tick deals exactly 1 damage');
+    }
   }
 
-  assert.ok(Math.abs(victim.totalDamageTaken - 5) < 0.05,
-    `the burn should total about 5 damage, got ${victim.totalDamageTaken}`);
+  assert.equal(victim.totalDamageTaken, 5);
 });

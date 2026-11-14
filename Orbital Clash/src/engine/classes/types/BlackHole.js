@@ -134,12 +134,15 @@ export class BlackHole extends FighterBase {
         const arenaSize = this.arenaSize ?? 800;
         this.projectiles.forEach(projectile => {
             projectile.update(dt);
-            if (opponent && DamageSystem.checkHitbox({ x: projectile.x, y: projectile.y, radius: 10 }, opponent, "Body")) {
+            const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
+            const victim = candidates.find(f => f && !f.isDead
+                && DamageSystem.checkHitbox({ x: projectile.x, y: projectile.y, radius: 10 }, f, "Body"));
+            if (victim) {
                 // The singularity is a ranged shot, so a parry can swat the whole
                 // projectile away before it ever opens its event horizon.
-                const spawnsHole = opponent.getParryChance ? opponent.getParryChance("Projectile") : 0;
+                const spawnsHole = victim.getParryChance ? victim.getParryChance("Projectile") : 0;
                 if (spawnsHole > 0 && Math.random() < spawnsHole) {
-                    if (opponent.onParried) opponent.onParried(this, "Projectile", projectile);
+                    if (victim.onParried) victim.onParried(this, "Projectile", projectile);
                     return;
                 }
                 this.openHole(projectile.x, projectile.y, projectile);

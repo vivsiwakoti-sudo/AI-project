@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { audioManager } from "../engine/audio/AudioManager";
 import {
   MATCH_CLOCK_SECONDS,
+  ROUND_COLORS,
   applyMatchResult,
   createTournamentBout,
   nextPendingMatch,
@@ -330,6 +331,7 @@ function TournamentScreenView({
           fighters: bout.fighters,
           particles: bout.particles,
           arenaSize: bout.arenaSize,
+          borderColor: ROUND_COLORS[activeMatch?.round],
           // Draw with the BOUT's simulated time, not the wall clock. The fighters
           // animate off the time they are handed, so wall time left every weapon
           // trail, slash and cooldown ring frozen while the bodies slid around.
@@ -664,7 +666,7 @@ function TournamentScreenView({
             <div
               className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}`}
               ref={arenaWrapRef}
-              style={{ "--arena-px": `${arenaSize}px` }}
+              style={{ "--arena-px": `${arenaSize}px`, "--round-color": ROUND_COLORS[stageMatch?.round] }}
             >
               <HudColumn fighters={leftFighters} side="left" clock={clockLabel} suddenDeath={suddenDeath} />
 

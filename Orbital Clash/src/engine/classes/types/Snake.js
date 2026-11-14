@@ -25,6 +25,10 @@ export class Snake extends FighterBase {
             this.trail.push({ x: this.x, y: this.y, age: 0 });
             this.dropTimer = 0.03;
         }
+        this.updateTrail(dt, opponent);
+    }
+
+    updateTrail(dt, opponent, attacker = this) {
         this.trail.forEach(segment => { segment.age += dt; });
         this.trail = this.trail.filter(segment => segment.age < this.trailLife);
 
@@ -33,7 +37,7 @@ export class Snake extends FighterBase {
         // so every living fighter is tested, not just the single opponent reference
         // handed over by the arena. Each victim has its own accumulator so the tick
         // rate doesn't depend on how many fighters are standing in the venom at once.
-        const walkers = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead);
+        const walkers = (attacker.victims?.length ? attacker.victims : [opponent]).filter(f => f && !f.isDead);
         if (walkers.length) {
             for (const victim of walkers) {
                 const touching = this.trail.some(segment => Math.hypot(segment.x - victim.x, segment.y - victim.y) < victim.radius + 8);
@@ -47,13 +51,13 @@ export class Snake extends FighterBase {
                 // and start the 1-second tick from here.
                 if (!this.dotAccumulators.has(victim)) {
                     this.dotAccumulators.set(victim, 0);
-                    DamageSystem.applyDamage(this, victim, 2, "AOE", { ignoreCooldown: true });
+                    DamageSystem.applyDamage(attacker, victim, 2, "AOE", { ignoreCooldown: true });
                     continue;
                 }
                 const accumulated = this.dotAccumulators.get(victim) + dt;
                 if (accumulated >= 1) {
                     this.dotAccumulators.set(victim, 0);
-                    DamageSystem.applyDamage(this, victim, 2, "AOE", { ignoreCooldown: true });
+                    DamageSystem.applyDamage(attacker, victim, 2, "AOE", { ignoreCooldown: true });
                 } else {
                     this.dotAccumulators.set(victim, accumulated);
                 }
@@ -63,6 +67,11 @@ export class Snake extends FighterBase {
 
     draw(ctx) {
         if (this.isDead || this.health <= 0) return;
+        this.drawTrail(ctx);
+        this.drawSnake(ctx);
+    }
+
+    drawTrail(ctx) {
         // Draw trail with gradient and effects
         if (this.trail.length > 1) {
             ctx.save();
@@ -100,6 +109,9 @@ export class Snake extends FighterBase {
             ctx.restore();
         }
 
+    }
+
+    drawSnake(ctx) {
         // Draw a compact snake body with a short scaly tail
         ctx.save();
         ctx.translate(this.x, this.y);

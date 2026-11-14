@@ -3,7 +3,7 @@ import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
 const WEB_LIFE = 30;
-const WEB_WEAVE_STEP = 0.05;
+const WEB_WEAVE_STEP = 0.02;
 const WEB_DROP_INTERVAL = 1.5;
 
 export class Spider extends FighterBase {
@@ -33,15 +33,15 @@ export class Spider extends FighterBase {
             this.createWeb(this.x, this.y);
             this.dropTimer = WEB_DROP_INTERVAL;
         }
+        this.updateWebs(dt, opponent);
+    }
 
-        // A web slows by 60% for 2 seconds and deals the Spider's damage the moment it is
-        // touched, then vanishes - so a web is a single one-shot trap rather than a DOT field.
-        // Every web that catches a fighter also adds a permanent 5% slow that stacks
-        // with the others and lasts until the bout ends (fighters are rebuilt per bout).
+    updateWebs(dt, opponent, attacker = this) {
+        // A touched web deals damage and adds a stacking permanent 2% slow, then vanishes.
         // Any living fighter can spring it, not just the one opponent the arena
         // hands over, so the other two fighters of a four-way brawl are caught too.
-        const walkers = this.victims?.length
-            ? this.victims
+        const walkers = attacker.victims?.length
+            ? attacker.victims
             : (opponent && !opponent.isDead ? [opponent] : []);
         this.webs = this.webs.filter(web => {
             web.life -= dt;
@@ -50,8 +50,6 @@ export class Spider extends FighterBase {
             if (victim && !web.touched) {
                 web.touched = true;
 
-                // Slowness is applied on touch and lingers briefly afterwards.
-                EffectSystem.addEffect(victim, { name: "web-slow", duration: 2, multiplier: 0.4 });
                 victim.slowVisual = true;
 
                 const weave = EffectSystem.get(victim, "web-weave")
@@ -59,7 +57,7 @@ export class Spider extends FighterBase {
                 weave.stacks += 1;
                 weave.multiplier = Math.max(0, 1 - WEB_WEAVE_STEP * weave.stacks);
 
-                DamageSystem.applyDamage(this, victim, this.damage, "AOE", { ignoreCooldown: true });
+                DamageSystem.applyDamage(attacker, victim, this.damage, "AOE", { ignoreCooldown: true });
                 if (victim.particleSystem) victim.particleSystem.emitImpact(victim.x, victim.y, "#c8ffe0", 12);
 
                 // Spend the web: it is consumed on the touch that triggered it.
@@ -120,6 +118,10 @@ export class Spider extends FighterBase {
         }
         ctx.restore();
 
+        this.drawWebs(ctx);
+    }
+
+    drawWebs(ctx) {
         // Freshly laid webs fade in from the spider outward.
         this.webs.forEach(web => {
             const opacity = Math.max(0.15, web.life / WEB_LIFE);

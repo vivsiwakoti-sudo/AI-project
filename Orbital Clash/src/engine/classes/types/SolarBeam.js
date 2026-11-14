@@ -5,7 +5,7 @@ import { audioManager } from "../../audio/AudioManager.js";
 export class SolarBeam extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
-        this.cooldown = 7;
+        this.cooldown = 8;
         this.cooldownTimer = 0;
         this.isCharging = false;
         this.chargeTimer = 0;

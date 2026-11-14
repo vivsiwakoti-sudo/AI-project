@@ -76,7 +76,7 @@ export class Dragon extends FighterBase {
         return this.baseSpeed * (1 - loss);
     }
 
-    updateFires(dt, opponent) {
+    updateFires(dt, opponent, attacker = this) {
         if (this.isDead) {
             this.fires = [];
             this.fireballs = [];
@@ -87,7 +87,7 @@ export class Dragon extends FighterBase {
 
         // Fire is an area hazard, so every living fighter inside it is tested. A victim
         // burns only after FIRE_BURN_DELAY seconds inside, then takes one tick per second.
-        const victims = (this.victims?.length ? this.victims : [opponent]).filter(f => f && !f.isDead);
+        const victims = (attacker.victims?.length ? attacker.victims : [opponent]).filter(f => f && !f.isDead);
         for (const fire of this.fires) {
             for (const victim of victims) {
                 if (!fireCovers(fire, victim)) {
@@ -100,7 +100,7 @@ export class Dragon extends FighterBase {
                 while (burn.ticks < FIRE_BURN_TICKS
                     && burn.elapsed >= FIRE_BURN_DELAY + burn.ticks * FIRE_TICK_SECONDS) {
                     burn.ticks += 1;
-                    DamageSystem.applyDamage(this, victim, FIRE_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
+                    DamageSystem.applyDamage(attacker, victim, FIRE_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
                 }
             }
         }

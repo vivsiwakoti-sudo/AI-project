@@ -68,6 +68,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
 
   const champion = tournament?.champion;
   const runnerUp = tournament?.runnerUp;
+  const thirdPlace = tournament?.rounds?.thirdplace?.matches[0]?.winner;
   const totalMatches = tournamentTotalMatches(tournament);
   const finalMatch = useMemo(
     () => allMatches(tournament).find(m => m.round === "final"),
@@ -98,6 +99,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
             Defeated <b style={{ color: classColor(runnerUp) }}>{runnerUp}</b> in the Grand Final
           </p>
         ) : null}
+        {thirdPlace ? <p className="champion-runner-up">Third place: <b style={{ color: classColor(thirdPlace) }}>{thirdPlace}</b></p> : null}
         <div className="champion-final-stats">
           <div><span>FINAL DURATION</span><b>{finalMatch && Number.isFinite(finalMatch.durationSeconds) ? `${Math.round(finalMatch.durationSeconds)}s` : "—"}</b></div>
           <div><span>MATCHES PLAYED</span><b>{path.filter(p => p.kind === "match").length}</b></div>

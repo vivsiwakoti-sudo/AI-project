@@ -26,6 +26,7 @@ const { FIGHTER_CLASSES } = await import('./fighterDefinitions.js');
 const {
   BYE_COUNT,
   ROUND_DEFINITIONS,
+  ROUND_COLORS,
   TOTAL_MATCHES,
   TOURNAMENT_HISTORY_KEY,
   TOURNAMENT_SAVE_KEY,
@@ -81,7 +82,8 @@ test('completed tournaments persist and improve best finishes without duplicate 
 
   const first = completeBracket(101);
   const preliminaryLoser = first.rounds.preliminary.matches[0].loser;
-  const semifinalLoser = first.rounds.semifinal.matches[0].loser;
+  const thirdPlace = first.rounds.thirdplace.matches[0].winner;
+  const fourthPlace = first.rounds.thirdplace.matches[0].loser;
   const quarterfinalLoser = first.rounds.quarterfinal.matches[0].loser;
   const round16Loser = first.rounds.round16.matches[0].loser;
   recordTournamentResult(first);
@@ -90,8 +92,10 @@ test('completed tournaments persist and improve best finishes without duplicate 
   assert.equal(stats.classes[first.champion].bestRound, 'Champion');
   assert.equal(stats.classes[first.runnerUp].bestPlacement, 2);
   assert.equal(stats.classes[first.runnerUp].bestRound, 'Grand Final');
-  assert.equal(stats.classes[semifinalLoser].bestPlacement, 3);
-  assert.equal(stats.classes[semifinalLoser].bestRound, 'Semifinals');
+  assert.equal(stats.classes[thirdPlace].bestPlacement, 3);
+  assert.equal(stats.classes[thirdPlace].bestRound, 'Third Place');
+  assert.equal(stats.classes[fourthPlace].bestPlacement, 4);
+  assert.equal(stats.classes[fourthPlace].bestRound, 'Third Place');
   assert.equal(stats.classes[quarterfinalLoser].bestRound, 'Quarterfinals');
   assert.equal(stats.classes[round16Loser].bestRound, 'Round of 16');
   assert.equal(stats.classes[preliminaryLoser].bestPlacement, 17);
@@ -202,9 +206,54 @@ test('an active save records the bout on stage, its round, eliminations and who 
   assert.equal(loadActiveTournament().currentMatchId, next.id, 'restoring resumes the same bout');
 });
 
-test('round sizes are 16 / 8 / 4 / 2 / 1 = 31 matches', () => {
-  assert.deepEqual(ROUND_DEFINITIONS.map(r => r.matches), [16, 8, 4, 2, 1]);
-  assert.equal(TOTAL_MATCHES, 31);
+test('round sizes include the third-place match before the final', () => {
+  assert.deepEqual(ROUND_DEFINITIONS.map(r => r.matches), [16, 8, 4, 2, 1, 1]);
+  assert.equal(TOTAL_MATCHES, 32);
+  assert.equal(new Set(ROUND_DEFINITIONS.map(round => ROUND_COLORS[round.key])).size, ROUND_DEFINITIONS.length);
+});
+
+test('semifinal losers play for third before semifinal winners meet in the final', () => {
+  let tournament = buildTournamentBracket({ random: seeded(37) });
+  let match;
+  while ((match = nextPendingMatch(tournament))?.round !== 'thirdplace') {
+    assert.ok(match);
+    tournament = applyMatchResult(tournament, match, {
+      winner: { name: match.first }, loser: { name: match.second }, durationSeconds: 10
+    }).tournament;
+  }
+  const semifinals = tournament.rounds.semifinal.matches;
+  assert.deepEqual([match.first, match.second], semifinals.map(item => item.loser));
+  tournament = applyMatchResult(tournament, match, {
+    winner: { name: match.first }, loser: { name: match.second }, durationSeconds: 10
+  }).tournament;
+  const final = nextPendingMatch(tournament);
+  assert.equal(final.round, 'final');
+  assert.deepEqual([final.first, final.second], semifinals.map(item => item.winner));
+});
+
+test('an older active save with a pending final gains the third-place match', () => {
+  store.clear();
+  let tournament = buildTournamentBracket({ random: seeded(38) });
+  let match;
+  while ((match = nextPendingMatch(tournament))?.round !== 'thirdplace') {
+    assert.ok(match);
+    tournament = applyMatchResult(tournament, match, {
+      winner: { name: match.first }, loser: { name: match.second }, durationSeconds: 10
+    }).tournament;
+  }
+  const winners = tournament.rounds.semifinal.matches.map(item => item.winner);
+  delete tournament.rounds.thirdplace;
+  tournament.rounds.final.matches = [{
+    id: 'final-1', round: 'final', first: winners[0], second: winners[1], status: 'pending'
+  }];
+  store.set(TOURNAMENT_SAVE_KEY, JSON.stringify(tournament));
+  const restored = loadActiveTournament();
+  assert.ok(restored);
+  assert.equal(nextPendingMatch(restored).round, 'thirdplace');
+  assert.deepEqual(
+    [nextPendingMatch(restored).first, nextPendingMatch(restored).second],
+    restored.rounds.semifinal.matches.map(item => item.loser)
+  );
 });
 
 test('playing every match produces a champion, and the save survives a "close and reopen"', () => {
@@ -230,7 +279,7 @@ test('playing every match produces a champion, and the save survives a "close an
     // continue from the restored copy, as App.jsx does on startTournament().
     const restored = loadActiveTournament();
     if (tournament.status === 'complete') {
-      // The 31st match finishes the tournament; a finished bracket is deliberately
+      // The final match finishes the tournament; a finished bracket is deliberately
       // not resumable (see the dedicated test below).
       assert.equal(restored, null);
       break;
@@ -359,8 +408,8 @@ test('a legacy 26-class tournament save resumes with its original byes and round
   assert.equal(restored.byes.length, 6);
   assert.equal(restored.rounds.preliminary.matches.length, 10);
   assert.equal(nextPendingMatch(restored).id, 'prelim-2');
-  assert.deepEqual(roundDefinitionsFor(restored).map(round => round.matches), [10, 8, 4, 2, 1]);
-  assert.equal(tournamentProgress(restored).total, 25);
+  assert.deepEqual(roundDefinitionsFor(restored).map(round => round.matches), [10, 8, 4, 2, 1, 1]);
+  assert.equal(tournamentProgress(restored).total, 26);
 
   let resumed = restored;
   while (resumed.currentRound === 'preliminary') {

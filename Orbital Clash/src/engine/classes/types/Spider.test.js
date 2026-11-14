@@ -193,21 +193,21 @@ test('An untouched web fades after 30 seconds', () => {
   assert.equal(spider.webs.length, 0, 'the web should be gone after 30 seconds');
 });
 
-test('Each touched web adds a permanent 5% slow that stacks', () => {
+test('Each touched web adds a permanent 2% slow that stacks', () => {
   const spider = spiderAt(100, 100);
   const target = dummy(700, 100);
   spider.dropTimer = 1000;
 
   spider.createWeb(700, 100);
   spider.update(1 / 60, target);
-  assert.ok(Math.abs(EffectSystem.slowMultiplier(target) - 0.4 * 0.95) < 1e-9, 'one web: 60% slow times 5% weave');
+  assert.ok(Math.abs(EffectSystem.slowMultiplier(target) - 0.98) < 1e-9, 'one web: 2% slow');
 
   spider.createWeb(700, 100);
   spider.update(1 / 60, target);
-  assert.ok(Math.abs(EffectSystem.slowMultiplier(target) - 0.4 * 0.9) < 1e-9, 'two webs: 60% slow times 10% weave');
+  assert.ok(Math.abs(EffectSystem.slowMultiplier(target) - 0.96) < 1e-9, 'two webs: 4% slow');
 });
 
-test('The 5% weave outlasts the 2 second web slow', () => {
+test('The 2% weave remains after time passes', () => {
   const spider = spiderAt(100, 100);
   const target = dummy(700, 100);
   spider.dropTimer = 1000;
@@ -222,7 +222,7 @@ test('The 5% weave outlasts the 2 second web slow', () => {
     EffectSystem.updateEffects(target, 1 / 60);
   }
 
-  assert.ok(Math.abs(EffectSystem.slowMultiplier(target) - 0.9) < 1e-9, 'the 10% weave should remain');
+  assert.ok(Math.abs(EffectSystem.slowMultiplier(target) - 0.96) < 1e-9, 'the 4% weave should remain');
 });
 
 test('Stacked web slow never drops below a full stop', () => {
@@ -230,7 +230,7 @@ test('Stacked web slow never drops below a full stop', () => {
   const target = dummy(700, 100);
   spider.dropTimer = 1000;
 
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 55; i++) {
     spider.createWeb(700, 100);
     spider.update(1 / 60, target);
   }

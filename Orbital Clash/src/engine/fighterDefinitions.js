@@ -109,7 +109,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Bombs",
     cooldown: 5,
     description: "Lays explosive mines.",
-    description2: "Drops proximity mines every 5 seconds. Mines arm quickly, detonate for 10 damage in a 20px radius, and expire after 25 seconds. The Mine Layer is immune to its own explosions.",
+    description2: "Drops proximity mines every 5 seconds. Mines arm quickly and remain until touched, detonating for 10 damage. The Mine Layer is immune to its own explosions.",
     keywords: ["mine", "explosion", "aoe", "trap"],
   },
   "Fireball": {
@@ -123,7 +123,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 3,
     description: "Fires increasing numbers of fireballs.",
-    description2: "Every attack fires one more fireball than the last. Each fireball deals no impact damage, but applies its own independent burn that deals 5 damage in total over 5 seconds. More hits mean more separate burn stacks.",
+    description2: "Every attack fires one more fireball than the last. Each fireball deals no impact damage, but applies an independent burn dealing 1 damage each second for 5 ticks. More hits mean more separate burn stacks.",
     keywords: ["fire", "volley", "burn", "dot", "stacking"],
   },
   "Duplicator": {
@@ -232,9 +232,9 @@ export const FIGHTER_CLASSES = {
     bodySize: 40,
     shape: "star",
     attackType: "Beam",
-    cooldown: 7,
+    cooldown: 8,
     description: "Charges and fires a powerful beam.",
-    description2: "Visibly gathers light for a moment before releasing a 25-damage laser across the arena. Every successful hit shaves 10% off the cooldown, down to a 2-second floor, so the second shot comes sooner than the first.",
+    description2: "Visibly gathers light before releasing a 25-damage laser. The cooldown starts at 8 seconds and decreases by 10% per successful hit, down to 2 seconds.",
     keywords: ["laser", "beam", "charge", "cooldown"],
   },
   "Berserker": {
@@ -262,7 +262,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 4,
     description: "Lays webs to slow and damage.",
-    description2: "Spins one web every 1.5 seconds wherever it walks. Anything that touches a web is slowed by 60% for 2 seconds, takes 5 damage, and gains a permanent 5% slow that stacks with every web it touches until the bout ends - and the web is spent on that touch, vanishing instantly. Untouched webs fade after 30 seconds, so the arena becomes a field of single-use traps.",
+    description2: "Spins one web every 1.5 seconds wherever it walks. Touching a web deals 5 damage and applies a permanent 2% slow that stacks until the bout ends. The web disappears on touch or after 30 seconds.",
     keywords: ["web", "slow", "zone", "dot", "trap"],
   },
   "Tunneler": {
@@ -283,14 +283,14 @@ export const FIGHTER_CLASSES = {
     name: "Tornado",
     color: "#E0FFFF",
     health: 100,
-    damage: 10,
+    damage: 15,
     speed: 6,
     bodySize: 48,
     shape: "vortex",
     attackType: "Area",
     cooldown: 4,
     description: "AOE wind burst.",
-    description2: "Releases an expanding ring of wind every 4 seconds that hits everything in a small radius for 10 damage and hurls the victim outward.",
+    description2: "Releases an expanding ring of wind every 4 seconds that hits everything within 200 pixels for 15 damage and hurls the victim outward.",
     keywords: ["wind", "aoe", "knockback", "burst"],
   },
   "Meteor": {
@@ -364,7 +364,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 0,
     description: "Adapts to enemy attacks.",
-    description2: "A heavy puncher that studies what hits it. The wheel over its head spins hard every time it adapts. After three hits from a category it adapts: melee becomes 30% resistant and unlocks a 25% parry that stuns the attacker for 1 second, projectiles become 50% resistant and unlock a 35% parry against further ranged shots, and body contact becomes 75% resistant. Its own body is a weapon too: slamming into an opponent deals its damage.",
+    description2: "Adapts separately to every attack category: after 3, 5 and 7 landed hits it gains 30%, 50% and 70% resistance. Melee adaptation unlocks a 25% parry that stuns for 1 second; projectile adaptation unlocks a 35% parry.",
     keywords: ["adapt", "resist", "parry", "wheel", "tank"],
   },
   "Summoner": {
@@ -462,7 +462,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 5,
     description: "Copies a random fighter's abilities and weapons temporarily.",
-    description2: "Starts in base form. After 5 seconds, copies a random class's abilities and weapons for 11 seconds, then returns to base form for 5 seconds and repeats. Keeps its own health, damage and speed rather than copying the other class's stats. Cannot copy Mimic, Mahoraga or Mutant. Duplicator clones and Summoner minions remain until they or the Mimic die.",
+    description2: "Starts in base form. After 5 seconds, copies a random class's abilities and weapons for 11 seconds, then returns to base form for 5 seconds and repeats. Keeps its own health, damage and speed. Cannot copy Mimic, Mahoraga or Mutant. Copied traps and trails persist for their normal lifetime, and clones and minions remain until they or the Mimic die.",
     keywords: ["copy", "transform", "random", "weapon", "body"],
   }
 };

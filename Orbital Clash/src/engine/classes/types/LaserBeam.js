@@ -85,14 +85,14 @@ export class LaserBeam extends FighterBase {
     }
 
     // Returns false once a fixed trail has lingered long enough and should be removed.
-    updateLaser(trail, dt, victims) {
+    updateLaser(trail, dt, victims, attacker = this) {
         if (!trail.fixed) {
             this.recordPathPoint(trail);
         } else {
             trail.fixedTimer -= dt;
             if (trail.fixedTimer <= 0) return false;
         }
-        this.applyLaserContact(trail, dt, victims);
+        this.applyLaserContact(trail, dt, victims, attacker);
         return true;
     }
 
@@ -107,14 +107,14 @@ export class LaserBeam extends FighterBase {
     // fixed, anyone still touching it takes TICK_DAMAGE every TICK_SECONDS. A touch that is
     // dodged or blocked is retried each frame until it lands, while the fighter is still
     // touching the line.
-    applyLaserContact(trail, dt, victims) {
+    applyLaserContact(trail, dt, victims, attacker = this) {
         const touchingNow = new Set();
         for (const victim of victims) {
             const distance = distanceToPath(victim.x, victim.y, trail.points);
             if (distance >= victim.radius + LASER_HALF_WIDTH) continue;
             touchingNow.add(victim);
             if (!trail.touching.has(victim)) {
-                if (DamageSystem.applyDamage(this, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true })) {
+                if (DamageSystem.applyDamage(attacker, victim, TOUCH_DAMAGE, "Beam", { ignoreCooldown: true })) {
                     trail.touching.set(victim, 0);
                 }
                 continue;
@@ -123,7 +123,7 @@ export class LaserBeam extends FighterBase {
             const accumulated = trail.touching.get(victim) + dt;
             if (accumulated >= TICK_SECONDS) {
                 trail.touching.set(victim, accumulated - TICK_SECONDS);
-                DamageSystem.applyDamage(this, victim, TICK_DAMAGE, "Beam", { ignoreCooldown: true });
+                DamageSystem.applyDamage(attacker, victim, TICK_DAMAGE, "Beam", { ignoreCooldown: true });
             } else {
                 trail.touching.set(victim, accumulated);
             }

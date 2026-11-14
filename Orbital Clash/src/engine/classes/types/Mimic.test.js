@@ -141,6 +141,67 @@ test('Summoner minions survive the end of the copied form and die with Mimic', (
   assert.equal(minion.isDead, true);
 });
 
+test('copied mines persist through form changes until a victim touches them', () => {
+  const mimic = makeMimic();
+  mimic.startCopiedForm('Mine Layer');
+  mimic.mines.push({ x: 400, y: 400, age: 0 });
+  mimic.endCopiedForm();
+  mimic.mimicTimer = 1000;
+  mimic.update(40, null);
+  assert.equal(mimic.placedAttacks[0].owner.mines.length, 1);
+  mimic.startCopiedForm('Knight');
+  const victim = FighterFactory.createFighter('Gunner', 400, 400);
+  mimic.update(0.01, victim);
+  assert.equal(victim.health, victim.maxHealth - 5);
+  assert.equal(mimic.placedAttacks.length, 0);
+});
+
+test('copied webs and snake trails keep their original remaining lifetimes', () => {
+  for (const [form, field, lifetime] of [['Spider', 'webs', 30], ['Snake', 'trail', 15]]) {
+    const mimic = makeMimic();
+    mimic.startCopiedForm(form);
+    if (form === 'Spider') mimic.createWeb(400, 400);
+    else mimic.trail.push({ x: 400, y: 400, age: 0 });
+    mimic.endCopiedForm();
+    mimic.mimicTimer = 1000;
+    mimic.update(lifetime - 1, null);
+    assert.equal(mimic.placedAttacks[0].owner[field].length, 1, form);
+    mimic.update(2, null);
+    assert.equal(mimic.placedAttacks.length, 0, form);
+  }
+});
+
+test('copied laser stops drawing at the form change, damages and fades normally', () => {
+  const mimic = makeMimic();
+  const victim = FighterFactory.createFighter('Gunner', 400, 400);
+  mimic.startCopiedForm('Laser Beam');
+  mimic.lasers.push({
+    points: [{ x: 390, y: 400 }, { x: 410, y: 400 }],
+    fixed: false, wallHits: 0, fixedTimer: 5, touching: new Map()
+  });
+  mimic.endCopiedForm();
+  mimic.mimicTimer = 1000;
+  mimic.update(0.1, victim);
+  assert.equal(victim.health, victim.maxHealth - 3);
+  mimic.update(0.5, victim);
+  assert.equal(victim.health, victim.maxHealth - 6);
+  mimic.update(4.5, null);
+  assert.equal(mimic.placedAttacks.length, 0);
+});
+
+test('copied dragon fire remains active until its normal expiry', () => {
+  const mimic = makeMimic();
+  const victim = FighterFactory.createFighter('Gunner', 400, 400);
+  mimic.startCopiedForm('Dragon');
+  mimic.explode(400, 400);
+  mimic.endCopiedForm();
+  mimic.mimicTimer = 1000;
+  mimic.update(1, victim);
+  assert.equal(victim.health, victim.maxHealth - 5);
+  mimic.update(4.1, null);
+  assert.equal(mimic.placedAttacks.length, 0);
+});
+
 test('each eligible copied form runs in the battle loop with Mimic stats', () => {
   const context = makeContext();
   for (const name of MIMIC_CLASSES) {

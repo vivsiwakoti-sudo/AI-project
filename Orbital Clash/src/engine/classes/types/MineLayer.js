@@ -5,7 +5,6 @@ export class MineLayer extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
         this.mines = []; // {x, y, age}
-        this.mineLifetime = 25;
         this.mineCooldown = 1.5; // Small arming delay before the first mine.
         this.hitColor = "#ffd166";
         this.MINE_RADIUS = 20; // 2x the original 10px body - keeps the trigger radius in sync with the visual.
@@ -23,30 +22,32 @@ export class MineLayer extends FighterBase {
             this.mineCooldown = this.cooldown || 5;
             this.useAbility();
         }
+        this.updateMines(dt, opponent);
+    }
 
+    updateMines(dt, opponent, attacker = this) {
         // Check Mine Collisions. Mines are AoE, so every living fighter in the
         // arena can set one off - not just the single opponent this class was
         // handed, which used to let the other two fighters of a four-way brawl
         // walk over mines untouched.
-        const standing = this.victims?.length
-            ? this.victims
+        const standing = attacker.victims?.length
+            ? attacker.victims
             : (opponent && !opponent.isDead ? [opponent] : []);
         if (standing.length) {
             this.mines = this.mines.filter(mine => {
                 const victim = standing.find(f => Math.hypot(mine.x - f.x, mine.y - f.y) < this.MINE_RADIUS * 2 + f.radius);
                 if (!victim) return true;
-                this.explode(mine, victim);
+                this.explode(mine, victim, attacker);
                 return false;
             });
         }
 
-        // Clean up expired mines using game time so 2x/3x speed stays consistent.
+        // Age drives the blinking animation; untouched mines do not expire.
         this.mines.forEach(mine => { mine.age += dt; });
-        this.mines = this.mines.filter(mine => mine.age < this.mineLifetime);
     }
 
-    explode(mine, opponent) {
-        DamageSystem.applyDamage(this, opponent, this.damage, "AOE", { ignoreCooldown: true });
+    explode(mine, opponent, attacker = this) {
+        DamageSystem.applyDamage(attacker, opponent, this.damage, "AOE", { ignoreCooldown: true });
         this.detonationFlash = 0.35;
         this.detonationX = mine.x;
         this.detonationY = mine.y;
@@ -63,15 +64,17 @@ export class MineLayer extends FighterBase {
 
     draw(ctx) {
         super.draw(ctx);
+        this.drawMines(ctx);
+    }
 
+    drawMines(ctx) {
         // Draw Mines with detailed visuals
         this.mines.forEach(mine => {
-            const opacity = Math.max(0.3, 1 - mine.age / this.mineLifetime);
             const R = this.MINE_RADIUS;
             const pulse = (Math.sin((mine.age || 0) * 8) + 1) / 2;
 
             ctx.save();
-            ctx.globalAlpha = opacity;
+            ctx.globalAlpha = 1;
 
             // Warning aura that pulses faster as the mine ages.
             const aura = ctx.createRadialGradient(mine.x, mine.y, R * 0.6, mine.x, mine.y, R * 2.2);

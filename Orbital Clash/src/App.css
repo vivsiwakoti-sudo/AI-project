@@ -985,7 +985,9 @@
 
 .fighter-info-panel {
   --class-accent: var(--cyan);
-  width: min(520px, 100%);
+  width: max-content;
+  min-width: min(520px, 100%);
+  max-width: 100%;
   max-height: 88vh;
   overflow-y: auto;
   box-sizing: border-box;
@@ -1007,12 +1009,15 @@
   border-bottom: 1px solid var(--border-soft);
 }
 
+.fighter-info-panel header > div { min-width: 0; }
+
 .fighter-info-panel h2 {
   margin-top: 6px;
   color: var(--text-h);
   font: 700 1.6rem var(--font-ui);
   letter-spacing: 0.03em;
   text-shadow: 0 0 10px color-mix(in srgb, var(--class-accent) 40%, transparent);
+  overflow-wrap: anywhere;
 }
 
 .fighter-info-close {
@@ -2144,7 +2149,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--round-color, var(--border));
   border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse at 50% 50%, rgba(47, 123, 255, 0.1), transparent 65%),
@@ -2200,7 +2205,7 @@
   .tournament-hud { font-size: 0.78em; }
 }
 
-.tournament-arena-sudden { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); box-shadow: inset 0 0 60px rgba(255, 45, 85, 0.18), var(--shadow-md); }
+.tournament-arena-sudden { border-color: var(--round-color, var(--danger)); box-shadow: inset 0 0 60px rgba(255, 45, 85, 0.18), var(--shadow-md); }
 
 .tournament-hud {
   display: flex;
@@ -2633,7 +2638,7 @@
   flex-direction: column;
   gap: 2px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 2px solid var(--round-color, var(--border-soft));
 }
 
 .tb-round-head h3 {
@@ -2662,16 +2667,16 @@
   flex-direction: column;
   gap: 6px;
   padding: 7px 8px;
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--round-color, var(--border-soft));
   border-radius: var(--radius);
   background: rgba(5, 7, 15, 0.55);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
-.tb-match-done { border-color: color-mix(in srgb, var(--success) 22%, var(--border-soft)); }
+.tb-match-done { border-color: var(--round-color, var(--border-soft)); }
 
 .tb-match-current {
-  border-color: var(--cyan);
+  border-color: var(--round-color, var(--cyan));
   box-shadow: 0 0 0 1px var(--cyan-glow), 0 0 18px rgba(0, 242, 255, 0.16);
 }
 
@@ -2842,7 +2847,9 @@
 }
 
 .match-details {
-  width: min(560px, 100%);
+  width: max-content;
+  min-width: min(560px, 100%);
+  max-width: 100%;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
   box-sizing: border-box;
@@ -2888,6 +2895,7 @@
   margin: 10px 0 14px;
   font: 800 1.35rem var(--font-title);
   letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
 }
 
 .match-details-title em { color: var(--text-muted); font: 600 0.8rem var(--font-ui); font-style: normal; }
@@ -2903,7 +2911,7 @@
 
 .match-details-summary > div { display: flex; flex-direction: column; gap: 3px; }
 .match-details-summary span { color: var(--text-muted); font: 700 0.56rem var(--font-data); letter-spacing: 0.14em; }
-.match-details-summary b { color: var(--text-h); font: 700 1.05rem var(--font-mono); }
+.match-details-summary b { color: var(--text-h); font: 700 1.05rem var(--font-mono); overflow-wrap: anywhere; }
 
 .match-details-note { margin: 12px 0 0; color: var(--text-secondary); font-size: 0.78rem; line-height: 1.45; }
 
@@ -2917,6 +2925,7 @@
 .match-details-fighter {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--fighter-color) 35%, var(--border));
@@ -3034,7 +3043,7 @@
 /* The preliminary round holds the only real cards, so it gets as many columns as
    the stage shape calls for (set from JavaScript); the rounds that are still
    placeholders are kept narrow. */
-.overview-bracket .tb-rounds { grid-template-columns: var(--ov-tracks, 4fr 1.2fr 0.8fr 0.8fr 0.8fr); gap: 16px; }
+.overview-bracket .tb-rounds { grid-template-columns: var(--ov-tracks, 4fr 1.2fr 0.8fr 0.8fr 0.8fr 0.8fr); gap: 16px; }
 
 .overview-bracket [data-round="preliminary"] .tb-round-matches {
   display: grid;

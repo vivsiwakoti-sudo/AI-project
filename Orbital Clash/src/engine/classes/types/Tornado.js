@@ -8,7 +8,7 @@ export class Tornado extends FighterBase {
         this.aoeActive = false;
         this.aoeTimer = 0;
         this.burstDuration = 0.4;
-        this.radiusReach = 150;
+        this.radiusReach = 200;
         this.burstVictims = new Set();
     }
 
@@ -87,7 +87,7 @@ export class Tornado extends FighterBase {
             ctx.shadowColor = "#38d8ff";
             for (let i = 0; i < 3; i++) {
                 const ringProgress = Math.max(0, windStrength - i * 0.18);
-                const ringRadius = this.radius + ringProgress * (150 - this.radius);
+                const ringRadius = this.radius + ringProgress * (this.radiusReach - this.radius);
                 const opacity = (1 - ringProgress) * (1 - i / 4) * 0.75;
                 ctx.strokeStyle = `rgba(120, 230, 255, ${opacity})`;
                 ctx.lineWidth = 4 - i;
@@ -101,7 +101,7 @@ export class Tornado extends FighterBase {
             for (let s = 0; s < 6; s++) {
                 const base = spin + s * (Math.PI * 2 / 6);
                 const r0 = this.radius + 6 + windStrength * 20;
-                const r1 = this.radius + 30 + windStrength * 110;
+                const r1 = this.radius + 30 + windStrength * (this.radiusReach - this.radius - 10);
                 ctx.strokeStyle = `rgba(200, 245, 255, ${(1 - windStrength * 0.6) * 0.55})`;
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -129,7 +129,7 @@ export class Tornado extends FighterBase {
             ctx.fillStyle = `rgba(220, 255, 255, ${windStrength * 0.7})`;
             for (let i = 0; i < 10; i++) {
                 const angle = (i / 10) * Math.PI * 2 + spin * 0.5;
-                const particleDistance = this.radius + windStrength * (150 - this.radius);
+                const particleDistance = this.radius + windStrength * (this.radiusReach - this.radius);
                 ctx.beginPath();
                 ctx.arc(this.x + Math.cos(angle) * particleDistance, this.y + Math.sin(angle) * particleDistance, 2.2, 0, Math.PI * 2);
                 ctx.fill();

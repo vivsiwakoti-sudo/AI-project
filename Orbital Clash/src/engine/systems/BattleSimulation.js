@@ -342,6 +342,7 @@ export function drawBattleFrame(ctx, {
   arenaSize,
   time,
   suddenDeath = false,
+  borderColor = "rgba(0, 242, 255, 0.4)",
   deadBodyFade = null,
   onFighterError = null
 }) {
@@ -361,7 +362,7 @@ export function drawBattleFrame(ctx, {
   // keeps only the pixels strictly inside the path, so stroking the border while
   // clipped to that same rect throws the whole 2px line away and the arena reads
   // as "no outline, just the inner floor". Stroke first, then clip what follows.
-  ctx.strokeStyle = "rgba(0, 242, 255, 0.4)";
+  ctx.strokeStyle = borderColor;
   ctx.lineWidth = 2;
   ctx.strokeRect(inner, inner, innerSize, innerSize);
   ctx.beginPath();

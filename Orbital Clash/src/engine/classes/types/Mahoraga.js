@@ -4,25 +4,16 @@ import { EffectSystem } from "../../systems/EffectSystem.js";
 const MELEE_PARRY_CHANCE = 0.25;
 const MELEE_PARRY_STUN_SECONDS = 1;
 
-// Every adaptation takes this long to complete after its hit threshold is reached.
-const ADAPT_SECONDS = 5;
-
-// One entry per adaptation step: the category hit count that starts it and the
-// resistance it grants once it completes. Projectile climbs 30% -> 40% -> 50%.
-const ADAPTATION_STEPS = {
-    Melee: [{ hits: 3, resistance: 0.3 }],
-    Projectile: [{ hits: 3, resistance: 0.3 }, { hits: 4, resistance: 0.4 }, { hits: 5, resistance: 0.5 }],
-    Body: [{ hits: 3, resistance: 0.75 }],
-    Beam: [{ hits: 3, resistance: 0 }],
-    AOE: [{ hits: 3, resistance: 0 }]
-};
+const ADAPTATION_STEPS = [
+    { hits: 3, resistance: 0.3 },
+    { hits: 5, resistance: 0.5 },
+    { hits: 7, resistance: 0.7 }
+];
 
 export class Mahoraga extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
-        this.adaptation = { Melee: 0, Projectile: 0, Body: 0, Beam: 0, AOE: 0 };
-        this.adaptScheduled = { Melee: 0, Projectile: 0, Body: 0, Beam: 0, AOE: 0 }; // steps already queued per category
-        this.adaptQueue = []; // {category, resistance, remaining} in the order they were earned
+        this.adaptation = Object.create(null);
         this.adaptedCategories = []; // Contains {category, resistance}
         this.impactFlash = 0;
         this.impactX = 0;
@@ -129,32 +120,11 @@ export class Mahoraga extends FighterBase {
         projectile.damage *= 1.25;
     }
 
-    // Called by DamageSystem when hit. Hits only queue an adaptation; it takes
-    // effect once ADAPT_SECONDS have passed, and each category adapts one step at a time.
-    onHitTaken(category, damage) {
-        if (this.adaptation[category] !== undefined) {
-            this.adaptation[category]++;
-            const next = ADAPTATION_STEPS[category][this.adaptScheduled[category]];
-            if (next && this.adaptation[category] >= next.hits) {
-                this.adaptScheduled[category]++;
-                this.adaptQueue.push({ category, resistance: next.resistance, remaining: ADAPT_SECONDS });
-            }
-        }
-        return true;
-    }
-
-    // Counts down the head adaptation of each category and completes any that finish.
-    tickAdaptations(dt) {
-        const counted = new Set();
-        for (const entry of this.adaptQueue) {
-            if (counted.has(entry.category)) continue;
-            counted.add(entry.category);
-            entry.remaining -= dt;
-        }
-        const finished = this.adaptQueue.filter(entry => entry.remaining <= 0);
-        if (finished.length === 0) return;
-        this.adaptQueue = this.adaptQueue.filter(entry => entry.remaining > 0);
-        finished.forEach(entry => this.completeAdaptation(entry));
+    onDamaged(amount, category, options = {}) {
+        super.onDamaged(amount, category, options);
+        const hits = this.adaptation[category] = (this.adaptation[category] || 0) + 1;
+        const step = ADAPTATION_STEPS.find(item => item.hits === hits);
+        if (step) this.completeAdaptation({ category, resistance: step.resistance });
     }
 
     completeAdaptation({ category, resistance }) {
@@ -186,7 +156,6 @@ export class Mahoraga extends FighterBase {
         this.adaptFlash = Math.max(0, (this.adaptFlash || 0) - dt);
         this.parryFlash = Math.max(0, (this.parryFlash || 0) - dt);
         this.parryRingRadius += dt * 190;
-        this.tickAdaptations(dt);
 
         // Spin the wheel: the adaptation burst decays into the slow idle turn and
         // the rendered angle integrates a smoothed rate, so the wheel winds up and

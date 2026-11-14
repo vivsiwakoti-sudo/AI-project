@@ -125,3 +125,28 @@ test('Each new event horizon can damage the same fighter again', () => {
 
   assert.equal(near.totalDamageTaken, 30, 'a second hole should hit the fighter with a fresh 3 ticks');
 });
+
+test('a hole pulls every nearby victim, including more than four enemies', () => {
+  const blackHole = new BlackHole(stats('Black Hole'), 400, 400);
+  const victims = Array.from({ length: 10 }, (_, i) => new FighterBase(stats(`Victim ${i}`), 100 + i * 5, 400));
+  for (const victim of victims) { victim.vx = 0; victim.vy = 0; }
+  blackHole.victims = victims;
+  collapseAtLeftWall(blackHole);
+  blackHole.update(0.05, null);
+  for (const victim of victims) {
+    assert.equal(victim.isPulledIn, true);
+    assert.ok(victim.vx < 0);
+    assert.equal(victim.totalDamageTaken, 5);
+  }
+});
+
+test('the projectile can open a hole on a non-targeted enemy', () => {
+  const blackHole = new BlackHole(stats('Black Hole'), 100, 400);
+  const target = new FighterBase(stats('Target'), 700, 400);
+  const bystander = new FighterBase(stats('Bystander'), 300, 400);
+  blackHole.victims = [target, bystander];
+  blackHole.cooldownTimer = 99;
+  blackHole.projectiles.push(new Projectile(290, 400, 1, 0, 0, blackHole));
+  blackHole.update(1 / 60, target);
+  assert.ok(blackHole.activeHole);
+});

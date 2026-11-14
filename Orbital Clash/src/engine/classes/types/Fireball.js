@@ -5,9 +5,8 @@ import { EffectSystem } from "../../systems/EffectSystem.js";
 import { audioManager } from "../../audio/AudioManager.js";
 
 const BURN_DURATION = 5;
-const BURN_TICK_INTERVAL = 1 / 3;
-const BURN_TOTAL_DAMAGE = 5;
-const BURN_TICK_DAMAGE = BURN_TOTAL_DAMAGE / Math.round(BURN_DURATION / BURN_TICK_INTERVAL);
+const BURN_TICK_INTERVAL = 1;
+const BURN_TICK_DAMAGE = 1;
 
 export class Fireball extends FighterBase {
     constructor(data, x, y) {
@@ -62,13 +61,13 @@ export class Fireball extends FighterBase {
                     duration: BURN_DURATION,
                     tickTimer: 0,
                     onUpdate: (fighter, effect, elapsed) => {
-                        effect.tickTimer += elapsed;
-                        if (effect.tickTimer >= BURN_TICK_INTERVAL) {
+                        effect.tickTimer += Math.min(elapsed, Math.max(0, effect.duration + elapsed));
+                        while (effect.tickTimer + 1e-9 >= BURN_TICK_INTERVAL) {
                             // Burn ticks are a damage-over-time source, not the
                             // class's attack, so they must not put the Fireball's
                             // own touch damage on cooldown.
                             DamageSystem.applyDamage(this, fighter, BURN_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
-                            effect.tickTimer = 0;
+                            effect.tickTimer -= BURN_TICK_INTERVAL;
                         }
                     }
                 });
