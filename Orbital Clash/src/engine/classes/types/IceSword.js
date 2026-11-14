@@ -29,22 +29,25 @@ export class IceSword extends FighterBase {
             const target = this.bladeTouchTarget(swordX, swordY, opponent, this.bladeEdgeRadius);
             if (target) {
                 // The blade may only connect once per sweep, not every frame it overlaps.
-                if (this.cooldownTimer <= 0 && DamageSystem.applyDamage(this, target, this.damage, "Melee", { ignoreCooldown: true })) {
+                if (this.cooldownTimer <= 0 && this.attackPauseTimer <= 0) {
+                    const landed = DamageSystem.applyDamage(this, target, this.damage, "Melee", { ignoreCooldown: true });
                     this.useAbility();
-                    this.slashFlash = 1;
-                    this.slashX = swordX;
-                    this.slashY = swordY;
-                    // Quick frost swipe arc in the direction the blade struck.
-                    this.triggerSwing(this.swordAngle, { duration: 0.2, reach: 38, color: "#bfe9ff" });
-                    EffectSystem.addEffect(target, {
-                        name: "slow",
-                        duration: 2,
-                        onEnd: fighter => { fighter.slowVisual = false; }
-                    });
-                    target.slowVisual = true;
-                    EffectSystem.rollFreeze(target, 2);
-                    if (target.particleSystem) {
-                        target.particleSystem.emitImpact(swordX, swordY, "#bfe9ff", 12);
+                    if (landed) {
+                        this.slashFlash = 1;
+                        this.slashX = swordX;
+                        this.slashY = swordY;
+                        // Quick frost swipe arc in the direction the blade struck.
+                        this.triggerSwing(this.swordAngle, { duration: 0.2, reach: 38, color: "#bfe9ff" });
+                        EffectSystem.addEffect(target, {
+                            name: "slow",
+                            duration: 2,
+                            onEnd: fighter => { fighter.slowVisual = false; }
+                        });
+                        target.slowVisual = true;
+                        EffectSystem.rollFreeze(target, 2);
+                        if (target.particleSystem) {
+                            target.particleSystem.emitImpact(swordX, swordY, "#bfe9ff", 12);
+                        }
                     }
                 }
             }

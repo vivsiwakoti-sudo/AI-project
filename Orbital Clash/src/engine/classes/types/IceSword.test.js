@@ -57,3 +57,16 @@ test('an Ice Sword hit still slows the victim', () => {
   assert.equal(victim.statusEffects.some(effect => effect.name === 'slow'), true);
   assert.equal(victim.health < 100, true, 'the hit still lands for damage');
 });
+
+test('a paused Ice Sword does not start its attack cooldown', () => {
+  const sword = new IceSword(data('Ice Sword'), 100, 100);
+  const victim = new FighterBase(data('Victim'), 140, 100);
+  sword.swordAngle = 0;
+  sword.cooldownTimer = 0;
+  sword.pauseAttacks(1);
+
+  sword.update(0, victim);
+
+  assert.equal(sword.cooldownTimer, 0);
+  assert.equal(victim.health, 100);
+});

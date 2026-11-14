@@ -61,7 +61,7 @@ export class Gunner extends FighterBase {
     projectileVictims(opponent, projectile, hitRadius) {
         const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
         for (const victim of candidates) {
-            if (victim.isDead || victim.health <= 0) continue;
+            if (victim.isDead || victim.health <= 0 || projectile.dodgedVictims?.has(victim)) continue;
             if (DamageSystem.checkHitbox({ x: projectile.x, y: projectile.y, radius: hitRadius }, victim, "Body")) {
                 return victim;
             }

@@ -146,6 +146,10 @@ export class DamageSystem {
         const avoidance = victim.getAvoidanceChance ? victim.getAvoidanceChance(category) : 0;
         if ((avoidance > 0 && Math.random() < avoidance) ||
             (victim.dodgeChance > 0 && Math.random() < victim.dodgeChance)) {
+            if (options.projectile) {
+                options.projectile.dodgedVictims ??= new WeakSet();
+                options.projectile.dodgedVictims.add(victim);
+            }
             if (victim.onAvoidedHit) victim.onAvoidedHit(attacker, category);
             audioManager.playDodgeSfx();
             return false;

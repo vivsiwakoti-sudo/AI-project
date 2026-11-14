@@ -85,17 +85,19 @@ export class Ninja extends FighterBase {
             if (!dart.hit) {
                 const struck = pool.find(f => Math.hypot(f.x - dart.x, f.y - dart.y) < f.radius + 8);
                 if (struck) {
+                    // A dodged or deflected dart cannot pull or apply its effects.
+                    if (!DamageSystem.applyDamage(this, struck, 11, "Melee", { ignoreCooldown: true })) {
+                        this.ropeActive = false;
+                        this.ropeDart = null;
+                        this.cooldownTimer = this.cooldown || 6;
+                        return;
+                    }
                     dart.target = struck;
                     dart.hit = true;
                     dart.x = struck.x;
                     dart.y = struck.y;
                     dart.savedVx = struck.vx;
                     dart.savedVy = struck.vy;
-                    // 11 damage on impact, then a 4 damage punch when it is released.
-                    // ignoreCooldown keeps this yank damage from consuming the
-                    // fighter's own attack cooldown, so the rope's damage is paced
-                    // by the rope.
-                    DamageSystem.applyDamage(this, struck, 11, "Melee", { ignoreCooldown: true });
                     if (struck.particleSystem) struck.particleSystem.emitImpact(struck.x, struck.y, "#d9d9d9", 18);
 
                     if (Math.random() < 0.33) {

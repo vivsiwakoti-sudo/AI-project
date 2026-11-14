@@ -33,7 +33,7 @@ export class Tunneler extends FighterBase {
             // crosses rather than only the one opponent reference handed over by
             // the arena.
             const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
-            const struck = candidates.find(victim => victim && !victim.isDead
+            const struck = candidates.find(victim => victim && !victim.isDead && !spike.dodgedVictims?.has(victim)
                 && DamageSystem.checkHitbox({ x: spike.x, y: spike.y, radius: 4 }, victim, "Body"));
             if (struck) {
                 // A parried spike is turned around instead of being consumed.

@@ -51,6 +51,16 @@ export class Grappler extends FighterBase {
             // Hook reaches out 100px and latches for 2 seconds while it spins the victim.
             const hookDistance = Math.hypot(hooked.x - this.x, hooked.y - this.y);
             if (hookDistance < 100 + hooked.radius) {
+                if (!this.latched) {
+                    if (!DamageSystem.applyDamage(this, hooked, this.damage, "Melee", { ignoreCooldown: true })) {
+                        this.isHookActive = false;
+                        this.hookTarget = null;
+                        this.cooldownTimer = this.cooldownDuration;
+                        return;
+                    }
+                    this.latched = true;
+                    if (hooked.particleSystem) hooked.particleSystem.emitImpact(hooked.x, hooked.y, "#c77dff", 16);
+                }
                 hooked.isPinned = true;
                 hooked.isStuck = true;
                 hooked.pinTimer = this.hookTimer;
@@ -61,11 +71,6 @@ export class Grappler extends FighterBase {
                 // and ranged volleys stop firing. The pause is refreshed every frame
                 // so it lasts exactly as long as the pin and then lapses on its own.
                 hooked.pauseAttacks?.(0.1);
-                if (!this.latched) {
-                    this.latched = true;
-                    DamageSystem.applyDamage(this, hooked, this.damage, "Melee", { ignoreCooldown: true });
-                    if (hooked.particleSystem) hooked.particleSystem.emitImpact(hooked.x, hooked.y, "#c77dff", 16);
-                }
             }
             if (this.hookTimer <= 0) {
                 this.isHookActive = false;
