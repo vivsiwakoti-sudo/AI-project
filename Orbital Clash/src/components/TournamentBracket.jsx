@@ -6,6 +6,12 @@ function classColor(name) {
   return FIGHTER_CLASSES[name]?.color || "#8fa6bd";
 }
 
+// Names past this length, or with more than one word, need extra room so they
+// stay on one line in the HUD and squish in the bracket.
+export function isLongFighterName(name) {
+  return typeof name === "string" && (name.length > 7 || name.includes(" "));
+}
+
 // One bracket slot: the class, its colour chip, and its state. A slot is one of
 // "upcoming", "current", "winner", "eliminated" or "bye" - never a mix - so the
 // styling stays predictable and a screen reader hears one clear state.
@@ -16,6 +22,7 @@ function Slot({ name, state, isWinner, isLoser, isChampion, onClick }) {
   const classes = [
     "tb-slot",
     `tb-slot-${state}`,
+    isLongFighterName(name) ? "tb-slot-long" : "",
     isWinner ? "tb-slot-winner" : "",
     isLoser ? "tb-slot-loser" : "",
     isChampion ? "tb-slot-champion" : ""

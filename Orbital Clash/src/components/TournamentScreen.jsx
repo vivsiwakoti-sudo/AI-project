@@ -18,7 +18,7 @@ import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { drawBattleFrame } from "../engine/systems/BattleSimulation";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
-import TournamentBracket from "./TournamentBracket";
+import TournamentBracket, { isLongFighterName } from "./TournamentBracket";
 import TournamentOverview from "./TournamentOverview";
 import StatsPanel from "./StatsPanel";
 
@@ -66,9 +66,16 @@ function formatClock(seconds) {
 
 // The stack of fighter HUD panels on one side of the arena stage. A duel has one
 // panel each, so both fit without shrinking the canvas the fight is drawn on.
-function HudColumn({ fighters, side, clock, suddenDeath }) {
+// A long or multi-word name gets a wider column so it stays on one line.
+function HudColumn({ fighters, side, wide, clock, suddenDeath }) {
+  const className = [
+    "tournament-hud",
+    `tournament-hud-${side}`,
+    fighters.length ? "" : "tournament-hud-empty",
+    wide ? "tournament-hud-wide" : ""
+  ].filter(Boolean).join(" ");
   return (
-    <div className={`tournament-hud tournament-hud-${side}${fighters.length ? "" : " tournament-hud-empty"}`}>
+    <div className={className}>
       {fighters.map(({ fighter, index }) => (
         <StatsPanel key={index} fighter={fighter} index={index} battleTime={clock} suddenDeath={suddenDeath} />
       ))}
@@ -622,6 +629,9 @@ function TournamentScreenView({
   const progressLabel = `${resolvedCount}/${progress.total}`;
   const leftFighters = stageFighters.filter(item => item.index % 2 === 0);
   const rightFighters = stageFighters.filter(item => item.index % 2 === 1);
+  const leftWide = leftFighters.some(item => isLongFighterName(item.fighter?.name));
+  const rightWide = rightFighters.some(item => isLongFighterName(item.fighter?.name));
+  const anyWide = leftWide || rightWide;
 
   return (
     <main className="tournament-screen">
@@ -651,7 +661,7 @@ function TournamentScreenView({
         </div>
       </div>
 
-      <div className={`tournament-body${isBracketMinimized ? " tournament-body-minimized" : ""}`}>
+      <div className={`tournament-body${isBracketMinimized ? " tournament-body-minimized" : ""}${anyWide ? " tournament-body-wide-hud" : ""}`}>
         <div className="tournament-stage">
           {phase === "error" ? (
             <div className="tournament-error" role="alert">
@@ -664,11 +674,11 @@ function TournamentScreenView({
             </div>
           ) : (
             <div
-              className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}`}
+              className={`tournament-arena tournament-arena-live${suddenDeath ? " tournament-arena-sudden" : ""}${leftWide ? " tournament-arena-wide-left" : ""}${rightWide ? " tournament-arena-wide-right" : ""}`}
               ref={arenaWrapRef}
               style={{ "--arena-px": `${arenaSize}px`, "--round-color": ROUND_COLORS[stageMatch?.round] }}
             >
-              <HudColumn fighters={leftFighters} side="left" clock={clockLabel} suddenDeath={suddenDeath} />
+              <HudColumn fighters={leftFighters} side="left" wide={leftWide} clock={clockLabel} suddenDeath={suddenDeath} />
 
               <div className="tournament-canvas-wrap">
                 <canvas
@@ -747,7 +757,7 @@ function TournamentScreenView({
                 )}
               </div>
 
-              <HudColumn fighters={rightFighters} side="right" clock={clockLabel} suddenDeath={suddenDeath} />
+              <HudColumn fighters={rightFighters} side="right" wide={rightWide} clock={clockLabel} suddenDeath={suddenDeath} />
             </div>
           )}
         </div>

@@ -2133,6 +2133,10 @@
   align-items: start;
 }
 
+/* Wide HUD panels take room from the bracket, which narrows to keep the stage
+   as large as possible. */
+.tournament-body-wide-hud { grid-template-columns: minmax(0, 1fr) minmax(0, min(320px, 28%)); }
+
 .tournament-stage {
   position: relative;
   display: flex;
@@ -2187,7 +2191,7 @@
      The middle track is therefore `min(native size, what is left after the
      HUDs)`: the arena fills the stage when it fits and shrinks proportionally
      when it does not, and the HUDs always keep their column. */
-  grid-template-columns: var(--hud-col, 150px) minmax(0, var(--arena-px, 800px)) var(--hud-col, 150px);
+  grid-template-columns: var(--hud-left-col, var(--hud-col, 150px)) minmax(0, var(--arena-px, 800px)) var(--hud-right-col, var(--hud-col, 150px));
   gap: 12px;
   align-items: start;
   justify-items: center;
@@ -2201,8 +2205,24 @@
 
 /* Narrow windows: the panels stay on the sides and simply get narrower. */
 @media (max-width: 1240px) {
-  .tournament-arena-live { --hud-col: 120px; }
+  .tournament-arena-live { --hud-col: 120px; --hud-col-wide: 180px; }
   .tournament-hud { font-size: 0.78em; }
+}
+
+/* A side whose fighter has a long or two-word name gets a wider panel so the name
+   stays on one line. The bracket column narrows to make room (see
+   .tournament-body-wide-hud below). */
+.tournament-arena-wide-left { --hud-left-col: var(--hud-col-wide, 210px); }
+.tournament-arena-wide-right { --hud-right-col: var(--hud-col-wide, 210px); }
+
+.tournament-hud-wide .hud-header-row { min-width: 0; }
+
+.tournament-hud-wide .hud-header h2 {
+  min-width: 0;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tournament-arena-sudden { border-color: var(--round-color, var(--danger)); box-shadow: inset 0 0 60px rgba(255, 45, 85, 0.18), var(--shadow-md); }
@@ -2783,7 +2803,14 @@
 }
 
 /* The bracket inside the scrolling side panel gets a tighter match list. */
-.tournament-bracket-compact .tb-rounds { grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 10px; }
+.tournament-bracket-compact .tb-rounds { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+
+/* Compact slots stack their two fighters so each name gets the full card width
+   and stays on one line. Long names squish a little further. */
+.tournament-bracket-compact .tb-match-body { flex-direction: column; align-items: stretch; gap: 4px; }
+.tournament-bracket-compact .tb-match-vs { display: none; }
+.tournament-bracket-compact .tb-slot { flex: 0 0 auto; }
+.tournament-bracket-compact .tb-slot-long { font-size: 0.6rem; letter-spacing: -0.01em; }
 
 /* --- Exit confirmation ----------------------------------------------- */
 .tournament-confirm-overlay {
@@ -3303,7 +3330,7 @@
   .tournament-controls { justify-content: space-between; }
   .tournament-control { flex: 1 1 auto; padding: 0 8px; font-size: 0.58rem; }
   .tournament-arena { min-height: 300px; padding: 8px; }
-  .tournament-arena-live { --hud-col: 96px; gap: 8px; padding: 8px; }
+  .tournament-arena-live { --hud-col: 96px; --hud-col-wide: 130px; gap: 8px; padding: 8px; }
   .champion-path-step { grid-template-columns: minmax(0, 1fr) 48px; }
   .champion-path-detail { grid-column: 1 / -1; }
   .champion-match-row { grid-template-columns: minmax(0, 1fr) 44px; }
