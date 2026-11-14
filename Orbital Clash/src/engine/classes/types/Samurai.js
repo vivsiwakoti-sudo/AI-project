@@ -74,6 +74,7 @@ export class Samurai extends FighterBase {
             this.invisibilityTimer -= dt;
             if (this.invisibilityTimer <= 0) {
                 this.isInvisible = false;
+                this.isInvulnerable = false;
                 this.critChance = 0.05;
             }
             return;
@@ -139,6 +140,7 @@ export class Samurai extends FighterBase {
 
     performCombo(opponent) {
         this.isInvisible = true;
+        this.isInvulnerable = true;
         this.invisibilityTimer = 5;
         this.critChance = 0.25;
     }

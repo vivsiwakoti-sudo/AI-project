@@ -141,7 +141,7 @@ export class DamageSystem {
             }
         }
 
-        // Dodge style avoidance (Vampire wings, Samurai invisibility) for the
+        // Dodge style avoidance (Vampire wings) for the
         // categories that are not handled by the projectile parry above.
         const avoidance = victim.getAvoidanceChance ? victim.getAvoidanceChance(category) : 0;
         if ((avoidance > 0 && Math.random() < avoidance) ||
