@@ -126,6 +126,7 @@ export class Vampire extends FighterBase {
     }
 
     update(dt, opponent) {
+        const wasDraining = this.dashState === "drain";
         this.updateBloodDash(dt, opponent);
         super.update(dt, opponent);
         this.clawCooldown = Math.max(0, this.clawCooldown - dt);
@@ -136,7 +137,7 @@ export class Vampire extends FighterBase {
         // inside the corpse, so a dead Vampire came back to full health.
         if (this.isDead) return;
 
-        if (!opponent) return;
+        if (!opponent || wasDraining || this.dashState === "drain") return;
 
         // Constant spinning stake: it sweeps the ring and drains whoever it
         // crosses. The heal (and therefore evolution) is paced by the orbit so a

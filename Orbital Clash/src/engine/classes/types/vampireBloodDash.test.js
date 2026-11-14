@@ -52,6 +52,39 @@ test('a latched Blood Dash freezes the victim\'s attacks', () => {
   assert.ok(victim.attackPauseTimer > 0, 'a latched victim has its attacks paused');
 });
 
+test('a full Blood Dash deals and heals only 12 HP, without stake hits during the latch', () => {
+  const vampire = new Vampire(data('Vampire', { damage: 12 }), 100, 100);
+  const victim = new Fireball(data('Fireball'), 140, 100);
+  vampire.health = 50;
+  vampire.evolutionLevel = 2;
+  vampire.weaponAngle = 0;
+  vampire.vx = 0;
+  vampire.vy = 0;
+  vampire.dashState = 'dash';
+  vampire.dashTarget = victim;
+  vampire.dashTimer = 1.2;
+
+  vampire.update(1 / 60, victim);
+  assert.equal(vampire.dashState, 'drain');
+  for (let i = 0; i < 181 && vampire.dashState === 'drain'; i++) {
+    vampire.update(1 / 60, victim);
+  }
+
+  assert.equal(vampire.dashState, 'idle');
+  assert.equal(victim.health, 138);
+  assert.equal(vampire.health, 62);
+  assert.equal(vampire.totalHits, 3);
+  assert.equal(vampire.successfulHeals, 0);
+
+  vampire.weaponAngle = 0;
+  vampire.weaponHot = false;
+  vampire.vx = 0;
+  vampire.vy = 0;
+  vampire.update(1 / 60, victim);
+  assert.equal(victim.health, 126, 'stake attacks resume after the latch');
+  assert.equal(vampire.health, 72);
+});
+
 test('a paused Fireball stops firing new projectiles', () => {
   const fireball = new Fireball(data('Fireball'), 100, 100);
   const opponent = { x: 300, y: 100, radius: 20, health: 500, isDead: false, statusEffects: [], vx: 0, vy: 0 };
