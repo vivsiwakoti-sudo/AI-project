@@ -667,7 +667,7 @@
 
 .fighter-card {
   min-width: 0;
-  height: 200px;
+  min-height: 200px;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 42px 1fr;
@@ -838,7 +838,7 @@
   color: var(--text-secondary);
   font: 0.58rem var(--font-data);
   letter-spacing: 0.08em;
-  white-space: nowrap;
+  flex-wrap: wrap;
 }
 
 .fighter-card-best small { color: var(--text-muted); font: 0.48rem var(--font-data); }
@@ -847,6 +847,7 @@
   color: color-mix(in srgb, var(--class-accent) 40%, #ffffff);
   font: 0.72rem var(--font-mono);
   letter-spacing: 0.02em;
+  text-align: right;
 }
 
 .fighter-card-record-new {

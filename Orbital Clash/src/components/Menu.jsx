@@ -4,7 +4,7 @@ import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
 import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
-import { clearTournamentStats, hasResumableTournament, loadTournamentStats } from "../engine/tournament";
+import { bestRoundForPlacement, clearTournamentStats, hasResumableTournament, loadTournamentStats } from "../engine/tournament";
 import { favoriteLastReplay, listFavoriteReplays, loadLastReplayMeta, removeFavoriteReplay, MAX_FAVORITE_REPLAYS } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
@@ -278,10 +278,12 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   };
 
   const statFor = (name) => {
-    const placement = tournamentStats.classes[name]?.bestPlacement;
+    const tournamentRecord = tournamentStats.classes[name];
+    const placement = tournamentRecord?.bestPlacement;
+    const round = tournamentRecord?.bestRound ?? bestRoundForPlacement(placement);
     return {
       ...statsFromRecords(records, name),
-      bestFinish: placement == null ? "N/A" : ordinal(placement)
+      bestFinish: placement == null ? "N/A" : `${ordinal(placement)} - ${round ?? "Round N/A"}`
     };
   };
 

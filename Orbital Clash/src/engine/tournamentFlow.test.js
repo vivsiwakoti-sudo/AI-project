@@ -33,6 +33,7 @@ const {
   TOURNAMENT_STATS_KEY,
   allMatches,
   applyMatchResult,
+  bestRoundForPlacement,
   buildTournamentBracket,
   createTournamentBout,
   hasResumableTournament,
@@ -81,12 +82,20 @@ test('completed tournaments persist and improve best finishes without duplicate 
   const first = completeBracket(101);
   const preliminaryLoser = first.rounds.preliminary.matches[0].loser;
   const semifinalLoser = first.rounds.semifinal.matches[0].loser;
+  const quarterfinalLoser = first.rounds.quarterfinal.matches[0].loser;
+  const round16Loser = first.rounds.round16.matches[0].loser;
   recordTournamentResult(first);
   let stats = loadTournamentStats();
   assert.equal(stats.classes[first.champion].bestPlacement, 1);
+  assert.equal(stats.classes[first.champion].bestRound, 'Champion');
   assert.equal(stats.classes[first.runnerUp].bestPlacement, 2);
+  assert.equal(stats.classes[first.runnerUp].bestRound, 'Grand Final');
   assert.equal(stats.classes[semifinalLoser].bestPlacement, 3);
+  assert.equal(stats.classes[semifinalLoser].bestRound, 'Semifinals');
+  assert.equal(stats.classes[quarterfinalLoser].bestRound, 'Quarterfinals');
+  assert.equal(stats.classes[round16Loser].bestRound, 'Round of 16');
   assert.equal(stats.classes[preliminaryLoser].bestPlacement, 17);
+  assert.equal(stats.classes[preliminaryLoser].bestRound, 'Round of 32');
   assert.equal(stats.tournamentsCompleted, 1);
   assert.equal(recordTournamentResult(first).tournamentsCompleted, 1);
 
@@ -94,7 +103,9 @@ test('completed tournaments persist and improve best finishes without duplicate 
   recordTournamentResult(second);
   stats = loadTournamentStats();
   assert.equal(stats.classes[preliminaryLoser].bestPlacement, 1);
+  assert.equal(stats.classes[preliminaryLoser].bestRound, 'Champion');
   assert.equal(stats.classes[first.champion].bestPlacement, 1, 'a worse finish cannot replace first place');
+  assert.equal(stats.classes[first.champion].bestRound, 'Champion');
   assert.equal(stats.tournamentsCompleted, 2);
   assert.equal(recordTournamentResult(first).tournamentsCompleted, 2, 'older tournament IDs remain recorded');
 });
@@ -106,10 +117,12 @@ test('incorrect first-place finishes are recovered from saved tournament history
   const saved = JSON.parse(store.get(TOURNAMENT_STATS_KEY));
   const loser = tournament.rounds.preliminary.matches[0].loser;
   saved.classes[loser].bestPlacement = 1;
+  saved.classes[loser].bestRound = 'Champion';
   store.set(TOURNAMENT_STATS_KEY, JSON.stringify(saved));
 
   const stats = loadTournamentStats();
   assert.equal(stats.classes[loser].bestPlacement, 17);
+  assert.equal(stats.classes[loser].bestRound, 'Round of 32');
   assert.equal(stats.classes[tournament.champion].bestPlacement, 1);
   assert.equal(stats.classes[loser].appearances, 1);
 });
@@ -127,6 +140,24 @@ test('an incorrect first-place finish without enough history is unavailable', ()
   const stats = loadTournamentStats();
   assert.equal(stats.classes[loser].bestPlacement, null);
   assert.equal(stats.classes[tournament.runnerUp].bestPlacement, 2);
+});
+
+test('older best finishes infer known rounds and do not invent an opening-round format', () => {
+  store.clear();
+  const saved = {
+    tournamentsCompleted: 1,
+    classes: {
+      Gunner: { bestPlacement: 9 },
+      Ghost: { bestPlacement: 17 }
+    }
+  };
+  store.set(TOURNAMENT_STATS_KEY, JSON.stringify(saved));
+  const stats = loadTournamentStats();
+
+  assert.equal(stats.classes.Gunner.bestRound, 'Round of 16');
+  assert.equal(stats.classes.Ghost.bestRound, null);
+  assert.equal(bestRoundForPlacement(stats.classes.Ghost.bestPlacement), 'Opening round');
+  assert.equal(bestRoundForPlacement(null), null);
 });
 
 test('all 32 classes enter the Round of 32 with no byes', () => {
@@ -343,6 +374,20 @@ test('a legacy 26-class tournament save resumes with its original byes and round
   assert.equal(resumed.rounds.round16.matches.length, 8, 'the legacy preliminary winners join the saved byes');
   saveActiveTournament(resumed);
   assert.equal(loadActiveTournament().currentRound, 'round16', 'the restored legacy bracket keeps advancing');
+
+  let match;
+  while ((match = nextPendingMatch(resumed))) {
+    resumed = applyMatchResult(resumed, match, {
+      winner: { name: match.first }, loser: { name: match.second }, durationSeconds: 1
+    }).tournament;
+  }
+  const legacyLoser = resumed.rounds.preliminary.matches[1].loser;
+  recordTournamentResult(resumed);
+  assert.equal(loadTournamentStats().classes[legacyLoser].bestRound, 'Preliminary Round');
+  const saved = JSON.parse(store.get(TOURNAMENT_STATS_KEY));
+  delete saved.classes[legacyLoser].bestRound;
+  store.set(TOURNAMENT_STATS_KEY, JSON.stringify(saved));
+  assert.equal(loadTournamentStats().classes[legacyLoser].bestRound, 'Preliminary Round', 'history restores the legacy round');
 });
 
 test('an unfinished save mid-final resumes with only the final left', () => {

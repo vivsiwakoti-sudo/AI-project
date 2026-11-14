@@ -700,12 +700,18 @@ export const PLACEMENT_BY_ROUND = {
   preliminary: 17
 };
 
-function placementFor(tournament, className) {
-  if (tournament.champion === className) return 1;
+export function bestRoundForPlacement(placement) {
+  if (placement === 1) return "Champion";
+  if (placement === 17) return "Opening round";
+  const round = Object.keys(PLACEMENT_BY_ROUND).find(key => PLACEMENT_BY_ROUND[key] === placement);
+  return round ? ROUND_LABELS[round] : null;
+}
+
+function finishFor(tournament, className) {
+  if (tournament.champion === className) return { placement: 1, round: "Champion" };
   const loss = allMatches(tournament).find(match => match.loser === className);
-  if (!loss) return null;
-  if (loss.round === "final") return 2;
-  return PLACEMENT_BY_ROUND[loss.round] ?? null;
+  const placement = loss ? PLACEMENT_BY_ROUND[loss.round] ?? null : null;
+  return { placement, round: placement == null ? null : roundLabelFor(tournament, loss.round) };
 }
 
 // --- Statistics --------------------------------------------------------------
@@ -735,6 +741,7 @@ function emptyClassStats() {
     runnerUps: 0,
     appearances: 0,
     bestPlacement: null,
+    bestRound: null,
     totalMatchSeconds: 0,
     totalSurvivalSeconds: 0
   };
@@ -748,6 +755,10 @@ function sanitizeNumber(value, fallback = 0) {
 function sanitizeClassStats(raw) {
   const source = raw && typeof raw === "object" ? raw : {};
   const best = source.bestPlacement == null ? null : sanitizeNumber(source.bestPlacement, null);
+  const placement = best == null || best < 1 ? null : Math.floor(best);
+  const allowedRounds = placement === 17
+    ? [ROUND_LABELS.preliminary, LEGACY_ROUND_DEFINITIONS[0].label]
+    : [bestRoundForPlacement(placement)];
   return {
     matches: Math.max(0, Math.floor(sanitizeNumber(source.matches))),
     wins: Math.max(0, Math.floor(sanitizeNumber(source.wins))),
@@ -756,7 +767,8 @@ function sanitizeClassStats(raw) {
     championships: Math.max(0, Math.floor(sanitizeNumber(source.championships))),
     runnerUps: Math.max(0, Math.floor(sanitizeNumber(source.runnerUps))),
     appearances: Math.max(0, Math.floor(sanitizeNumber(source.appearances))),
-    bestPlacement: best == null || best < 1 ? null : Math.floor(best),
+    bestPlacement: placement,
+    bestRound: typeof source.bestRound === "string" && allowedRounds.includes(source.bestRound) ? source.bestRound : null,
     totalMatchSeconds: Math.max(0, sanitizeNumber(source.totalMatchSeconds)),
     totalSurvivalSeconds: Math.max(0, sanitizeNumber(source.totalSurvivalSeconds))
   };
@@ -839,8 +851,11 @@ export function loadTournamentStats() {
     const affected = Object.entries(stats.classes).filter(([, entry]) =>
       entry.bestPlacement === 1 && entry.championships === 0
     );
+    const needsOpeningRound = Object.values(stats.classes).some(entry => entry.bestPlacement === 17 && !entry.bestRound);
+    const history = affected.length || needsOpeningRound
+      ? loadTournamentHistory().slice(0, stats.tournamentsCompleted)
+      : [];
     if (affected.length > 0) {
-      const history = loadTournamentHistory().slice(0, stats.tournamentsCompleted);
       const completeHistory = stats.tournamentsCompleted > 0 && history.length === stats.tournamentsCompleted;
       for (const [name, entry] of affected) {
         const finishes = history.flatMap(tournament => tournament.matches
@@ -850,6 +865,20 @@ export function loadTournamentStats() {
         const bestKnown = finishes.length ? Math.min(...finishes) : null;
         entry.bestPlacement = entry.runnerUps > 0 ? 2
           : completeHistory || bestKnown === 3 ? bestKnown : null;
+        entry.bestRound = null;
+      }
+    }
+    for (const [name, entry] of Object.entries(stats.classes)) {
+      if (entry.bestRound || entry.bestPlacement == null) continue;
+      if (entry.bestPlacement !== 17) {
+        entry.bestRound = bestRoundForPlacement(entry.bestPlacement);
+        continue;
+      }
+      const tournament = history.find(item => item.matches.some(match => match.round === "preliminary" && match.loser === name));
+      const openingMatches = tournament?.matches.filter(match => match.round === "preliminary").length;
+      if (openingMatches === 16) entry.bestRound = ROUND_LABELS.preliminary;
+      else if (openingMatches === 10 || tournament?.byes.length === LEGACY_BYE_COUNT) {
+        entry.bestRound = LEGACY_ROUND_DEFINITIONS[0].label;
       }
     }
     return stats;
@@ -1037,17 +1066,18 @@ export function recordTournamentResult(tournament, { timestamp = Date.now() } = 
   const participants = new Set([...(tournament.participants || []), ...tournament.byes.map(bye => bye.name)]);
   participants.forEach(name => {
     const current = touch(name);
-    const placement = placementFor(tournament, name);
+    const { placement, round } = finishFor(tournament, name);
     const isChampion = name === tournament.champion;
-    const best = current.bestPlacement == null || (placement != null && placement < current.bestPlacement)
-      ? placement
-      : current.bestPlacement;
+    const improved = placement != null && (current.bestPlacement == null || placement < current.bestPlacement);
     write(name, {
       ...current,
       appearances: current.appearances + 1,
       championships: current.championships + (isChampion ? 1 : 0),
       runnerUps: current.runnerUps + (name === tournament.runnerUp ? 1 : 0),
-      bestPlacement: best
+      bestPlacement: improved ? placement : current.bestPlacement,
+      bestRound: improved || (placement != null && placement === current.bestPlacement && !current.bestRound)
+        ? round
+        : current.bestRound
     });
   });
 
