@@ -2,7 +2,7 @@ import { FighterBase } from "../FighterBase.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
-const WEB_LIFE = 25;
+const WEB_LIFE = 30;
 const WEB_WEAVE_STEP = 0.05;
 const WEB_DROP_INTERVAL = 1.5;
 

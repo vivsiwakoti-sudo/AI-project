@@ -71,6 +71,38 @@ test('a landed leap slams for 10 AoE damage and resets the interval', () => {
   assert.ok(yeti.cooldownTimer > 0, 'the next leap is on a fresh interval');
 });
 
+test('a leap heads toward the launch position without following a moving opponent', () => {
+  const yeti = withRandom(0.5, () => new Yeti(data('Yeti', { speed: 1 }), 100, 100));
+  const victim = new FighterBase(data('Victim'), 250, 100);
+  yeti.cooldownTimer = 0;
+  yeti.vx = 0;
+  yeti.vy = 1;
+
+  yeti.update(1 / 60, victim);
+  assert.ok(yeti.x > 100, 'the leap starts toward the opponent immediately');
+  assert.equal(yeti.y, 100);
+  victim.y = 350;
+
+  while (yeti.leapState === 'leap') {
+    yeti.update(1 / 60, victim);
+    if (yeti.leapState === 'leap') assert.equal(yeti.y, 100);
+  }
+  assert.ok(yeti.x > 220, 'the Yeti reaches the original target position');
+  assert.equal(victim.health, 150, 'an opponent that moved away avoids the slam');
+});
+
+test('the 175-pixel slam radius hits fighters at its edge but not beyond it', () => {
+  const yeti = new Yeti(data('Yeti'), 100, 100);
+  const atEdge = new FighterBase(data('At edge'), 295, 100);
+  const outside = new FighterBase(data('Outside'), 295.01, 100);
+  yeti.victims = [atEdge, outside];
+
+  withRandom(0.9, () => yeti.slam(atEdge));
+
+  assert.equal(atEdge.health, 140);
+  assert.equal(outside.health, 150);
+});
+
 test('each enemy struck rolls its own 25% freeze', () => {
   const yeti = withRandom(0.5, () => new Yeti(data('Yeti'), 100, 100));
   const frozen = new FighterBase(data('Frozen'), 130, 100);
@@ -139,7 +171,7 @@ test('a slam shatters the ice and plays the slam sound', () => {
   assert.equal(shatters.length, 1, 'one shatter burst per slam');
   assert.equal(shatters[0][0], 100);
   assert.equal(shatters[0][1], 100);
-  assert.equal(shatters[0][3].radius, 100, 'the break spreads across the 100px slam radius');
+  assert.equal(shatters[0][3].radius, 175, 'the break spreads across the 175px slam radius');
   assert.equal(slamSounds, 1, 'the slam sound plays once');
 });
 

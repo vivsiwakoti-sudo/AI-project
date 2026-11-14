@@ -8,7 +8,7 @@ const MAX_LEAP_INTERVAL = 10;
 const LEAP_SPEED_MULTIPLIER = 3;
 const LEAP_MAX_SECONDS = 1.5;
 const SLAM_DAMAGE = 10;
-const SLAM_RADIUS = 100;
+const SLAM_RADIUS = 175;
 const FREEZE_SECONDS = 2;
 const LIFT_HEIGHT = 22;
 const LEAP_GROWTH = 1.2;
@@ -25,6 +25,7 @@ export class Yeti extends FighterBase {
         this.cooldownTimer = this.cooldown;
         this.leapState = "idle";
         this.leapTarget = null;
+        this.leapDestination = null;
         this.leapTime = 0;
         this.leapStartDistance = 1;
         this.leapProgress = 0;
@@ -45,10 +46,17 @@ export class Yeti extends FighterBase {
             this.useAbility();
             this.leapState = "leap";
             this.leapTarget = opponent;
+            this.leapDestination = { x: opponent.x, y: opponent.y };
             this.leapTime = 0;
             this.leapStartDistance = Math.max(1, Math.hypot(opponent.x - this.x, opponent.y - this.y));
             this.leapProgress = 0;
             this.speedMultiplier = LEAP_SPEED_MULTIPLIER;
+            const dx = this.leapDestination.x - this.x;
+            const dy = this.leapDestination.y - this.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            this.vx = dx / dist;
+            this.vy = dy / dist;
+            this.lastAngle = Math.atan2(dy, dx);
             return;
         }
 
@@ -59,23 +67,26 @@ export class Yeti extends FighterBase {
         }
 
         this.leapTime += dt;
-        const dx = target.x - this.x;
-        const dy = target.y - this.y;
-        const dist = Math.hypot(dx, dy) || 1;
+        const dx = this.leapDestination.x - this.x;
+        const dy = this.leapDestination.y - this.y;
+        const dist = Math.hypot(dx, dy);
         this.leapProgress = Math.min(1, Math.max(0, 1 - dist / this.leapStartDistance));
+
+        const targetDistance = Math.hypot(target.x - this.x, target.y - this.y);
+        if (dist <= this.radius || targetDistance <= this.radius + target.radius + 4 || this.leapTime >= LEAP_MAX_SECONDS) {
+            this.slam(target);
+            return;
+        }
         this.vx = dx / dist;
         this.vy = dy / dist;
         this.lastAngle = Math.atan2(dy, dx);
-
-        if (dist <= this.radius + target.radius + 4 || this.leapTime >= LEAP_MAX_SECONDS) {
-            this.slam(target);
-        }
     }
 
     cancelLeap() {
         if (this.leapState === "idle") return;
         this.leapState = "idle";
         this.leapTarget = null;
+        this.leapDestination = null;
         this.speedMultiplier = 1;
     }
 

@@ -180,17 +180,17 @@ test('Spider lays its first web immediately and another every 1.5 seconds', () =
   assert.equal(spider.webs.length, 3);
 });
 
-test('An untouched web fades after 25 seconds', () => {
+test('An untouched web fades after 30 seconds', () => {
   const spider = spiderAt(100, 100);
   const target = dummy(2000, 100); // far away, never touches the web
   spider.dropTimer = 1000;         // stop the spider from laying more webs
   spider.createWeb(700, 100);
 
-  for (let i = 0; i < 24 * 60; i++) spider.update(1 / 60, target);
-  assert.equal(spider.webs.length, 1, 'the web should still be standing at 24 seconds');
+  for (let i = 0; i < 29 * 60; i++) spider.update(1 / 60, target);
+  assert.equal(spider.webs.length, 1, 'the web should still be standing at 29 seconds');
 
   for (let i = 0; i < 2 * 60; i++) spider.update(1 / 60, target);
-  assert.equal(spider.webs.length, 0, 'the web should be gone after 25 seconds');
+  assert.equal(spider.webs.length, 0, 'the web should be gone after 30 seconds');
 });
 
 test('Each touched web adds a permanent 5% slow that stacks', () => {

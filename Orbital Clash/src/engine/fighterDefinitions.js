@@ -262,7 +262,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 4,
     description: "Lays webs to slow and damage.",
-    description2: "Spins one web every 1.5 seconds wherever it walks. Anything that touches a web is slowed by 60% for 2 seconds, takes 5 damage, and gains a permanent 5% slow that stacks with every web it touches until the bout ends - and the web is spent on that touch, vanishing instantly. Untouched webs fade after 25 seconds, so the arena becomes a field of single-use traps.",
+    description2: "Spins one web every 1.5 seconds wherever it walks. Anything that touches a web is slowed by 60% for 2 seconds, takes 5 damage, and gains a permanent 5% slow that stacks with every web it touches until the bout ends - and the web is spent on that touch, vanishing instantly. Untouched webs fade after 30 seconds, so the arena becomes a field of single-use traps.",
     keywords: ["web", "slow", "zone", "dot", "trap"],
   },
   "Tunneler": {
@@ -392,7 +392,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 7.5,
     description: "Leaps onto enemies for 10 AoE damage.",
-    description2: "Every 5-10 seconds the Yeti leaps onto its opponent and slams the ground for 10 damage to everyone nearby. Each enemy struck has a 25% chance to be frozen in a block of ice for 2 seconds. Frozen fighters cannot move or attack, and a frozen Yeti cancels its leap.",
+    description2: "Every 5-10 seconds the Yeti leaps toward its opponent's position at launch, then slams the ground for 10 damage within a 175 px radius. It does not track the opponent during the leap. Each enemy struck has a 25% chance to be frozen in a block of ice for 2 seconds. Frozen fighters cannot move or attack, and a frozen Yeti cancels its leap.",
     keywords: ["leap", "aoe", "freeze", "ice", "slam"],
   },
   "Dragon": {
