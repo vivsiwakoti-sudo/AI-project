@@ -378,7 +378,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Trail",
     cooldown: 0,
     description: "Summons two roster fighters every 15 seconds.",
-    description2: "Carries a staff and deals no touch damage. Every 15 seconds he summons two random roster fighters with 15 HP each and their full abilities. Summons fight for him, can be hit by enemies, and vanish when he is knocked out.",
+    description2: "Carries a staff and deals no touch damage. Every 15 seconds he summons two random roster fighters with 15 HP each and their full abilities. Summons fight for him, can be hit by enemies, and vanish when he is knocked out. In one-on-one fights, ranged fighters aim at the Summoner instead of his summons.",
     keywords: ["summon", "staff", "minions", "trail"],
   },
   "Yeti": {
@@ -448,7 +448,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 5,
     description: "Throws a die that rolls a random face when it lands.",
-    description2: "Every 5 seconds the Gambler throws a 44 px die at the nearest opponent. The die deals 15 damage when it lands, then rolls one of six faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), or deal 15% of the target's max HP. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, or set itself on fire (5 burn damage over 5 seconds). A parried or dodged die does not roll. A die that misses the arena does not roll.",
+    description2: "Every 5 seconds the Gambler throws a 44 px die at its target. The die deals 15 damage when it lands, then rolls one of six faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), or deal 15% of the target's max HP. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, or set itself on fire (5 burn damage over 5 seconds). A parried or dodged die does not roll. A die that misses the arena does not roll.",
     keywords: ["dice", "gamble", "luck", "stun", "burn", "projectile"],
   },
   "Mimic": {

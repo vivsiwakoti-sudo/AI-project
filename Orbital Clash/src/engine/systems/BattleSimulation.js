@@ -84,10 +84,8 @@ const RANGED_CLASS_NAMES = new Set([
   "Laser Beam"
 ]);
 
-// A ranged fighter has to aim at whoever is closest, because anything else means
-// firing a bolt, dart or potion across the arena while an opponent stands in its
-// face. Nearest-target tracking is therefore DERIVED from the attack type rather
-// than from a per-class flag, so a new ranged class inherits it automatically.
+// Ranged fighters normally track the nearest opponent. This is derived from the
+// attack type rather than a per-class flag, so new ranged classes inherit it.
 export function usesNearestTarget(fighter) {
   if (!fighter) return false;
   if (RANGED_CLASS_NAMES.has(fighter.name)) return true;
@@ -103,9 +101,25 @@ export function usesNearestTarget(fighter) {
 // target is the nearest one, so nobody opens by charging a fighter on the far
 // side of the arena, and `isUnderground` is treated as unreachable rather than
 // dead so a Tunneler is dropped while submerged and re-acquired once it surfaces.
-export function chooseTarget(fighters, index) {
+export function chooseTarget(fighters, index, duelFighters = null) {
   const self = fighters[index];
   if (!self) return null;
+
+  // In a duel, ranged fighters aim at the opposing main fighter rather than its
+  // summons. Dragon's fireball and Mimic's copied forms also need this rule,
+  // even when their roster attack type is not classified as ranged.
+  if (duelFighters?.length === 2 &&
+      (usesNearestTarget(self) || self.name === "Dragon" ||
+       RANGED_CLASS_NAMES.has(self.mimicForm) || self.mimicForm === "Dragon")) {
+    const mainOpponent = duelFighters.find(other =>
+      isValidTarget(other, self) && !other.isUnderground
+    );
+    if (mainOpponent) {
+      self.target = mainOpponent;
+      return mainOpponent;
+    }
+  }
+
   const current = self.target;
   if (current && isValidTarget(current, self)) {
     if (usesNearestTarget(self)) {
@@ -195,7 +209,7 @@ export function stepBattle(fighters, options = {}) {
     // living opponent (see chooseTarget). Each class's update() only ever
     // reads a single opponent, so this keeps their AI unchanged while
     // making free-for-alls work.
-    const opponent = chooseTarget(bodies, i);
+    const opponent = chooseTarget(bodies, i, fighters.length === 2 ? fighters : null);
     f.opponent = opponent;
     // Other classes' target selection will overwrite f.target below; keep
     // the reference tally here so it stays an accurate "who is aiming at me".

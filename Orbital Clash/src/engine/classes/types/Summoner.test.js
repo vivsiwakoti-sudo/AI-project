@@ -199,6 +199,96 @@ test('a summon targets enemies, not its own summoner', () => {
   assert.equal(chooseTarget(bodies, bodies.indexOf(summon)), enemy);
 });
 
+test('ranged fighters in a duel prefer the opposing summoner over a closer summon', () => {
+  const summoner = makeSummoner(600, 100);
+  const summon = new FighterBase(bodyStats, 100, 200);
+  summon.owner = summoner;
+  for (const name of ['Gunner', 'Gambler', 'Alchemist', 'Spearman', 'Ninja', 'Tunneler', 'Solar Beam', 'Dragon', 'Striker']) {
+    const ranged = FighterFactory.createFighter(name, 100, 100);
+    ranged.target = summon;
+    assert.equal(chooseTarget([ranged, summoner, summon], 0, [ranged, summoner]), summoner, name);
+  }
+});
+
+test('a Mimic using a ranged copied form prefers the summoner in a duel', () => {
+  const summoner = makeSummoner(600, 100);
+  const summon = new FighterBase(bodyStats, 100, 200);
+  summon.owner = summoner;
+  const mimic = FighterFactory.createFighter('Mimic', 100, 100);
+  for (const form of ['Dragon', 'Fireball', 'Black Hole']) {
+    mimic.startCopiedForm(form);
+    assert.equal(chooseTarget([mimic, summoner, summon], 0, [mimic, summoner]), summoner, form);
+    mimic.endCopiedForm();
+  }
+});
+
+test('a duel passes the summoner to a ranged fighter without making summons unhittable', () => {
+  const summoner = makeSummoner(600, 100);
+  const summon = new FighterBase(bodyStats, 100, 200);
+  summon.owner = summoner;
+  summoner.summons.push(summon);
+  const gambler = FighterFactory.createFighter('Gambler', 100, 100);
+  gambler.target = summon;
+
+  stepBattle([gambler, summoner], { dt: 0, arenaSize: 800 });
+
+  assert.equal(gambler.opponent, summoner);
+  assert.ok(gambler.victims.includes(summon));
+  assert.equal(gambler.dice.length, 1);
+  assert.ok(gambler.dice[0].vx > 0);
+  assert.equal(gambler.dice[0].vy, 0);
+});
+
+test('a ranged summon in a duel aims at the enemy summoner, not either side\'s summons', () => {
+  const owner = makeSummoner(100, 100);
+  const enemy = makeSummoner(600, 100);
+  const ranged = FighterFactory.createFighter('Gambler', 200, 100);
+  const enemySummon = new FighterBase(bodyStats, 300, 100);
+  ranged.owner = owner;
+  enemySummon.owner = enemy;
+  owner.summons.push(ranged);
+  enemy.summons.push(enemySummon);
+
+  stepBattle([owner, enemy], { dt: 0, arenaSize: 800 });
+
+  assert.equal(ranged.opponent, enemy);
+  assert.ok(ranged.victims.includes(enemySummon));
+  assert.ok(!ranged.victims.includes(owner));
+});
+
+test('melee fighters and ranged fighters in larger fights retain their usual targets', () => {
+  const summoner = makeSummoner(600, 100);
+  const summon = new FighterBase(bodyStats, 100, 200);
+  summon.owner = summoner;
+  const melee = new FighterBase(bodyStats, 100, 100);
+  const ranged = FighterFactory.createFighter('Gambler', 100, 100);
+  const third = new FighterBase(bodyStats, 700, 700);
+  third.isDead = true;
+
+  assert.equal(chooseTarget([melee, summoner, summon], 0, [melee, summoner]), summon);
+  assert.equal(chooseTarget([ranged, summoner, summon, third], 0), summon);
+
+  summoner.summons.push(summon);
+  stepBattle([ranged, summoner, third], { dt: 0, arenaSize: 800 });
+  assert.equal(ranged.opponent, summon);
+});
+
+test('ranged duel fighters fall back to summons when the main opponent is unreachable', () => {
+  const summoner = makeSummoner(600, 100);
+  const summon = new FighterBase(bodyStats, 100, 200);
+  summon.owner = summoner;
+  const ranged = FighterFactory.createFighter('Gambler', 100, 100);
+  const bodies = [ranged, summoner, summon];
+  const duel = [ranged, summoner];
+
+  summoner.isUnderground = true;
+  assert.equal(chooseTarget(bodies, 0, duel), summon);
+  summoner.isUnderground = false;
+  assert.equal(chooseTarget(bodies, 0, duel), summoner);
+  summoner.health = 0;
+  assert.equal(chooseTarget(bodies, 0, duel), summon);
+});
+
 test('a summoner is not a body attacker, so it deals no touch damage', () => {
   const summoner = makeSummoner();
   assert.equal(DamageSystem.isBodyAttacker(summoner), false);
