@@ -4,6 +4,7 @@ import { DamageSystem } from "../../systems/DamageSystem.js";
 
 const WEB_LIFE = 25;
 const WEB_WEAVE_STEP = 0.05;
+const WEB_DROP_INTERVAL = 1.5;
 
 export class Spider extends FighterBase {
     constructor(data, x, y) {
@@ -14,8 +15,6 @@ export class Spider extends FighterBase {
     }
 
     createWeb(x, y) {
-        // Webs are laid at most once every 3 seconds, so there is no risk of
-        // stacking them on one spot - never skip a drop.
         this.webs.push({ x, y, radius: 42, life: WEB_LIFE, touched: false });
         if (this.webs.length > 40) this.webs.shift();
         if (this.particleSystem) {
@@ -27,12 +26,12 @@ export class Spider extends FighterBase {
     update(dt, opponent) {
         super.update(dt, opponent);
 
-        // Lay a web where the Spider actually is, on a 3 second cadence, so the
+        // Lay a web where the Spider actually is, on a 1.5 second cadence, so the
         // webs trace its movement instead of being shot across the arena.
         this.dropTimer -= dt;
         if (this.dropTimer <= 0) {
             this.createWeb(this.x, this.y);
-            this.dropTimer = 3;
+            this.dropTimer = WEB_DROP_INTERVAL;
         }
 
         // A web slows by 60% for 2 seconds and deals the Spider's damage the moment it is

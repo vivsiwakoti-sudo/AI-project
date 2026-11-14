@@ -166,6 +166,20 @@ const spiderAt = (x, y) => new Spider({
   description: 'Lays webs to slow and damage.'
 }, x, y);
 
+test('Spider lays its first web immediately and another every 1.5 seconds', () => {
+  const spider = spiderAt(100, 100);
+  const target = dummy(2000, 100);
+
+  spider.update(0.125, target);
+  assert.equal(spider.webs.length, 1);
+  spider.update(1.25, target);
+  assert.equal(spider.webs.length, 1);
+  spider.update(0.25, target);
+  assert.equal(spider.webs.length, 2);
+  spider.update(1.5, target);
+  assert.equal(spider.webs.length, 3);
+});
+
 test('An untouched web fades after 25 seconds', () => {
   const spider = spiderAt(100, 100);
   const target = dummy(2000, 100); // far away, never touches the web
