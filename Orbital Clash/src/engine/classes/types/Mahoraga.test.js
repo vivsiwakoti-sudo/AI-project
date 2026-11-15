@@ -123,19 +123,34 @@ test('drawing a revealed adaptation on the wheel leaves the canvas stack balance
 
   // Records save/restore depth so an exception mid-wheel cannot leak transforms
   // into the rest of the arena frame unnoticed.
-  const stack = { depth: 0 };
-  const chain = new Proxy(function () { }, {
-    get(_, prop) {
-      if (prop === 'save') return () => { stack.depth += 1; };
-      if (prop === 'restore') return () => { stack.depth -= 1; };
-      if (prop === Symbol.toPrimitive) return () => 0;
-      return chain;
-    },
-    set: () => true,
-    apply: () => chain
-  });
-  assert.doesNotThrow(() => mahoraga.draw(chain));
+  const { ctx, stack } = recordingContext();
+  assert.doesNotThrow(() => mahoraga.draw(ctx));
   assert.equal(stack.depth, 0, 'every save must be matched by a restore');
+  assert.equal(stack.badArcs, 0, 'no wheel node may be drawn with a non-finite radius');
+});
+
+test('each revealed adaptation nests one more wheel, capped at three in total', () => {
+  const mahoraga = makeMahoraga();
+  const victim = makeVictim();
+  const advance = (seconds) => {
+    for (let t = 0; t < seconds; t += 1 / 60) mahoraga.update(1 / 60, victim);
+  };
+  for (const category of ['Melee', 'Projectile', 'Body']) {
+    for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, category);
+  }
+  assert.deepEqual(mahoraga.wheelLayers, ['Melee'], 'the first reveal adds a wheel straight away');
+
+  advance(3.1);
+  assert.deepEqual(mahoraga.wheelLayers, ['Melee', 'Projectile'], 'the second reveal adds a wheel');
+
+  advance(3.1);
+  assert.deepEqual(mahoraga.wheelLayers, ['Melee', 'Projectile'], 'a third adaptation never exceeds three wheels');
+  assert.ok(mahoraga.wheelRevealedCategories.includes('Body'), 'its node still rides the rim');
+
+  const { ctx, stack } = recordingContext();
+  assert.doesNotThrow(() => mahoraga.draw(ctx));
+  assert.equal(stack.depth, 0, 'nested wheels must restore every save');
+  assert.equal(stack.badArcs, 0);
 });
 
 test('zero-impact projectiles still count as landed attacks', () => {
@@ -180,6 +195,24 @@ const withRandom = (value, fn) => {
   const original = Math.random;
   Math.random = () => value;
   try { return fn(); } finally { Math.random = original; }
+};
+
+// Records save/restore depth and arcs drawn with a non-finite radius, so a draw
+// that leaks transforms or silently skips a node fails the test.
+const recordingContext = () => {
+  const stack = { depth: 0, badArcs: 0 };
+  const chain = new Proxy(function () { }, {
+    get(_, prop) {
+      if (prop === 'save') return () => { stack.depth += 1; };
+      if (prop === 'restore') return () => { stack.depth -= 1; };
+      if (prop === 'arc') return (x, y, radius) => { if (!Number.isFinite(radius)) stack.badArcs += 1; };
+      if (prop === Symbol.toPrimitive) return () => 0;
+      return chain;
+    },
+    set: () => true,
+    apply: () => chain
+  });
+  return { ctx: chain, stack };
 };
 
 test('Mahoraga only gains a melee parry once it has adapted to melee', () => {

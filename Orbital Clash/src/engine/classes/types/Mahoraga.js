@@ -15,6 +15,11 @@ const ADAPTATION_STEPS = [
 // do not blur together.
 const WHEEL_REVEAL_GAP = 3;
 
+// Each revealed adaptation nests one more wheel inside the base wheel, so the
+// total is capped at the base plus these layers (3 wheels).
+const WHEEL_LAYER_SCALES = [0.66, 0.4];
+const WHEEL_POP_SECONDS = 0.6;
+
 export class Mahoraga extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -45,6 +50,8 @@ export class Mahoraga extends FighterBase {
         this.wheelQueue = [];                   // earned adaptations waiting to be shown
         this.wheelRevealedCategories = [];      // categories whose node is on the wheel
         this.wheelRevealHold = 0;               // seconds until the next reveal
+        this.wheelLayers = [];                  // categories of the extra wheels, oldest first
+        this.wheelPop = 0;                      // 1 -> 0 pop-in of the newest extra wheel
 
         // Mahoraga has NO attack animation of its own. It is a pure Body fighter:
         // the fists are attached to the body and the damage comes from the arena's
@@ -154,6 +161,10 @@ export class Mahoraga extends FighterBase {
         if (this.wheelRevealHold > 0 || this.wheelQueue.length === 0) return;
         const category = this.wheelQueue.shift();
         if (!this.wheelRevealedCategories.includes(category)) this.wheelRevealedCategories.push(category);
+        if (this.wheelLayers.length < WHEEL_LAYER_SCALES.length) {
+            this.wheelLayers.push(category);
+            this.wheelPop = 1;
+        }
         this.adaptFlash = 0.8;
         this.spinAdaptationWheel();
         this.wheelRevealHold = WHEEL_REVEAL_GAP;
@@ -189,6 +200,7 @@ export class Mahoraga extends FighterBase {
         const targetTilt = Math.max(-0.35, Math.min(0.35, this.vx * 0.05));
         this.wheelTilt += (targetTilt - this.wheelTilt) * Math.min(1, dt * 6);
         this.wheelGlow = Math.max(0, this.wheelGlow - dt * 2.2);
+        this.wheelPop = Math.max(0, this.wheelPop - dt / WHEEL_POP_SECONDS);
     }
 
     draw(ctx) {
@@ -292,6 +304,41 @@ export class Mahoraga extends FighterBase {
         ctx.stroke();
         ctx.restore();
 
+        // Each earned adaptation nests a smaller wheel inside the base one, rimmed
+        // in the colour that earned it. Neighbouring wheels turn in opposite
+        // directions, and the newest one pops in larger before settling.
+        this.wheelLayers.forEach((category, i) => {
+            const isNewest = i === this.wheelLayers.length - 1;
+            const pop = isNewest ? this.wheelPop : 0;
+            const layerRadius = wheelRadius * WHEEL_LAYER_SCALES[i] * (1 + pop * 0.35);
+            const color = wheelColor({ category });
+            const direction = i % 2 === 0 ? -1 : 1;
+
+            ctx.save();
+            ctx.globalAlpha = 1 - pop * 0.5;
+            ctx.rotate(direction * this.wheelRenderAngle * (1 + i * 0.5));
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = "rgba(180, 200, 230, 0.55)";
+            for (let spoke = 0; spoke < 6; spoke++) {
+                const spokeAngle = (spoke / 6) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(spokeAngle) * layerRadius * 0.22, Math.sin(spokeAngle) * layerRadius * 0.22);
+                ctx.lineTo(Math.cos(spokeAngle) * layerRadius, Math.sin(spokeAngle) * layerRadius);
+                ctx.stroke();
+            }
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = isNewest ? 12 : 4;
+            ctx.shadowColor = color;
+            ctx.beginPath();
+            ctx.arc(0, 0, layerRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, layerRadius * 0.22, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        });
+
         // Adaptation nodes ride the rim inside the rotated frame, so each earned
         // adaptation keeps its own slot and physically turns with the wheel.
         ctx.shadowBlur = 0;
@@ -303,7 +350,7 @@ export class Mahoraga extends FighterBase {
             const nodeX = Math.cos(angle) * wheelRadius;
             const nodeY = Math.sin(angle) * wheelRadius;
             const color = wheelColor(adaptation);
-            const pulse = 1 + Math.sin(this.spinAngle * 3 + index) * 0.15;
+            const pulse = 1 + Math.sin(this.wheelRenderAngle * 3 + index) * 0.15;
 
             ctx.fillStyle = color + "55";
             ctx.beginPath();
