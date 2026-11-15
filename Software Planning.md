@@ -184,7 +184,7 @@ node index.js
 
     
 
-* **\- Berserker:** The Berserker has 2 rotating blades around it that both do 8 damage, and every time either blade hits the enemy, the blades spin 10% faster. This stacks multiplicatively until the game ends.  
+* **\- Berserker:** The Berserker has 2 rotating blades around it that both do 8 damage, and every time either blade hits the enemy, the blades spin 10% faster. This stacks multiplicatively until the game ends. It takes 25% more damage from every attack, except for sudden death damage.  
   *   \- Health: 150  
   *   \- Damage: 8  
   *   \- Effect: Increase speed of attack  

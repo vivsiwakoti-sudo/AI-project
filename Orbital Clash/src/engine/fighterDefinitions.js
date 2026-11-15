@@ -248,7 +248,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Melee",
     cooldown: 0,
     description: "Two accelerating rotating blades.",
-    description2: "Two axes orbit the fighter, each dealing 8 damage. Every landed blade hit spins both axes 10% faster, stacking multiplicatively for the rest of the fight - the longer it lives, the deadlier it gets.",
+    description2: "Two axes orbit the fighter, each dealing 8 damage. Every landed blade hit spins both axes 10% faster, stacking multiplicatively for the rest of the fight - the longer it lives, the deadlier it gets. Takes 25% more damage from every attack (sudden death excepted).",
     keywords: ["axes", "orbit", "ramp", "stacking"],
   },
   "Spider": {

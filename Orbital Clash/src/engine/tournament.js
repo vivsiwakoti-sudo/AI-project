@@ -181,7 +181,7 @@ function applySuddenDeathDrain(fighters, onDrained = null) {
   fighters.forEach(fighter => {
     if (!liveFighter(fighter)) return;
     // A null attacker means the drain hurts everyone equally and credits nobody.
-    DamageSystem.applyDamage(null, fighter, SUDDEN_DEATH_DAMAGE, "AOE", { ignoreCooldown: true });
+    DamageSystem.applyDamage(null, fighter, SUDDEN_DEATH_DAMAGE, "AOE", { ignoreCooldown: true, suddenDeath: true });
     onDrained?.(fighter);
     landed = true;
   });

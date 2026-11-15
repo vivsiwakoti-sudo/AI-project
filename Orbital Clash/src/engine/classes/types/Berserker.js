@@ -22,6 +22,11 @@ export class Berserker extends FighterBase {
         this.bladeEdgeRadius = 13;
     }
 
+    // Berserkers take 25% more from every attack. Sudden death drain is exempt.
+    getDamageMultiplier(category, options = {}) {
+        return options.suddenDeath ? 1 : 1.25;
+    }
+
     update(dt, opponent) {
         super.update(dt, opponent);
         this.rotationSpeed = Math.min(this.rotationSpeed, this.maxRotationSpeed);

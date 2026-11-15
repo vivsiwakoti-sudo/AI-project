@@ -227,7 +227,7 @@ export function stepBattle(fighters, options = {}) {
       : [];
     if (suddenDeathTick) {
       // A null attacker means it hurts everyone equally and credits nobody.
-      DamageSystem.applyDamage(null, f, 2, "AOE", { ignoreCooldown: true });
+      DamageSystem.applyDamage(null, f, 2, "AOE", { ignoreCooldown: true, suddenDeath: true });
       onSuddenDeath?.(f);
     }
     f.update(dt, opponent);

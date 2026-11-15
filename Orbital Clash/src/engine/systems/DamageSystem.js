@@ -124,7 +124,7 @@ export class DamageSystem {
 
         let finalDamage = typeof hitResponse === "number" ? hitResponse : damage;
         if (typeof hitResponse !== "number" && victim.getDamageMultiplier) {
-            finalDamage *= victim.getDamageMultiplier(category);
+            finalDamage *= victim.getDamageMultiplier(category, options);
         }
 
         // Parry / deflection. Each class decides for itself which categories it
