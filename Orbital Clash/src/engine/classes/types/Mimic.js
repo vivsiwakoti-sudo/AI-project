@@ -101,7 +101,7 @@ export class Mimic extends FighterBase {
             saved.set(key, Object.hasOwn(this, key) ? { value: this[key] } : null);
             this[key] = value;
         }
-        // A fresh Summoner normally waits 15 seconds, longer than a copied form.
+        // A fresh Summoner normally waits its full summon interval, longer than a copied form.
         if (name === "Summoner") this.summonTimer = 0;
         for (const key of ["speed", "damage", "dodgeChance", "isCharging", "chargeProgress"]) {
             if (!saved.has(key)) saved.set(key, Object.hasOwn(this, key) ? { value: this[key] } : null);

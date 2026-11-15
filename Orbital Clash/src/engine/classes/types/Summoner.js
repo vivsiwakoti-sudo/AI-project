@@ -2,7 +2,7 @@ import { FighterBase } from "../FighterBase.js";
 import { FighterFactory } from "../../FighterFactory.js";
 import { FIGHTER_CLASSES } from "../../fighterDefinitions.js";
 
-export const SUMMON_INTERVAL = 15;
+export const SUMMON_INTERVAL = 17;
 export const SUMMON_HEALTH = 15;
 export const SUMMONS_PER_PULSE = 2;
 

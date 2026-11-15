@@ -377,8 +377,8 @@ export const FIGHTER_CLASSES = {
     shape: "round",
     attackType: "Trail",
     cooldown: 0,
-    description: "Summons two roster fighters every 15 seconds.",
-    description2: "Carries a staff and deals no touch damage. Every 15 seconds he summons two random roster fighters with 15 HP each and their full abilities. Summons fight for him, can be hit by enemies, and vanish when he is knocked out. In one-on-one fights, ranged fighters aim at the Summoner instead of his summons.",
+    description: "Summons two roster fighters every 17 seconds.",
+    description2: "Carries a staff and deals no touch damage. Every 17 seconds he summons two random roster fighters with 15 HP each and their full abilities. Summons fight for him, can be hit by enemies, and vanish when he is knocked out. In one-on-one fights, ranged fighters aim at the Summoner instead of his summons.",
     keywords: ["summon", "staff", "minions", "trail"],
   },
   "Yeti": {

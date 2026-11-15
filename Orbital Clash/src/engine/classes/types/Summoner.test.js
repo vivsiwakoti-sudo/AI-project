@@ -93,10 +93,10 @@ test('a pruned Duplicator summon also takes its clone swarm with it', () => {
   assert.ok(clones.every(clone => clone.isDead));
 });
 
-test('the first summon pulse lands after 15 seconds, with two 15 HP summons', () => {
+test('the first summon pulse lands after the summon interval, with two 15 HP summons', () => {
   const summoner = makeSummoner();
   for (let i = 0; i < SUMMON_INTERVAL - 1; i++) summoner.update(1, null);
-  assert.equal(summoner.summons.length, 0, 'nothing is summoned before the 15 second mark');
+  assert.equal(summoner.summons.length, 0, 'nothing is summoned before the summon interval');
 
   summoner.update(1, null);
   assert.equal(summoner.summons.length, SUMMONS_PER_PULSE);
@@ -108,7 +108,7 @@ test('the first summon pulse lands after 15 seconds, with two 15 HP summons', ()
   }
 });
 
-test('summons repeat every 15 seconds', () => {
+test('summons repeat every summon interval', () => {
   const summoner = makeSummoner();
   for (let i = 0; i < SUMMON_INTERVAL; i++) summoner.update(1, null);
   for (let i = 0; i < SUMMON_INTERVAL; i++) summoner.update(1, null);
