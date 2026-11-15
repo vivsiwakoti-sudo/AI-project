@@ -112,6 +112,32 @@ test('every damage category adapts independently at 3, 5 and 7 landed hits', () 
   assert.ok(mahoraga.wheelBurst > 0);
 });
 
+test('drawing a revealed adaptation on the wheel leaves the canvas stack balanced', () => {
+  const mahoraga = makeMahoraga();
+  mahoraga.health = mahoraga.maxHealth = 1e9;
+  const attacker = makeVictim();
+  for (let hit = 0; hit < 3; hit++) {
+    withRandom(0.99, () => DamageSystem.applyDamage(attacker, mahoraga, 10, 'Melee', { ignoreCooldown: true }));
+  }
+  assert.ok(mahoraga.wheelRevealedCategories.includes('Melee'), 'the adaptation must be on the wheel');
+
+  // Records save/restore depth so an exception mid-wheel cannot leak transforms
+  // into the rest of the arena frame unnoticed.
+  const stack = { depth: 0 };
+  const chain = new Proxy(function () { }, {
+    get(_, prop) {
+      if (prop === 'save') return () => { stack.depth += 1; };
+      if (prop === 'restore') return () => { stack.depth -= 1; };
+      if (prop === Symbol.toPrimitive) return () => 0;
+      return chain;
+    },
+    set: () => true,
+    apply: () => chain
+  });
+  assert.doesNotThrow(() => mahoraga.draw(chain));
+  assert.equal(stack.depth, 0, 'every save must be matched by a restore');
+});
+
 test('zero-impact projectiles still count as landed attacks', () => {
   const mahoraga = makeMahoraga();
   const attacker = makeVictim();

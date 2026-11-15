@@ -298,7 +298,7 @@ export class Mahoraga extends FighterBase {
         this.adaptedCategories.filter(a => this.wheelRevealedCategories.includes(a.category)).forEach((adaptation, index) => {
 
             const slotOrder = { Melee: 0, Projectile: 1, Body: 2, Beam: 3, AOE: 4 };
-            const order = slotOrder[slot] ?? index;
+            const order = slotOrder[adaptation.category] ?? index;
             const angle = (order / 5) * Math.PI * 2 - Math.PI / 2 + this.wheelRenderAngle;
             const nodeX = Math.cos(angle) * wheelRadius;
             const nodeY = Math.sin(angle) * wheelRadius;
@@ -328,7 +328,7 @@ export class Mahoraga extends FighterBase {
             ctx.font = "bold 9px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(slot[0], 0, 0);
+            ctx.fillText(adaptation.category[0], 0, 0);
             ctx.restore();
         });
         // Close the rim/spoke frame and the wheel's tilt+translate frame.
