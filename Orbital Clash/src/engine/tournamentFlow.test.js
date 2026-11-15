@@ -110,7 +110,9 @@ test('completed tournaments persist and improve best finishes without duplicate 
   assert.equal(stats.classes[fourthPlace].bestRound, 'Third Place');
   assert.equal(stats.classes[quarterfinalLoser].bestRound, 'Quarterfinals');
   assert.equal(stats.classes[round16Loser].bestRound, 'Round of 16');
-  assert.equal(stats.classes[preliminaryLoser].bestPlacement, 17);
+  const openingStanding = tournamentRankings(first).standings.find(row => row.name === preliminaryLoser).placement;
+  assert.equal(stats.classes[preliminaryLoser].bestPlacement, openingStanding);
+  assert.ok(openingStanding >= 17, 'opening-round losers rank 17 or lower');
   assert.equal(stats.classes[preliminaryLoser].bestRound, 'Round of 32');
   assert.equal(stats.tournamentsCompleted, 1);
   assert.equal(recordTournamentResult(first).tournamentsCompleted, 1);
@@ -124,6 +126,18 @@ test('completed tournaments persist and improve best finishes without duplicate 
   assert.equal(stats.classes[first.champion].bestRound, 'Champion');
   assert.equal(stats.tournamentsCompleted, 2);
   assert.equal(recordTournamentResult(first).tournamentsCompleted, 2, 'older tournament IDs remain recorded');
+});
+
+test('stored best placements match the exact standings shown on the champion screen', () => {
+  store.clear();
+  const tournament = completeBracket(103);
+  recordTournamentResult(tournament);
+  const stats = loadTournamentStats();
+  const standings = tournamentRankings(tournament).standings;
+  assert.ok(standings.length > 4, 'the bracket produces a full standings list');
+  for (const row of standings) {
+    assert.equal(stats.classes[row.name].bestPlacement, row.placement, row.name);
+  }
 });
 
 test('third and fourth in the standings follow the third-place match, not damage', () => {
@@ -460,6 +474,7 @@ test('a legacy 26-class tournament save resumes with its original byes and round
   assert.equal(loadTournamentStats().classes[legacyLoser].bestRound, 'Preliminary Round');
   const saved = JSON.parse(store.get(TOURNAMENT_STATS_KEY));
   delete saved.classes[legacyLoser].bestRound;
+  saved.classes[legacyLoser].bestPlacement = 17;
   store.set(TOURNAMENT_STATS_KEY, JSON.stringify(saved));
   assert.equal(loadTournamentStats().classes[legacyLoser].bestRound, 'Preliminary Round', 'history restores the legacy round');
 });

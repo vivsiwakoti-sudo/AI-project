@@ -801,10 +801,9 @@ function sanitizeClassStats(raw) {
   const source = raw && typeof raw === "object" ? raw : {};
   const best = source.bestPlacement == null ? null : sanitizeNumber(source.bestPlacement, null);
   const placement = best == null || best < 1 ? null : Math.floor(best);
-  const allowedRounds = placement === 17
-    ? [ROUND_LABELS.preliminary, LEGACY_ROUND_DEFINITIONS[0].label]
-    : placement === 3 ? [ROUND_LABELS.semifinal, ROUND_LABELS.thirdplace]
-      : [bestRoundForPlacement(placement)];
+  // Exact standings can place a fighter at any rank inside a bracket bucket, so the
+  // stored round label only has to be a known round name.
+  const knownRounds = [...Object.values(ROUND_LABELS), ...LEGACY_ROUND_DEFINITIONS.map(round => round.label), "Champion", "Opening round"];
   return {
     matches: Math.max(0, Math.floor(sanitizeNumber(source.matches))),
     wins: Math.max(0, Math.floor(sanitizeNumber(source.wins))),
@@ -814,7 +813,7 @@ function sanitizeClassStats(raw) {
     runnerUps: Math.max(0, Math.floor(sanitizeNumber(source.runnerUps))),
     appearances: Math.max(0, Math.floor(sanitizeNumber(source.appearances))),
     bestPlacement: placement,
-    bestRound: typeof source.bestRound === "string" && allowedRounds.includes(source.bestRound) ? source.bestRound : null,
+    bestRound: typeof source.bestRound === "string" && knownRounds.includes(source.bestRound) ? source.bestRound : null,
     totalMatchSeconds: Math.max(0, sanitizeNumber(source.totalMatchSeconds)),
     totalSurvivalSeconds: Math.max(0, sanitizeNumber(source.totalSurvivalSeconds))
   };
@@ -1170,9 +1169,14 @@ export function recordTournamentResult(tournament, { timestamp = Date.now() } = 
   // Everyone who took part gets an appearance; everyone who lost gets a loss and
   // an elimination. Only the champion is spared a loss (they never lost a match).
   const participants = new Set([...(tournament.participants || []), ...tournament.byes.map(bye => bye.name)]);
+  // Exact standings (the same order the champion screen shows) decide the stored
+  // placement; the bracket bucket is only a fallback for anyone missing from them.
+  const standings = new Map(tournamentRankings(tournament).standings.map(row => [row.name, row.placement]));
   participants.forEach(name => {
     const current = touch(name);
-    const { placement, round } = finishFor(tournament, name);
+    const bracket = finishFor(tournament, name);
+    const placement = standings.get(name) ?? bracket.placement;
+    const round = bracket.round;
     const isChampion = name === tournament.champion;
     const improved = placement != null && (current.bestPlacement == null || placement < current.bestPlacement);
     write(name, {
