@@ -10,6 +10,11 @@ const ADAPTATION_STEPS = [
     { hits: 7, resistance: 0.7 }
 ];
 
+// Adaptations take effect the moment they are earned, but the wheel reveals them
+// one at a time, at least this many seconds apart, so back-to-back adaptations
+// do not blur together.
+const WHEEL_REVEAL_GAP = 3;
+
 export class Mahoraga extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -37,6 +42,9 @@ export class Mahoraga extends FighterBase {
         this.wheelGlow = 0;            // 0..1 rim highlight while adapting
         this.wheelRadius = this.radius * 0.72;
         this.wheelHeight = -(this.radius + 22); // centre sits above the head
+        this.wheelQueue = [];                   // earned adaptations waiting to be shown
+        this.wheelRevealedCategories = [];      // categories whose node is on the wheel
+        this.wheelRevealHold = 0;               // seconds until the next reveal
 
         // Mahoraga has NO attack animation of its own. It is a pure Body fighter:
         // the fists are attached to the body and the damage comes from the arena's
@@ -132,13 +140,23 @@ export class Mahoraga extends FighterBase {
         if (existing) existing.resistance = resistance;
         else this.adaptedCategories.push({ category, resistance });
 
-        this.adaptFlash = 0.8;
-        // The wheel spins fast the instant a new adaptation is earned.
-        this.spinAdaptationWheel();
+        this.wheelQueue.push(category);
+        this.revealQueuedAdaptations();
         this.emitBurst("#ffffff", 30, 420);
         if (this.particleSystem) {
             this.particleSystem.ring(this.x, this.y, "#ffffff", { startRadius: this.radius, endRadius: 150, life: 0.6, lineWidth: 5 });
         }
+    }
+
+    // Shows the next queued adaptation on the wheel once the previous reveal has
+    // had its full gap on screen.
+    revealQueuedAdaptations() {
+        if (this.wheelRevealHold > 0 || this.wheelQueue.length === 0) return;
+        const category = this.wheelQueue.shift();
+        if (!this.wheelRevealedCategories.includes(category)) this.wheelRevealedCategories.push(category);
+        this.adaptFlash = 0.8;
+        this.spinAdaptationWheel();
+        this.wheelRevealHold = WHEEL_REVEAL_GAP;
     }
 
     getDamageMultiplier(category) {
@@ -156,6 +174,8 @@ export class Mahoraga extends FighterBase {
         this.adaptFlash = Math.max(0, (this.adaptFlash || 0) - dt);
         this.parryFlash = Math.max(0, (this.parryFlash || 0) - dt);
         this.parryRingRadius += dt * 190;
+        this.wheelRevealHold = Math.max(0, this.wheelRevealHold - dt);
+        this.revealQueuedAdaptations();
 
         // Spin the wheel: the adaptation burst decays into the slow idle turn and
         // the rendered angle integrates a smoothed rate, so the wheel winds up and
@@ -275,8 +295,8 @@ export class Mahoraga extends FighterBase {
         // Adaptation nodes ride the rim inside the rotated frame, so each earned
         // adaptation keeps its own slot and physically turns with the wheel.
         ctx.shadowBlur = 0;
-        this.adaptedCategories.forEach((adaptation, index) => {
-            const slot = adaptation.category;
+        this.adaptedCategories.filter(a => this.wheelRevealedCategories.includes(a.category)).forEach((adaptation, index) => {
+
             const slotOrder = { Melee: 0, Projectile: 1, Body: 2, Beam: 3, AOE: 4 };
             const order = slotOrder[slot] ?? index;
             const angle = (order / 5) * Math.PI * 2 - Math.PI / 2 + this.wheelRenderAngle;

@@ -207,6 +207,21 @@ test('an unparried melee strike takes 30% less damage and is not stunned', () =>
   assert.notEqual(attacker.isStuck, true, 'only a parry stuns');
 });
 
+test('a second adaptation waits 3 seconds on the wheel before it is shown', () => {
+  const mahoraga = makeMahoraga();
+  const victim = makeVictim();
+  for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, 'Melee');
+  for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, 'Projectile');
+  assert.deepEqual(mahoraga.wheelRevealedCategories, ['Melee'], 'the first adaptation shows at once');
+  assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.7, 'the queued adaptation still applies immediately');
+
+  for (let t = 0; t < 2.9; t += 1 / 60) mahoraga.update(1 / 60, victim);
+  assert.deepEqual(mahoraga.wheelRevealedCategories, ['Melee'], 'the second is still waiting');
+
+  for (let t = 0; t < 0.2; t += 1 / 60) mahoraga.update(1 / 60, victim);
+  assert.deepEqual(mahoraga.wheelRevealedCategories, ['Melee', 'Projectile'], 'the second shows after 3 seconds');
+});
+
 test('resistances stay capped at 70% through repeated hits', () => {
   const mahoraga = adaptedMahoraga('Melee', 'Projectile', 'Body');
   for (const category of ['Melee', 'Projectile', 'Body']) {
