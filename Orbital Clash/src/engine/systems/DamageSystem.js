@@ -124,7 +124,7 @@ export class DamageSystem {
 
         let finalDamage = typeof hitResponse === "number" ? hitResponse : damage;
         if (typeof hitResponse !== "number" && victim.getDamageMultiplier) {
-            finalDamage *= victim.getDamageMultiplier(category, options);
+            finalDamage *= victim.getDamageMultiplier(category, options, attacker);
         }
 
         // Parry / deflection. Each class decides for itself which categories it
@@ -134,7 +134,7 @@ export class DamageSystem {
         // out of the categories it is meant to be weak to. The projectile itself
         // is knocked aside by the class's own onParried hook.
         if (victim.getParryChance) {
-            const parryChance = victim.getParryChance(category);
+            const parryChance = victim.getParryChance(category, attacker);
             if (parryChance > 0 && Math.random() < parryChance) {
                 if (victim.onParried) victim.onParried(attacker, category, options.projectile);
                 return false;
@@ -170,7 +170,7 @@ export class DamageSystem {
             ?? attacker?.root?.particleSystem?.tournamentDamageTracker
             ?? victim.particleSystem?.tournamentDamageTracker;
         tournamentTracker?.(attacker, appliedDamage);
-        if (victim.onDamaged) victim.onDamaged(appliedDamage, category, { crit: isCrit });
+        if (victim.onDamaged) victim.onDamaged(appliedDamage, category, { crit: isCrit, attacker });
 
         // Presentation-only impact feedback. Every source funnels through here, so
         // crit star-bursts, knockback impulses and the camera jolt are applied

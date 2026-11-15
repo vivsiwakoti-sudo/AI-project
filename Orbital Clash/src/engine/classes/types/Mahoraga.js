@@ -19,12 +19,19 @@ const WHEEL_REVEAL_GAP = 3;
 // total is capped at the base plus these layers (3 wheels).
 const WHEEL_LAYER_SCALES = [0.66, 0.4];
 const WHEEL_POP_SECONDS = 0.6;
+const ADAPTATION_GOLD = "#FFD700";
+
+// Every attack is adapted to on its own. The key is the attacking class plus the
+// damage category, and a Mimic counts as the form it is copying, so a Knight's
+// sword and a Samurai's sword are separate attacks, and so is a Mimic's sword
+// after it switches form.
+const attackKeyOf = (attacker, category) => `${attacker?.mimicForm ?? attacker?.name ?? "World"}:${category}`;
 
 export class Mahoraga extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
-        this.adaptation = Object.create(null);
-        this.adaptedCategories = []; // Contains {category, resistance}
+        this.adaptation = Object.create(null); // landed hits per attack key
+        this.adaptedAttacks = [];              // Contains {key, category, resistance}
         this.impactFlash = 0;
         this.impactX = 0;
         this.impactY = 0;
@@ -44,11 +51,11 @@ export class Mahoraga extends FighterBase {
         this.wheelSpinSpeed = 0.8;     // idle target rad/second
         this.wheelBurst = 0;           // extra spin imparted by an adaptation
         this.wheelTilt = 0;            // lean into the fighter's momentum
-        this.wheelGlow = 0;            // 0..1 rim highlight while adapting
+        this.wheelGlow = 0;            // 0..1 gold rim highlight while adapting
+        this.adaptFlash = 0;           // seconds the gold glow lasts after an adaptation
         this.wheelRadius = this.radius * 0.72;
         this.wheelHeight = -(this.radius + 22); // centre sits above the head
         this.wheelQueue = [];                   // earned adaptations waiting to be shown
-        this.wheelRevealedCategories = [];      // categories whose node is on the wheel
         this.wheelRevealHold = 0;               // seconds until the next reveal
         this.wheelLayers = [];                  // categories of the extra wheels, oldest first
         this.wheelPop = 0;                      // 1 -> 0 pop-in of the newest extra wheel
@@ -76,17 +83,18 @@ export class Mahoraga extends FighterBase {
         this.wheelBurst = Math.PI * 6;
     }
 
-    hasAdaptedTo(category) {
-        return this.adaptedCategories.some(c => c.category === category);
+    hasAdaptedTo(key) {
+        return this.adaptedAttacks.some(a => a.key === key);
     }
 
-    // Parries only unlock with the matching adaptation: once he has adapted to
-    // Projectiles he swats them away (35%), and once he has adapted to Melee he
-    // parries weapon strikes (25%) and stuns the attacker. Body slams, beams and
-    // AOE are never parried.
-    getParryChance(category) {
-        if (category === "Projectile") return this.hasAdaptedTo("Projectile") ? 0.35 : 0;
-        if (category === "Melee") return this.hasAdaptedTo("Melee") ? MELEE_PARRY_CHANCE : 0;
+    // Parries only unlock with the matching adaptation to that exact attack: once
+    // he has adapted to a Knight's sword it is parried (25%) and stuns the
+    // attacker, and once he has adapted to a projectile it is swatted (35%). Body
+    // slams, beams and AOE are never parried.
+    getParryChance(category, attacker) {
+        const key = attackKeyOf(attacker, category);
+        if (category === "Projectile") return this.hasAdaptedTo(key) ? 0.35 : 0;
+        if (category === "Melee") return this.hasAdaptedTo(key) ? MELEE_PARRY_CHANCE : 0;
         return 0;
     }
 
@@ -137,18 +145,21 @@ export class Mahoraga extends FighterBase {
 
     onDamaged(amount, category, options = {}) {
         super.onDamaged(amount, category, options);
-        const hits = this.adaptation[category] = (this.adaptation[category] || 0) + 1;
+        const key = attackKeyOf(options.attacker, category);
+        const hits = this.adaptation[key] = (this.adaptation[key] || 0) + 1;
         const step = ADAPTATION_STEPS.find(item => item.hits === hits);
-        if (step) this.completeAdaptation({ category, resistance: step.resistance });
+        if (step) this.completeAdaptation({ key, category, resistance: step.resistance });
     }
 
-    completeAdaptation({ category, resistance }) {
-        const existing = this.adaptedCategories.find(c => c.category === category);
-        if (existing) existing.resistance = resistance;
-        else this.adaptedCategories.push({ category, resistance });
+    completeAdaptation({ key, category, resistance }) {
+        this.adaptedAttacks.push({ key, category, resistance });
 
+        // The wheel reacts the moment he adapts; the reveal below may wait for the
+        // previous one to finish, but the spin and gold glow never do.
         this.wheelQueue.push(category);
         this.revealQueuedAdaptations();
+        this.spinAdaptationWheel();
+        this.adaptFlash = 0.8;
         this.emitBurst("#ffffff", 30, 420);
         if (this.particleSystem) {
             this.particleSystem.ring(this.x, this.y, "#ffffff", { startRadius: this.radius, endRadius: 150, life: 0.6, lineWidth: 5 });
@@ -160,7 +171,6 @@ export class Mahoraga extends FighterBase {
     revealQueuedAdaptations() {
         if (this.wheelRevealHold > 0 || this.wheelQueue.length === 0) return;
         const category = this.wheelQueue.shift();
-        if (!this.wheelRevealedCategories.includes(category)) this.wheelRevealedCategories.push(category);
         if (this.wheelLayers.length < WHEEL_LAYER_SCALES.length) {
             this.wheelLayers.push(category);
             this.wheelPop = 1;
@@ -170,8 +180,9 @@ export class Mahoraga extends FighterBase {
         this.wheelRevealHold = WHEEL_REVEAL_GAP;
     }
 
-    getDamageMultiplier(category) {
-        const adaptation = this.adaptedCategories.find(c => c.category === category);
+    getDamageMultiplier(category, options, attacker) {
+        const key = attackKeyOf(attacker, category);
+        const adaptation = this.adaptedAttacks.findLast(a => a.key === key);
         return adaptation ? (1 - adaptation.resistance) : 1;
     }
 
@@ -240,16 +251,15 @@ export class Mahoraga extends FighterBase {
         
         // --- Adaptation wheel -------------------------------------------------
         // A spoked Dharma wheel floats OVER Mahoraga's head, held up by a short
-        // neck. It turns constantly at a slow idle rate and whips around hard the
-        // instant a new adaptation lands, so "I just adapted" is readable at a
-        // glance. Rim, spokes and nodes all ride the same angle, and the nodes
-        // corresponding to an earned adaptation light up in its category colour.
+        // neck. It turns constantly at a slow idle rate and whips around hard, with
+        // a gold glow, the instant he adapts to an attack, so "I just adapted" is
+        // readable at a glance. Each earned adaptation nests a coloured wheel inside.
         const wheelRadius = this.wheelRadius;
         const wheelY = this.wheelHeight;
-        const wheelColor = (adaptation) => {
-            if (adaptation.category === "Melee") return "#FFD700";
-            if (adaptation.category === "Projectile") return "#00BFFF";
-            if (adaptation.category === "Body") return "#FF69B4";
+        const wheelColor = (category) => {
+            if (category === "Melee") return "#FF8C1A";
+            if (category === "Projectile") return "#00BFFF";
+            if (category === "Body") return "#FF69B4";
             return "#FF0000";
         };
 
@@ -277,10 +287,10 @@ export class Mahoraga extends FighterBase {
         ctx.save();
         ctx.rotate(this.wheelRenderAngle);
         const glowing = this.adaptFlash > 0 || this.wheelGlow > 0;
-        ctx.strokeStyle = glowing ? "rgba(255,255,255,0.95)" : "rgba(180, 200, 230, 0.65)";
+        ctx.strokeStyle = glowing ? ADAPTATION_GOLD : "rgba(180, 200, 230, 0.65)";
         ctx.lineWidth = 2.5;
         ctx.shadowBlur = glowing ? 18 : 8;
-        ctx.shadowColor = "#ffffff";
+        ctx.shadowColor = glowing ? ADAPTATION_GOLD : "#ffffff";
 
         // Outer rim.
         ctx.beginPath();
@@ -311,7 +321,7 @@ export class Mahoraga extends FighterBase {
             const isNewest = i === this.wheelLayers.length - 1;
             const pop = isNewest ? this.wheelPop : 0;
             const layerRadius = wheelRadius * WHEEL_LAYER_SCALES[i] * (1 + pop * 0.35);
-            const color = wheelColor({ category });
+            const color = wheelColor(category);
             const direction = i % 2 === 0 ? -1 : 1;
 
             ctx.save();
@@ -339,49 +349,8 @@ export class Mahoraga extends FighterBase {
             ctx.restore();
         });
 
-        // Adaptation nodes ride the rim inside the rotated frame, so each earned
-        // adaptation keeps its own slot and physically turns with the wheel.
-        ctx.shadowBlur = 0;
-        this.adaptedCategories.filter(a => this.wheelRevealedCategories.includes(a.category)).forEach((adaptation, index) => {
-
-            const slotOrder = { Melee: 0, Projectile: 1, Body: 2, Beam: 3, AOE: 4 };
-            const order = slotOrder[adaptation.category] ?? index;
-            const angle = (order / 5) * Math.PI * 2 - Math.PI / 2 + this.wheelRenderAngle;
-            const nodeX = Math.cos(angle) * wheelRadius;
-            const nodeY = Math.sin(angle) * wheelRadius;
-            const color = wheelColor(adaptation);
-            const pulse = 1 + Math.sin(this.wheelRenderAngle * 3 + index) * 0.15;
-
-            ctx.fillStyle = color + "55";
-            ctx.beginPath();
-            ctx.arc(nodeX, nodeY, 9 * pulse, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = color;
-            ctx.beginPath();
-            ctx.arc(nodeX, nodeY, 9 * pulse, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-
-            // The letter is counter-rotated so it stays upright while the node
-            // itself physically turns with the wheel.
-            ctx.save();
-            ctx.translate(nodeX, nodeY);
-            ctx.rotate(-this.wheelRenderAngle);
-            ctx.fillStyle = color;
-            ctx.font = "bold 9px Arial";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(adaptation.category[0], 0, 0);
-            ctx.restore();
-        });
-        // Close the rim/spoke frame and the wheel's tilt+translate frame.
-        // These two must be balanced: the wheel mount opened two saves (line
-        // ~360 and ~374) on top of the outer body translate, so the nodes frame
-        // closes the inner one here and the mount frame is closed below.
+        // Close the wheel's spin frame and its lean/mount frame. The mount opened
+        // two saves on top of the outer body translate, so both are closed here.
         ctx.restore();
         ctx.restore();
 

@@ -364,7 +364,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 0,
     description: "Adapts to enemy attacks.",
-    description2: "Adapts separately to every attack category: after 3, 5 and 7 landed hits it gains 30%, 50% and 70% resistance. Melee adaptation unlocks a 25% parry that stuns for 1 second; projectile adaptation unlocks a 35% parry.",
+    description2: "Adapts separately to every attack, meaning each attacking class and damage type on its own (a Knight's sword and a Samurai's sword are different attacks, and a Mimic must be re-adapted after it switches form). After 3, 5 and 7 landed hits from that attack it gains 30%, 50% and 70% resistance. A melee adaptation unlocks a 25% parry that stuns for 1 second; a projectile adaptation unlocks a 35% parry. The wheel spins and glows gold each time he adapts.",
     keywords: ["adapt", "resist", "parry", "wheel", "tank"],
   },
   "Summoner": {

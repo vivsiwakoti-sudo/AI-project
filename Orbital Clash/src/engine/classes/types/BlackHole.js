@@ -140,7 +140,7 @@ export class BlackHole extends FighterBase {
             if (victim) {
                 // The singularity is a ranged shot, so a parry can swat the whole
                 // projectile away before it ever opens its event horizon.
-                const spawnsHole = victim.getParryChance ? victim.getParryChance("Projectile") : 0;
+                const spawnsHole = victim.getParryChance ? victim.getParryChance("Projectile", this) : 0;
                 if (spawnsHole > 0 && Math.random() < spawnsHole) {
                     if (victim.onParried) victim.onParried(this, "Projectile", projectile);
                     return;

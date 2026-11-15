@@ -285,7 +285,7 @@ node index.js
 
     
 
-* **\- Mahoraga**: A larger fighter that adapts to attack categories after being hit 3 times by attacks of that category. When Melee attacks (with weapons) have been adapted to, it gets 30% resistance to them and a 25% chance to parry and stun the attack. Projectile attacks get 50% resistance. Body attacks get 75% resistance after the required adaptation is completed. It attacks with fists attached to its body.  
+* **\- Mahoraga**: A larger fighter that adapts to each attack separately. An attack is its attacking class plus damage category (a Mimic counts as the form it copies), so every new attack must be adapted to again. After 3, 5 and 7 landed hits from that attack it gains 30%, 50% and 70% resistance. A melee adaptation unlocks a 25% parry that stuns the attacker for 1 second; a projectile adaptation unlocks a 35% parry. Each adaptation makes the wheel spin and glow gold. It attacks with fists attached to its body.  
   *   \- Health: 130  
   *   \- Damage: 8  
   *   \- Effect: Adaptation  

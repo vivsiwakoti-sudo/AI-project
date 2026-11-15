@@ -30,7 +30,7 @@ function getSpecialRows(fighter) {
     case "Berserker": return [["BLADE SPEED", `${formatNumber(fighter.rotationSpeed * 100)}%`]];
     case "Solar Beam": return [["BEAM STATE", fighter.beamActive ? "FIRING" : fighter.isCharging ? "CHARGING" : "STANDBY"]];
     case "Vampire": return [["EVOLUTION", `STAGE ${Math.max(1, (fighter.evolutionLevel || 0) + 1)}`], ["BLOOD DASH", fighter.dashState === "drain" ? "DRAINING" : fighter.dashState === "dash" ? "DASHING" : (fighter.evolutionLevel || 0) >= 1 ? "READY" : "STAGE 2"]];
-    case "Mahoraga": return [["ADAPTATIONS", `${fighter.adaptedCategories?.length || 0}`]];
+    case "Mahoraga": return [["ADAPTATIONS", `${fighter.adaptedAttacks?.length || 0}`]];
     case "Mutant": return [["CURRENT HP MAX", formatNumber(fighter.maxHealth)], ["MUTATION", `${formatNumber(fighter.mutationTimer)}s`]];
     case "Spider": return [["WEBS ACTIVE", String(fighter.webs?.length || 0)]];
     case "Tunneler": return [["TUNNEL STATUS", fighter.isUntargetable ? "UNDERGROUND" : "READY"]];
