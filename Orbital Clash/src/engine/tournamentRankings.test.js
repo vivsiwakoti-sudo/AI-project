@@ -129,15 +129,15 @@ test('ties schedule a real placement bout, survive reload and rerank using its t
   assert.deepEqual(ties, []);
 });
 
-test('the third-place match contributes stats but its winner is not automatically third', () => {
+test('the third-place match winner takes third even when the other semifinalist dealt more damage', () => {
   const { tournament } = bracketWithOpeningTie();
   const third = tournament.rounds.thirdplace.matches[0];
   const record = tournament.matchResults.find(item => item.id === third.id);
   const losingSemifinalist = record.combatants.find(item => item.name === third.loser);
   losingSemifinalist.tournamentStats.damageDealt = 10000;
   const standings = tournamentRankings(tournament).standings;
-  assert.equal(standings[2].name, third.loser);
-  assert.equal(standings[3].name, third.winner);
+  assert.equal(standings[2].name, third.winner);
+  assert.equal(standings[3].name, third.loser);
 });
 
 test('three identical totals are resolved by tiebreak winners when match totals remain tied', () => {

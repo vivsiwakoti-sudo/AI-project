@@ -52,6 +52,12 @@ export function tournamentRankings(tournament) {
     if (totals.has(name)) rows.push(totals.get(name));
   }
   for (const round of ELIMINATION_ROUNDS) {
+    const thirdPlace = tournament.rounds?.thirdplace?.matches?.[0];
+    if (round === "semifinal" && thirdPlace?.status === "resolved"
+      && totals.has(thirdPlace.winner) && totals.has(thirdPlace.loser)) {
+      rows.push(totals.get(thirdPlace.winner), totals.get(thirdPlace.loser));
+      continue;
+    }
     const group = (tournament.rounds?.[round]?.matches || [])
       .filter(match => match.status === "resolved" && totals.has(match.loser))
       .map(match => totals.get(match.loser))

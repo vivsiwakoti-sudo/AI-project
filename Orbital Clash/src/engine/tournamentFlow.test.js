@@ -38,6 +38,7 @@ const {
   buildTournamentBracket,
   createTournamentBout,
   hasResumableTournament,
+  tournamentRankings,
   tournamentRoster,
   loadActiveTournament,
   loadTournamentStats,
@@ -123,6 +124,21 @@ test('completed tournaments persist and improve best finishes without duplicate 
   assert.equal(stats.classes[first.champion].bestRound, 'Champion');
   assert.equal(stats.tournamentsCompleted, 2);
   assert.equal(recordTournamentResult(first).tournamentsCompleted, 2, 'older tournament IDs remain recorded');
+});
+
+test('third and fourth in the standings follow the third-place match, not damage', () => {
+  const tournament = completeBracket(101);
+  const thirdPlace = tournament.rounds.thirdplace.matches[0];
+  const flipped = {
+    ...tournament,
+    rounds: {
+      ...tournament.rounds,
+      thirdplace: { ...tournament.rounds.thirdplace, matches: [{ ...thirdPlace, winner: thirdPlace.loser, loser: thirdPlace.winner }] }
+    }
+  };
+  const { standings } = tournamentRankings(flipped);
+  assert.equal(standings[2].name, thirdPlace.loser);
+  assert.equal(standings[3].name, thirdPlace.winner);
 });
 
 test('incorrect first-place finishes are recovered from saved tournament history', () => {

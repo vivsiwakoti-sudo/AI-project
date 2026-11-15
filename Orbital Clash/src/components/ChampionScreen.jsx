@@ -115,7 +115,7 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
 
       <section className="champion-leaderboard">
         <h2>TOURNAMENT LEADERBOARD</h2>
-        <p>Ranked by elimination round, damage dealt, survival time, then damage taken. Tiebreak matches count toward these totals.</p>
+        <p>Ranked by elimination round (3rd and 4th decided by the third-place match), then damage dealt, survival time, then damage taken. Tiebreak matches count toward these totals.</p>
         {ranking.standings.some(row => row.approximate) && (
           <p role="status">Some totals are approximate or incomplete because this tournament includes matches saved by an older version.</p>
         )}
