@@ -441,13 +441,13 @@ export class FighterBase {
 
         this.damageNumbers.push({
             amount: value,
-            life: 0.8,
-            maxLife: 0.8,
+            life: 1.0,
+            maxLife: 1.0,
             color: crit ? "#ffd166" : color,
             crit,
             category,
             hits: 1,
-            pop: crit ? 1.3 : 1,   // crit reads bigger for its whole life
+            pop: crit ? 1.6 : 1,   // spawn overshoot; crit overshoots harder
             drift: (Math.random() - 0.5) * 30,
             offsetX: (Math.random() - 0.5) * 18
         });
@@ -537,7 +537,7 @@ export class FighterBase {
             // Ease-out rise: fast at first, slowing as it fades, so the number
             // "pops" up out of the body instead of sliding at a constant rate.
             const t = Math.min(1, entry.life / entry.maxLife);
-            entry.offsetY = (entry.offsetY ?? 0) - dt * (16 + t * 34);
+            entry.offsetY = (entry.offsetY ?? 0) - dt * (24 + t * 40);
             entry.offsetX = (entry.offsetX || 0) + (entry.drift || 0) * dt;
             if (entry.pop !== undefined && entry.pop > 0) {
                 entry.pop = Math.max(0, entry.pop - dt * 4);
@@ -553,58 +553,94 @@ export class FighterBase {
         this.velocityBoost = null;
     }
 
+    // Radiating ticks (or rays for a crit) that burst out of a number on spawn.
+    // Fades over the first third of the readout's life.
+    drawDamageBurst(ctx, x, y, size, color, progress, rays) {
+        const p = Math.max(0, Math.min(1, progress));
+        const inner = size * 0.45 + p * 10;
+        const outer = size * 0.75 + p * (rays > 4 ? 44 : 22);
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha *= (1 - p);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = rays > 4 ? 3 : 2;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        for (let i = 0; i < rays; i++) {
+            const a = (i / rays) * Math.PI * 2 + 0.2;
+            ctx.moveTo(x + Math.cos(a) * inner, y + Math.sin(a) * inner);
+            ctx.lineTo(x + Math.cos(a) * outer, y + Math.sin(a) * outer);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
     drawDamageNumbers(ctx) {
+        const font = "'Share Tech Mono', 'Rajdhani', monospace";
         this.damageNumbers.forEach(entry => {
             const alpha = Math.max(0, entry.life / entry.maxLife);
             const rise = 1 - alpha; // 0 on spawn -> 1 at fade-out
-            // Crit numbers are larger, gold, and carry a small burst behind them so
-            // a big blow is unmistakable at a glance; ordinary hits stay small and
-            // tinted to the victim's accent.
+            const elapsed = entry.maxLife - entry.life; // seconds since spawn
             const big = entry.crit;
-            const pop = 1 + (entry.pop || 0) * 0.35;
-            const baseSize = big ? 22 : 15;
-            const size = (baseSize + rise * 4) * pop;
-            const x = this.x + (entry.offsetX || 0);
+            const pop = entry.pop || 0;
+            const size = (big ? 34 : 22) * (1 + pop * 0.5) + rise * 4;
+            // Crit numbers jolt sideways for their first beat so the blow feels heavy.
+            const shake = big && elapsed < 0.25 ? Math.sin(elapsed * 70) * 4 * (1 - elapsed / 0.25) : 0;
+            const x = this.x + (entry.offsetX || 0) + shake;
             const y = this.y - this.radius - 14 + (entry.offsetY || 0);
+            const label = `-${entry.amount}`;
+            const glow = big ? "#ffd166" : entry.color;
 
             ctx.save();
             ctx.globalAlpha = alpha;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.font = `bold ${size}px 'Share Tech Mono', 'Rajdhani', monospace`;
+            ctx.lineJoin = "round";
+            ctx.font = `bold ${size}px ${font}`;
 
-            if (big) {
-                // Gold glow + a thin dark outline so the crit stays legible over any
-                // background or explosion behind it.
-                ctx.shadowBlur = 16;
-                ctx.shadowColor = "#ffd166";
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = "rgba(60, 30, 0, 0.85)";
-                ctx.strokeText(`-${entry.amount}`, x, y);
-                ctx.fillStyle = "#fff3b0";
-                ctx.fillText(`-${entry.amount}`, x, y);
-
-                // CRIT tag above the number, only for the first beat of the pop.
-                if (alpha > 0.55) {
-                    ctx.shadowBlur = 10;
-                    ctx.font = `bold ${Math.round(11 + rise * 2)}px 'Share Tech Mono', 'Rajdhani', monospace`;
-                    ctx.fillStyle = "#ffd166";
-                    ctx.fillText("CRIT", x, y - size * 0.85);
-                }
-            } else {
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = entry.color;
-                ctx.fillStyle = entry.color;
-                ctx.fillText(`-${entry.amount}`, x, y);
+            if (elapsed < 0.35) {
+                this.drawDamageBurst(ctx, x, y, size, glow, elapsed / 0.35, big ? 8 : 4);
             }
 
-            // A small hit-count suffix when several rapid ticks have merged, so a
-            // chip stream reads as "x4" rather than silently inflating one number.
-            if ((entry.hits || 1) > 2 && !big) {
+            // Thick dark outline + coloured glow keeps the number readable over
+            // any background, explosion or particle cloud.
+            ctx.shadowBlur = big ? 24 : 14;
+            ctx.shadowColor = glow;
+            ctx.lineWidth = Math.max(3, size * 0.18);
+            ctx.strokeStyle = "rgba(20, 6, 12, 0.9)";
+            ctx.strokeText(label, x, y);
+            ctx.fillStyle = big ? "#fff3b0" : entry.color;
+            ctx.fillText(label, x, y);
+
+            // White-hot flash for the first instant after each contribution.
+            if (pop > 0.5) {
                 ctx.shadowBlur = 0;
-                ctx.font = `bold ${Math.round(size * 0.55)}px 'Share Tech Mono', 'Rajdhani', monospace`;
-                ctx.fillStyle = "rgba(255,255,255,0.75)";
-                ctx.fillText(`x${entry.hits}`, x, y + size * 0.7);
+                ctx.fillStyle = `rgba(255, 255, 255, ${(pop - 0.5) * 2})`;
+                ctx.fillText(label, x, y);
+            }
+
+            if (big && alpha > 0.4) {
+                const tagSize = Math.round(15 + rise * 3);
+                ctx.font = `bold ${tagSize}px ${font}`;
+                ctx.shadowBlur = 12;
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = "rgba(20, 6, 12, 0.9)";
+                ctx.strokeText("CRIT!", x, y - size * 0.9);
+                ctx.fillStyle = "#ffd166";
+                ctx.fillText("CRIT!", x, y - size * 0.9);
+            }
+
+            // Hit-count tag for merged rapid ticks, so a chip stream reads as "x4"
+            // rather than silently inflating one number.
+            if ((entry.hits || 1) > 2) {
+                const countSize = Math.round(size * 0.6);
+                ctx.shadowBlur = 0;
+                ctx.font = `bold ${countSize}px ${font}`;
+                ctx.lineWidth = Math.max(2, countSize * 0.2);
+                ctx.strokeStyle = "rgba(20, 6, 12, 0.9)";
+                ctx.strokeText(`x${entry.hits}`, x, y + size * 0.8);
+                ctx.fillStyle = big ? "#ffd166" : "#ffffff";
+                ctx.fillText(`x${entry.hits}`, x, y + size * 0.8);
             }
             ctx.restore();
         });
