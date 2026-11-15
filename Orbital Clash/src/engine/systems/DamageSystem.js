@@ -166,6 +166,10 @@ export class DamageSystem {
         // Per-fighter statistics. Damage received is tracked on the victim so the
         // results screen can show it for every fighter, not just the winner.
         victim.totalDamageTaken = (victim.totalDamageTaken || 0) + appliedDamage;
+        const tournamentTracker = attacker?.particleSystem?.tournamentDamageTracker
+            ?? attacker?.root?.particleSystem?.tournamentDamageTracker
+            ?? victim.particleSystem?.tournamentDamageTracker;
+        tournamentTracker?.(attacker, appliedDamage);
         if (victim.onDamaged) victim.onDamaged(appliedDamage, category, { crit: isCrit });
 
         // Presentation-only impact feedback. Every source funnels through here, so

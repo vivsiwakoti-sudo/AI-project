@@ -3229,6 +3229,7 @@
 
 .champion-path,
 .champion-h2h,
+.champion-leaderboard,
 .champion-bracket-section,
 .champion-matches {
   width: 100%;
@@ -3241,6 +3242,7 @@
 
 .champion-path h2,
 .champion-h2h h2,
+.champion-leaderboard h2,
 .champion-bracket-section h2,
 .champion-matches h2 {
   margin: 0 0 12px;
@@ -3248,6 +3250,16 @@
   font: 700 0.7rem var(--font-title);
   letter-spacing: 0.2em;
 }
+
+.app-screen-champion { width: 100%; min-width: 0; }
+.champion-leaderboard { min-width: 0; }
+.champion-leaderboard p { color: var(--text-secondary); font-size: 0.78rem; }
+.champion-leaderboard-scroll { overflow-x: auto; }
+.champion-leaderboard table { width: 100%; min-width: 580px; border-collapse: collapse; font: 600 0.75rem var(--font-mono); }
+.champion-leaderboard th, .champion-leaderboard td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border-soft); }
+.champion-leaderboard th:nth-child(2), .champion-leaderboard tbody th { text-align: left; }
+.champion-leaderboard thead th { color: var(--text-muted); font: 700 0.58rem var(--font-data); }
+.champion-leaderboard tbody td { color: var(--text-secondary); }
 
 .champion-path-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 

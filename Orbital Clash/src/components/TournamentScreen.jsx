@@ -413,6 +413,7 @@ function TournamentScreenView({
         loser: result.loser,
         durationSeconds: result.durationSeconds,
         combatants: result.combatants || [],
+        resolvedBy: result.resolvedBy,
         peakLiveFighters: result.peakLiveFighters,
         // Snap the deciding frame before the result card covers the arena.
         frameStill: snapshotCanvas(canvasRef.current)
@@ -627,6 +628,7 @@ function TournamentScreenView({
   // so it is included the moment the fight ends.
   const resolvedCount = Math.min(progress.resolved + (phase === "result" ? 1 : 0), progress.total);
   const progressLabel = `${resolvedCount}/${progress.total}`;
+  const isPlacementTiebreak = stageMatch?.round === "placement";
   const leftFighters = stageFighters.filter(item => item.index % 2 === 0);
   const rightFighters = stageFighters.filter(item => item.index % 2 === 1);
   const leftWide = leftFighters.some(item => isLongFighterName(item.fighter?.name));
@@ -640,6 +642,7 @@ function TournamentScreenView({
           <span className="tournament-badge">TOURNAMENT</span>
           <strong>{roundLabel}</strong>
           <span className="tournament-progress">{progressLabel} MATCHES</span>
+          {isPlacementTiebreak && <span className="tournament-progress">PLACEMENT TIEBREAK</span>}
           <span className="tournament-progress">ARENA {arenaSize}×{arenaSize}</span>
         </div>
         <div className="tournament-controls">
@@ -745,12 +748,12 @@ function TournamentScreenView({
                       </h2>
                       <div className="tournament-result-grid">
                         <div><span>DURATION</span><b>{formatClock(matchResult.durationSeconds)}</b></div>
-                        <div><span>ELIMINATED</span><b>{matchResult.loser.name}</b></div>
+                        <div><span>{isPlacementTiebreak ? "OPPONENT" : "ELIMINATED"}</span><b>{matchResult.loser.name}</b></div>
                         <div><span>HP LEFT</span><b>{Math.round(matchResult.winner.health)}</b></div>
                         <div><span>DAMAGE DEALT</span><b>{matchResult.winner.damageDealt}</b></div>
                       </div>
                       <p className="tournament-result-next">
-                        {resolvedCount >= progress.total ? "TOURNAMENT COMPLETE" : "ADVANCING…"}
+                        {isPlacementTiebreak ? "UPDATING RANKINGS…" : resolvedCount >= progress.total ? "FINALIZING RANKINGS…" : "ADVANCING…"}
                       </p>
                     </div>
                   </div>

@@ -62,15 +62,26 @@ function seeded(seed) {
   };
 }
 
+function simulatedResult(match, winner = match.first, durationSeconds = 10) {
+  const loser = winner === match.first ? match.second : match.first;
+  return {
+    winner: { name: winner }, loser: { name: loser }, durationSeconds,
+    combatants: [match.first, match.second].map(name => ({
+      name, tournamentStats: {
+        damageDealt: tournamentRoster().indexOf(name) + 1,
+        damageTaken: 1,
+        survivalTime: durationSeconds
+      }
+    }))
+  };
+}
+
 function completeBracket(seed, preferredChampion = null) {
   let tournament = buildTournamentBracket({ random: seeded(seed), timestamp: seed });
   let match;
   while ((match = nextPendingMatch(tournament))) {
     const winner = [match.first, match.second].includes(preferredChampion) ? preferredChampion : match.first;
-    const loser = winner === match.first ? match.second : match.first;
-    tournament = applyMatchResult(tournament, match, {
-      winner: { name: winner }, loser: { name: loser }, durationSeconds: 10
-    }).tournament;
+    tournament = applyMatchResult(tournament, match, simulatedResult(match, winner)).tournament;
   }
   return tournament;
 }
@@ -426,9 +437,7 @@ test('a legacy 26-class tournament save resumes with its original byes and round
 
   let match;
   while ((match = nextPendingMatch(resumed))) {
-    resumed = applyMatchResult(resumed, match, {
-      winner: { name: match.first }, loser: { name: match.second }, durationSeconds: 1
-    }).tournament;
+    resumed = applyMatchResult(resumed, match, simulatedResult(match, match.first, 1)).tournament;
   }
   const legacyLoser = resumed.rounds.preliminary.matches[1].loser;
   recordTournamentResult(resumed);

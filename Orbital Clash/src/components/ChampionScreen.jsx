@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
-import { allMatches, matchDetails, roundLabelFor, tournamentTotalMatches } from "../engine/tournament";
+import { allMatches, matchDetails, roundLabelFor, tournamentRankings, tournamentTotalMatches } from "../engine/tournament";
 import TournamentBracket from "./TournamentBracket";
 import MatchDetails from "./MatchDetails";
 import FighterCanvas from "./MenuComponents/ClassCard";
 
 function classColor(name) {
   return FIGHTER_CLASSES[name]?.color || "#8fa6bd";
+}
+
+function formatRankingNumber(value) {
+  return Number(value.toFixed(3)).toLocaleString(undefined, { maximumFractionDigits: 3 });
 }
 
 // The champion's route: only the matches it actually fought, in order. Byes are
@@ -68,7 +72,8 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
 
   const champion = tournament?.champion;
   const runnerUp = tournament?.runnerUp;
-  const thirdPlace = tournament?.rounds?.thirdplace?.matches[0]?.winner;
+  const ranking = useMemo(() => tournament ? tournamentRankings(tournament) : { standings: [], ties: [] }, [tournament]);
+  const thirdPlace = ranking.standings[2]?.name;
   const totalMatches = tournamentTotalMatches(tournament);
   const finalMatch = useMemo(
     () => allMatches(tournament).find(m => m.round === "final"),
@@ -107,6 +112,35 @@ export default function ChampionScreen({ tournament, stats, onNewTournament, onM
           <div><span>TOTAL MATCHES</span><b>{totalMatches}</b></div>
         </div>
       </div>
+
+      <section className="champion-leaderboard">
+        <h2>TOURNAMENT LEADERBOARD</h2>
+        <p>Ranked by elimination round, damage dealt, survival time, then damage taken. Tiebreak matches count toward these totals.</p>
+        {ranking.standings.some(row => row.approximate) && (
+          <p role="status">Some totals are approximate or incomplete because this tournament includes matches saved by an older version.</p>
+        )}
+        {ranking.ties.length > 0 && (
+          <p role="status">This older completed tournament has unresolved ties; tied placements are not final.</p>
+        )}
+        <div className="champion-leaderboard-scroll">
+          <table>
+            <thead>
+              <tr><th scope="col">PLACE</th><th scope="col">CLASS</th><th scope="col">DAMAGE DEALT</th><th scope="col">SURVIVED</th><th scope="col">DAMAGE TAKEN</th></tr>
+            </thead>
+            <tbody>
+              {ranking.standings.map(row => (
+                <tr key={row.name}>
+                  <td>{row.placement}</td>
+                  <th scope="row" style={{ color: classColor(row.name) }}>{row.name}{row.approximate ? " *" : ""}</th>
+                  <td>{formatRankingNumber(row.damageDealt)}</td>
+                  <td>{formatRankingNumber(row.survivalTime)}s</td>
+                  <td>{formatRankingNumber(row.damageTaken)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="champion-path">
         <h2>CHAMPION&apos;S PATH</h2>

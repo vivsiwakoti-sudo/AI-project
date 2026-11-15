@@ -17,6 +17,9 @@ import { ParticleSystem } from "./systems/ParticleSystem.js";
 import { spawnPositionFor, launchDirectionFor } from "./systems/SpawnSystem.js";
 import { stepBattle } from "./systems/BattleSimulation.js";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE } from "./config.js";
+import { tournamentRankings } from "./tournamentRankings.js";
+
+export { tournamentRankings } from "./tournamentRankings.js";
 
 // --- Tournament shape -------------------------------------------------------
 // All 32 fighters enter the opening round: 16 matches, then 8 + 4 + 2 + 1.
@@ -51,7 +54,8 @@ export const ROUND_COLORS = {
   quarterfinal: "#c780ff",
   semifinal: "#ff75ac",
   thirdplace: "#e5a65b",
-  final: "#ffd54a"
+  final: "#ffd54a",
+  placement: "#e5a65b"
 };
 export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + round.matches, 0);
 export const ROUND_LABELS = Object.fromEntries(ROUND_DEFINITIONS.map(round => [round.key, round.label]));
@@ -79,6 +83,7 @@ export function roundDefinitionsFor(tournament) {
 }
 
 export function roundLabelFor(tournament, roundKey) {
+  if (roundKey === "placement") return "Placement Tiebreaker";
   return roundDefinitionsFor(tournament).find(round => round.key === roundKey)?.label ?? roundKey;
 }
 
@@ -200,7 +205,7 @@ function fighterHpTotal(fighters) {
   return fighters.reduce((sum, fighter) => sum + Math.max(0, fighter.health || 0), 0);
 }
 
-function combatantSnapshot(fighter) {
+function combatantSnapshot(fighter, durationSeconds) {
   if (!fighter) return null;
   return {
     name: fighter.name,
@@ -210,7 +215,12 @@ function combatantSnapshot(fighter) {
     damageDealt: Math.floor(fighter.totalDamageDealt || 0),
     damageTaken: Math.floor(fighter.totalDamageTaken || 0),
     kills: Math.max(0, Math.floor(fighter.totalKills || 0)),
-    survivalTime: Math.max(0, fighter.survivalTime || 0)
+    survivalTime: Math.max(0, fighter.survivalTime || 0),
+    tournamentStats: {
+      damageDealt: Math.max(0, fighter.tournamentDamageDealt ?? fighter.totalDamageDealt ?? 0),
+      damageTaken: Math.max(0, fighter.totalDamageTaken || 0),
+      survivalTime: Math.max(0, fighter.survivalTime ?? durationSeconds)
+    }
   };
 }
 
@@ -250,7 +260,7 @@ function resolveDraw(fighters, snapshots, durationSeconds, peakLiveFighters, cau
 // out of the bout. A same-frame double elimination is NOT a stuck match: it is
 // decided by resolveDraw so the bracket always advances.
 function matchOutcome(fighters, durationSeconds, peakLiveFighters) {
-  const snapshots = fighters.map(combatantSnapshot);
+  const snapshots = fighters.map(fighter => combatantSnapshot(fighter, durationSeconds));
   const survivors = fighters.filter(liveFighter);
 
   const result = (winner, loser) => ({
@@ -315,7 +325,15 @@ export function createTournamentBout(firstName, secondName, options = {}) {
   }
 
   const particles = new ParticleSystem({ graphicsQuality });
-  fighters.forEach(fighter => { fighter.particleSystem = particles; });
+  fighters.forEach(fighter => {
+    fighter.particleSystem = particles;
+    fighter.tournamentDamageDealt = 0;
+  });
+  particles.tournamentDamageTracker = (attacker, damage) => {
+    let owner = attacker;
+    while (owner && (owner.root || owner.owner)) owner = owner.root || owner.owner;
+    if (fighters.includes(owner)) owner.tournamentDamageDealt += damage;
+  };
 
   // Seconds that actually elapsed in the fight (never the afterglow).
   let elapsed = 0;
@@ -571,6 +589,7 @@ export function buildTournamentBracket({ random = Math.random, timestamp = Date.
     runnerUp: null,
     completedAt: null,
     matchResults: [],
+    placementTiebreaks: [],
     resolvedMatchIds: [],
     error: null
   };
@@ -663,6 +682,8 @@ export function nextPendingMatch(tournament) {
       && item.first && item.second);
     if (match) return match;
   }
+  const tiebreak = (tournament.placementTiebreaks || []).find(match => match.status === "pending");
+  if (tiebreak) return tiebreak;
   return null;
 }
 
@@ -964,7 +985,13 @@ function sanitizeTournamentEntry(entry) {
     finalDurationSeconds: Math.max(0, sanitizeNumber(entry.finalDurationSeconds)),
     byes: Array.isArray(entry.byes) ? entry.byes.filter(name => typeof name === "string") : [],
     path: Array.isArray(entry.path) ? entry.path.filter(step => step && typeof step.opponent === "string") : [],
-    matches
+    matches,
+    standings: Array.isArray(entry.standings) ? entry.standings.filter(row =>
+      row && typeof row.name === "string" && Number.isInteger(row.placement)
+      && ["damageDealt", "survivalTime", "damageTaken"].every(key => Number.isFinite(row[key])))
+      .map(row => ({ name: row.name, placement: row.placement, damageDealt: row.damageDealt,
+        survivalTime: row.survivalTime, damageTaken: row.damageTaken, approximate: row.approximate === true }))
+      : []
   };
 }
 
@@ -989,6 +1016,33 @@ function writeTournamentHistory(entries) {
 
 // --- Applying one resolved match --------------------------------------------
 
+function schedulePlacementTiebreak(tournament) {
+  const { ties } = tournamentRankings(tournament);
+  if (ties.length) {
+    const tie = ties[0];
+    const matches = tournament.placementTiebreaks || [];
+    const match = {
+      id: `placement-${matches.length + 1}`,
+      round: "placement",
+      eliminationRound: tie.round,
+      first: tie.first,
+      second: tie.second,
+      status: "pending",
+      winner: null,
+      loser: null,
+      durationSeconds: null
+    };
+    tournament.placementTiebreaks = [...matches, match];
+    tournament.currentRound = "placement";
+    tournament.currentMatchId = match.id;
+  } else {
+    tournament.status = "complete";
+    tournament.completedAt = Date.now();
+    tournament.currentRound = "final";
+    tournament.currentMatchId = null;
+  }
+}
+
 // Records a resolved match in the bracket, the running statistics and the saved
 // history. Guarded by `resolvedMatchIds`, so calling it twice for the same match
 // id (a double-render, a double-click on Next Match, a replayed effect) can never
@@ -1000,9 +1054,38 @@ export function applyMatchResult(tournament, match, result) {
 
   const winnerName = result.winner.name;
   const loserName = result.loser?.name ?? (match.first === winnerName ? match.second : match.first);
-  if (!winnerName || !loserName || winnerName === loserName) return { tournament, applied: false };
+  if (!winnerName || !loserName || winnerName === loserName
+    || ![match.first, match.second].includes(winnerName)
+    || ![match.first, match.second].includes(loserName)) return { tournament, applied: false };
 
   const durationSeconds = Math.max(0, result.durationSeconds || 0);
+
+  if (match.round === "placement") {
+    const pending = (tournament.placementTiebreaks || []).find(item => item.id === match.id && item.status === "pending");
+    if (!pending) return { tournament, applied: false };
+    const next = {
+      ...tournament,
+      placementTiebreaks: tournament.placementTiebreaks.map(item => item.id === match.id
+        ? { ...item, winner: winnerName, loser: loserName, durationSeconds, status: "resolved",
+          combatants: Array.isArray(result.combatants) ? result.combatants : [] }
+        : item),
+      resolvedMatchIds: [...tournament.resolvedMatchIds, match.id]
+    };
+    const { standings } = tournamentRankings(next);
+    const first = standings.find(row => row.name === match.first);
+    const second = standings.find(row => row.name === match.second);
+    if (first && second && first.damageDealt === second.damageDealt
+      && first.survivalTime === second.survivalTime && first.damageTaken === second.damageTaken) {
+      const decided = next.placementTiebreaks.find(item => item.id === match.id);
+      decided.tieDecision = {
+        damageDealt: first.damageDealt,
+        survivalTime: first.survivalTime,
+        damageTaken: first.damageTaken
+      };
+    }
+    schedulePlacementTiebreak(next);
+    return { tournament: next, applied: true };
+  }
 
   const next = {
     ...tournament,
@@ -1049,11 +1132,9 @@ export function applyMatchResult(tournament, match, result) {
       ensureUpcomingRounds(next);
       next.currentRound = upcoming;
     } else {
-      next.status = "complete";
-      next.completedAt = Date.now();
       next.champion = winnerName;
       next.runnerUp = loserName;
-      next.currentRound = "final";
+      schedulePlacementTiebreak(next);
     }
   } else {
     next.currentRound = match.round;
@@ -1162,6 +1243,7 @@ export function recordTournamentResult(tournament, { timestamp = Date.now() } = 
     finalDurationSeconds: tournament.matchResults.find(item => item.round === "final")?.durationSeconds ?? 0,
     byes: tournament.byes.map(bye => bye.name),
     path: championPath(tournament).map(step => ({ ...step })),
+    standings: tournamentRankings(tournament).standings,
     matches: tournament.matchResults.map(item => ({
       id: item.id,
       round: item.round,
@@ -1339,9 +1421,25 @@ export function loadActiveTournament() {
       runnerUp: typeof raw.runnerUp === "string" ? raw.runnerUp : null,
       completedAt: Number.isFinite(raw.completedAt) ? raw.completedAt : null,
       matchResults: Array.isArray(raw.matchResults) ? raw.matchResults : [],
+      placementTiebreaks: Array.isArray(raw.placementTiebreaks)
+        ? raw.placementTiebreaks.map((match, index) => {
+          const restored = sanitizeMatch(match, "placement", index);
+          if (!restored) return null;
+          return {
+            ...restored,
+            eliminationRound: match.eliminationRound,
+            tieDecision: match.tieDecision,
+            combatants: Array.isArray(match.combatants) ? match.combatants : []
+          };
+        }).filter(Boolean)
+        : [],
       // Always rebuilt from the matches themselves so a save written without the
       // field still resumes with every decided match marked as resolved.
-      resolvedMatchIds: all.filter(match => match.status === "resolved").map(match => match.id),
+      resolvedMatchIds: [
+        ...all.filter(match => match.status === "resolved").map(match => match.id),
+        ...(Array.isArray(raw.placementTiebreaks) ? raw.placementTiebreaks : [])
+          .filter(match => match?.status === "resolved").map(match => match.id)
+      ],
       error: null
     };
 
@@ -1360,10 +1458,9 @@ export function loadActiveTournament() {
       // game was closed mid-celebration). Promote it so the save is usable.
       const final = tournament.rounds.final.matches[0];
       if (final?.winner) {
-        tournament.status = "complete";
         tournament.champion = final.winner;
         tournament.runnerUp = final.loser;
-        tournament.completedAt = tournament.completedAt ?? Date.now();
+        schedulePlacementTiebreak(tournament);
         return tournament;
       }
       return null;
@@ -1449,6 +1546,12 @@ export function validateTournament(tournament, { requireComplete = false } = {})
     }
     const champions = new Set(matches.filter(match => match.round === "final" && match.winner).map(match => match.winner));
     if (champions.size > 1) problems.push("More than one champion was declared.");
+    const ranking = tournamentRankings(tournament);
+    if (ranking.standings.length !== tournament.participants.length
+      || new Set(ranking.standings.map(row => row.name)).size !== tournament.participants.length) {
+      problems.push("The tournament does not have one placement for every participant.");
+    }
+    if (ranking.ties.length) problems.push("The tournament has unresolved placement ties.");
   }
 
   return problems;
