@@ -174,7 +174,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 5,
     description: "Throws potions with varied effects.",
-    description2: "Lobs a random potion on a 5-second cooldown: slowness (5 damage), poison (10 damage over time), stun (7 damage), percentage damage (20% of current health) or vampiric drain (8 damage and 5 healing).",
+    description2: "Lobs a random potion on a 5-second cooldown: slowness (5 damage), poison (10 damage over time), stun (7 damage), percentage damage (20% of current health) or vampiric drain (10 damage and 7 healing).",
     keywords: ["potion", "random", "poison", "stun", "lifesteal"],
   },
   "Assassin": {

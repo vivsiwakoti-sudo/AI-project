@@ -128,7 +128,7 @@ node index.js
 
     
 
-* **\- Alchemist**: Throws a potion that gives different effects like: Slowness (5 dam), Poison (10 dam), Stun (7 dam), percentage damage (10-25% of current hp), and vampiric drain (8 dam \+5 hp).  
+* **\- Alchemist**: Throws a potion that gives different effects like: Slowness (5 dam), Poison (10 dam), Stun (7 dam), percentage damage (10-25% of current hp), and vampiric drain (10 dam \+7 hp).  
   *   \- Health: 90  
   *   \- Damage: 5 \- 25% of hp  
   *   \- Effect: Slowness, Poison, Stun, Percentage damage, life steal  

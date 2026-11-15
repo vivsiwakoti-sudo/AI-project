@@ -7,6 +7,11 @@ import { audioManager } from "../../audio/AudioManager.js";
 // Same inset as the inner border in CollisionSystem.resolveFighterWall.
 const WALL_INSET = 20;
 
+// The flask is drawn at this multiple of its base shape. Its hitbox scales with it
+// so what you see is what collides.
+const FLASK_SCALE = 4;
+const FLASK_HITBOX_RADIUS = 7 * FLASK_SCALE;
+
 class Potion extends Projectile {
     constructor(x, y, vx, vy, owner, effect) {
         super(x, y, vx, vy, effect.damage, owner);
@@ -47,7 +52,7 @@ export class Alchemist extends FighterBase {
             // or on the arena wall if it gets there first.
             const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
             const struck = candidates.find(f => f && !f.isDead
-                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: 14 }, f, "Body")) || null; // matches the 2x flask in draw()
+                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: FLASK_HITBOX_RADIUS }, f, "Body")) || null;
             if (!struck && !this.touchesWall(potion)) return;
 
             this.impactEffects.push({
@@ -70,7 +75,7 @@ export class Alchemist extends FighterBase {
             { type: "poison", damage: 10 },
             { type: "stun", damage: 7, duration: 3 },
             { type: "percent", damage: 0 }, // Handled specially
-            { type: "vampire", damage: 8 }
+            { type: "vampire", damage: 10, heal: 7 }
         ];
         const effect = effects[Math.floor(Math.random() * effects.length)];
 
@@ -134,7 +139,7 @@ export class Alchemist extends FighterBase {
         });
 
         if (effect.type === "vampire" && hits > 0) {
-            this.health = Math.min(this.maxHealth, this.health + 5);
+            this.health = Math.min(this.maxHealth, this.health + effect.heal);
         }
     }
 
@@ -196,7 +201,7 @@ export class Alchemist extends FighterBase {
             const color = potionColors[potion.effect.type] || "#8BE9FD";
             ctx.save();
             ctx.translate(potion.x, potion.y);
-            ctx.scale(2, 2);
+            ctx.scale(FLASK_SCALE, FLASK_SCALE);
             ctx.rotate((potion.age || Date.now() / 1000) * 8);
             // Glass flask with glowing liquid, neck and cork.
             ctx.shadowBlur = 16;

@@ -54,6 +54,20 @@ const dropSlowFlaskOn = (alchemist, victim) => {
   alchemist.cooldownTimer = 999; // no second throw during this update
 };
 
+test('the vampire potion deals 10 damage and heals the Alchemist for 7', () => {
+  const alchemist = makeAlchemist();
+  const opponent = makeVictim(200);
+  alchemist.victims = [opponent];
+  alchemist.opponent = opponent;
+  alchemist.health = 50;
+
+  const potion = { x: opponent.x, y: opponent.y, impactRadius: 40, effect: { type: 'vampire', damage: 10, heal: 7 } };
+  alchemist.applyPotionEffect(potion, opponent);
+
+  assert.equal(opponent.health, 990);
+  assert.equal(alchemist.health, 57);
+});
+
 test('a potion that lands damages the opponent in a one-on-one fight', () => {
   const alchemist = makeAlchemist();
   const opponent = makeVictim(200);
