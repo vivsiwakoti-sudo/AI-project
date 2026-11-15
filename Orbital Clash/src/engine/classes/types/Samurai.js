@@ -5,6 +5,8 @@ import { drawKatana } from "../../systems/Weapons.js";
 export class Samurai extends FighterBase {
     // Seconds an enemy's attacks stay frozen after one of this Samurai's hits.
     static ATTACK_PAUSE = 0.6;
+    // Chance that a finished combo turns this Samurai invisible.
+    static INVISIBILITY_CHANCE = 0.35;
 
     constructor(data, x, y) {
         super(data, x, y);
@@ -62,7 +64,7 @@ export class Samurai extends FighterBase {
                 if (this.comboPass >= 3) {
                     this.comboActive = false;
                     this.comboTimer = 3;
-                    this.performCombo(opponent);
+                    if (Math.random() < Samurai.INVISIBILITY_CHANCE) this.performCombo(opponent);
                 } else {
                     this.startComboPass(opponent);
                 }

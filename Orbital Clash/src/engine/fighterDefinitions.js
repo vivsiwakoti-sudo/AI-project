@@ -81,7 +81,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Sword",
     cooldown: 3,
     description: "Fast slashes, becomes invisible.",
-    description2: "Dashes into range and performs three consecutive 6-damage slashes. Landing the third slash turns the Samurai invisible for 5 seconds, immune to all damage while invisible, with a 25% critical chance at 1.5x damage (5% normally).",
+    description2: "Dashes into range and performs three consecutive 6-damage slashes. Each completed combo has a 35% chance to turn the Samurai invisible for 5 seconds, immune to all damage while invisible, with a 25% critical chance at 1.5x damage (5% normally).",
     keywords: ["sword", "combo", "invisible", "crit"],
   },
   "Grappler": {

@@ -50,3 +50,36 @@ test('the Samurai takes damage again once the 5 second invisibility ends', () =>
   assert.equal(DamageSystem.applyDamage(opponent, samurai, 20, 'Melee', { ignoreCooldown: true }), true);
   assert.equal(samurai.health, 130);
 });
+
+// Pins Math.random to `value` for the duration of `fn`.
+const withRandom = (value, fn) => {
+  const original = Math.random;
+  Math.random = () => value;
+  try {
+    return fn();
+  } finally {
+    Math.random = original;
+  }
+};
+
+// Runs one full three-pass combo, starting it on the first update.
+const runCombo = (samurai, opponent) => {
+  samurai.update(FRAME, opponent);
+  for (let i = 0; i < 120 && samurai.comboActive; i++) samurai.update(FRAME, opponent);
+};
+
+test('a finished combo turns the Samurai invisible when the 35% roll succeeds', () => {
+  const samurai = new Samurai(samuraiStats, 200, 400);
+  const opponent = new FighterBase(opponentStats, 240, 400);
+  withRandom(0.2, () => runCombo(samurai, opponent));
+  assert.equal(samurai.isInvisible, true);
+});
+
+test('a finished combo leaves the Samurai visible when the 35% roll fails', () => {
+  const samurai = new Samurai(samuraiStats, 200, 400);
+  const opponent = new FighterBase(opponentStats, 240, 400);
+  withRandom(0.9, () => runCombo(samurai, opponent));
+  assert.equal(samurai.comboPass, 3);
+  assert.equal(samurai.isInvisible, false);
+});
+
