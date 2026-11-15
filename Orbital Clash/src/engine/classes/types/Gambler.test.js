@@ -7,6 +7,7 @@ installTestAudio();
 
 const { Gambler } = await import('./Gambler.js');
 const { FighterFactory } = await import('../../FighterFactory.js');
+const { DamageSystem } = await import('../../systems/DamageSystem.js');
 
 const makeGambler = () => new Gambler({
   name: 'Gambler',
@@ -99,15 +100,15 @@ test('a die that lands deals 15 damage and rolls a face on the victim', () => {
   assert.equal(gambler.dice.length, 0);
 });
 
-test('a die roll picks one of six faces by equal chance', () => {
+test('a die roll picks one of eight faces by equal chance', () => {
   const gambler = makeGambler();
   const victim = makeVictim(200, { health: 500 });
   gambler.victims = [victim];
   victim.victims = [gambler];
 
-  // Random in the fourth sixth lands on face index 3: heal the enemy 15 HP.
+  // Random in the fourth eighth lands on face index 3: heal the enemy 15 HP.
   throwDieOnto(gambler, victim);
-  withRandom(3.5 / 6, () => gambler.update(0.016, victim));
+  withRandom(3.5 / 8, () => gambler.update(0.016, victim));
 
   // The die's 15 base damage is healed back by the 15 HP heal face.
   assert.equal(victim.health, 500);
@@ -143,4 +144,53 @@ test('the self 15% face damages the Gambler by 15% of its max HP', () => {
   gambler.applyFace('selfPercent', gambler);
 
   assert.equal(gambler.health, 150 - 150 * 0.15);
+});
+
+const hitGambler = (gambler, damage = 10) => {
+  const attacker = makeVictim(200);
+  return DamageSystem.applyDamage(attacker, gambler, damage, 'Projectile', { ignoreCooldown: true });
+};
+
+test('the shield face blocks the next three hits and then lapses', () => {
+  const gambler = makeGambler();
+  gambler.applyFace('shield', gambler);
+
+  const landed = [1, 2, 3, 4].map(() => hitGambler(gambler));
+
+  assert.deepEqual(landed, [false, false, false, true]);
+  assert.equal(gambler.health, 140);
+});
+
+test('the vulnerable face doubles the next two hits and then lapses', () => {
+  const gambler = makeGambler();
+  gambler.applyFace('vulnerable', gambler);
+
+  const health = [1, 2, 3].map(() => {
+    hitGambler(gambler);
+    return gambler.health;
+  });
+
+  assert.deepEqual(health, [130, 110, 100]);
+});
+
+test('blocked hits do not use up the vulnerable charges', () => {
+  const gambler = makeGambler();
+  gambler.applyFace('shield', gambler);
+  gambler.applyFace('vulnerable', gambler);
+
+  [1, 2, 3].forEach(() => hitGambler(gambler));
+  assert.equal(gambler.health, 150);
+
+  [1, 2].forEach(() => hitGambler(gambler));
+  assert.equal(gambler.health, 110);
+});
+
+test('sudden death ignores the shield and does not use up a charge', () => {
+  const gambler = makeGambler();
+  gambler.applyFace('shield', gambler);
+
+  DamageSystem.applyDamage(null, gambler, 2, 'AOE', { ignoreCooldown: true, suddenDeath: true });
+
+  assert.equal(gambler.health, 148);
+  assert.equal(gambler.shieldHits, 3);
 });

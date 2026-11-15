@@ -118,7 +118,7 @@ export class DamageSystem {
 
         let hitResponse;
         if (victim.onHitTaken) {
-            hitResponse = victim.onHitTaken(category, damage);
+            hitResponse = victim.onHitTaken(category, damage, options);
             if (hitResponse === false) return false;
         }
 

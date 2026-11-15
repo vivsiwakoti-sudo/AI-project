@@ -16,15 +16,20 @@ const BURN_TICK_DAMAGE = 1;
 const MAX_BURNS = 5;
 const PERCENT_DAMAGE = 0.15;
 const HEAL_AMOUNT = 15;
+const SHIELD_HITS = 3;
+const VULNERABLE_HITS = 2;
+const VULNERABLE_MULTIPLIER = 2;
 
-// One entry per face of the die. Each face is rolled with equal (1/6) chance.
+// One entry per face of the die. Each face is rolled with equal chance.
 const FACES = [
     { id: "stun", good: true },
     { id: "burn", good: true },
     { id: "percent", good: true },
     { id: "heal", good: false },
     { id: "selfPercent", good: false },
-    { id: "selfBurn", good: false }
+    { id: "selfBurn", good: false },
+    { id: "shield", good: true },
+    { id: "vulnerable", good: false }
 ];
 
 let burnSerial = 0;
@@ -41,6 +46,8 @@ export class Gambler extends FighterBase {
         super(data, x, y);
         this.dice = [];
         this.cooldownTimer = 0;
+        this.shieldHits = 0;
+        this.vulnerableHits = 0;
     }
 
     update(dt, opponent) {
@@ -108,7 +115,28 @@ export class Gambler extends FighterBase {
             case "selfBurn":
                 this.applyBurn(this, null);
                 break;
+            case "shield":
+                this.shieldHits = SHIELD_HITS;
+                break;
+            case "vulnerable":
+                this.vulnerableHits = VULNERABLE_HITS;
+                break;
         }
+    }
+
+    // Sudden death is the arena forcing a finish, so it neither uses up a shield or
+    // vulnerability charge nor is blocked or doubled by one.
+    onHitTaken(category, damage, options = {}) {
+        if (options.suddenDeath) return true;
+        if (this.shieldHits > 0) {
+            this.shieldHits -= 1;
+            return false;
+        }
+        if (this.vulnerableHits > 0) {
+            this.vulnerableHits -= 1;
+            return damage * VULNERABLE_MULTIPLIER;
+        }
+        return true;
     }
 
     stunVictim(victim) {
@@ -142,7 +170,50 @@ export class Gambler extends FighterBase {
 
     draw(ctx) {
         super.draw(ctx);
+        if (!this.isDead && this.health > 0) {
+            if (this.shieldHits > 0) this.drawShield(ctx);
+            if (this.vulnerableHits > 0) this.drawVulnerableMark(ctx);
+        }
         this.dice.forEach(die => this.drawDie(ctx, die));
+    }
+
+    drawShield(ctx) {
+        const radius = this.radius + 10;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        const dome = ctx.createRadialGradient(0, 0, this.radius * 0.6, 0, 0, radius);
+        dome.addColorStop(0, "rgba(179, 136, 255, 0)");
+        dome.addColorStop(1, "rgba(179, 136, 255, 0.4)");
+        ctx.fillStyle = dome;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#d1b3ff";
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = "#b388ff";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius - 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    drawVulnerableMark(ctx) {
+        const reach = this.radius * 0.8;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.strokeStyle = "#e53935";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#ff1744";
+        ctx.beginPath();
+        ctx.moveTo(-reach, -reach);
+        ctx.lineTo(reach, reach);
+        ctx.moveTo(reach, -reach);
+        ctx.lineTo(-reach, reach);
+        ctx.stroke();
+        ctx.restore();
     }
 
     drawDie(ctx, die) {
