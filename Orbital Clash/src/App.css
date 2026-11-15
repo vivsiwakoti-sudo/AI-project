@@ -2153,14 +2153,18 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  border: 1px solid var(--round-color, var(--border));
+  border: 3px solid var(--round-color, var(--border));
   border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse at 50% 50%, rgba(47, 123, 255, 0.1), transparent 65%),
     repeating-linear-gradient(0deg, transparent 0 39px, rgba(0, 242, 255, 0.04) 39px 40px),
     repeating-linear-gradient(90deg, transparent 0 39px, rgba(0, 242, 255, 0.04) 39px 40px),
     var(--grad-surface);
-  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.55), var(--shadow-md);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.55),
+    0 0 0 1px var(--round-color, transparent),
+    0 0 24px color-mix(in srgb, var(--round-color, transparent) 60%, transparent),
+    var(--shadow-md);
   overflow: hidden;
 }
 
@@ -2225,7 +2229,14 @@
   text-overflow: ellipsis;
 }
 
-.tournament-arena-sudden { border-color: var(--round-color, var(--danger)); box-shadow: inset 0 0 60px rgba(255, 45, 85, 0.18), var(--shadow-md); }
+.tournament-arena-sudden {
+  border-color: var(--round-color, var(--danger));
+  box-shadow:
+    inset 0 0 60px rgba(255, 45, 85, 0.18),
+    0 0 0 1px var(--round-color, var(--danger)),
+    0 0 24px color-mix(in srgb, var(--round-color, var(--danger)) 60%, transparent),
+    var(--shadow-md);
+}
 
 .tournament-hud {
   display: flex;

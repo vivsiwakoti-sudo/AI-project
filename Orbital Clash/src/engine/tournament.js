@@ -49,12 +49,12 @@ export const ROUND_DEFINITIONS = [
   { key: "final", label: "Grand Final", short: "FINAL", matches: 1 }
 ];
 export const ROUND_COLORS = {
-  preliminary: "#34d8eb",
-  round16: "#7d9cff",
-  quarterfinal: "#c780ff",
-  semifinal: "#ff75ac",
-  thirdplace: "#e5a65b",
-  final: "#ffd54a",
+  preliminary: "#00e5ff",
+  round16: "#3dff6b",
+  quarterfinal: "#a855ff",
+  semifinal: "#ff2fa6",
+  thirdplace: "#ff6a1a",
+  final: "#ffe81a",
   placement: "#e5a65b"
 };
 export const TOTAL_MATCHES = ROUND_DEFINITIONS.reduce((sum, round) => sum + round.matches, 0);
