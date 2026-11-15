@@ -462,7 +462,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 5,
     description: "Copies a random fighter's abilities and weapons temporarily.",
-    description2: "Starts in base form. After 5 seconds, copies a random class's abilities and weapons for 11 seconds, then returns to base form for 5 seconds and repeats. Keeps its own health, damage and speed. Cannot copy Mimic, Mahoraga or Mutant. Copied traps and trails persist for their normal lifetime, and clones and minions remain until they or the Mimic die.",
+    description2: "Starts in base form. After 5 seconds, copies a random class's abilities and weapons for 11 seconds, then returns to base form for 5 seconds and repeats. Keeps its own health, damage and speed. Cannot copy Mimic, Mahoraga, Mutant or Summoner. Copied traps and trails persist for their normal lifetime, and clones remain until they or the Mimic die.",
     keywords: ["copy", "transform", "random", "weapon", "body"],
   }
 };

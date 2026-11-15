@@ -21,17 +21,17 @@ const makeContext = () => {
   });
 };
 
-test('Mimic keeps its distinct appearance when copying Summoner', () => {
+test('Mimic keeps its distinct appearance when copying Knight', () => {
   const mimic = makeMimic();
-  const summoner = FighterFactory.createFighter('Summoner', 300, 200);
+  const knight = FighterFactory.createFighter('Knight', 300, 200);
   const context = makeContext();
   const { color, shape } = mimic;
-  assert.notEqual(color, summoner.color);
-  assert.notEqual(shape, summoner.shape);
+  assert.notEqual(color, knight.color);
+  assert.notEqual(shape, knight.shape);
   assert.equal(hasShape(shape), true);
 
   mimic.draw(context);
-  mimic.startCopiedForm('Summoner');
+  mimic.startCopiedForm('Knight');
   assert.equal(mimic.color, color);
   assert.equal(mimic.shape, shape);
   mimic.draw(context);
@@ -72,9 +72,9 @@ test('copying preserves Mimic stats and gives the copied weapon and defense', ()
   assert.equal(mimic.speed, 5);
 });
 
-test('Mimic cannot copy itself, Mahoraga, or Mutant', () => {
+test('Mimic cannot copy itself, Mahoraga, Mutant, or Summoner', () => {
   const mimic = makeMimic();
-  for (const name of ['Mimic', 'Mahoraga', 'Mutant']) {
+  for (const name of ['Mimic', 'Mahoraga', 'Mutant', 'Summoner']) {
     assert.ok(!MIMIC_CLASSES.includes(name));
     assert.throws(() => mimic.startCopiedForm(name));
   }
@@ -126,19 +126,6 @@ test('Duplicator clones remain ordinary clones after Mimic changes form', () => 
   assert.equal(mimic.clones[1].name, 'Duplicator');
   mimic.die();
   assert.equal(clone.isDead, true);
-});
-
-test('Summoner minions survive the end of the copied form and die with Mimic', () => {
-  const mimic = makeMimic();
-  mimic.startCopiedForm('Summoner');
-  mimic.update(0.1, null);
-  assert.equal(mimic.summons.length, 2);
-  const minion = mimic.summons[0];
-  mimic.endCopiedForm();
-  mimic.update(0.1, null);
-  assert.equal(mimic.summons[0], minion);
-  mimic.die();
-  assert.equal(minion.isDead, true);
 });
 
 test('copied mines persist through form changes until a victim touches them', () => {

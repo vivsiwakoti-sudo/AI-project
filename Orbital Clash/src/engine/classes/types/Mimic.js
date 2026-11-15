@@ -1,19 +1,18 @@
 import { FighterBase } from "../FighterBase.js";
 import { Duplicator } from "./Duplicator.js";
-import { Summoner } from "./Summoner.js";
 import { FighterFactory } from "../../FighterFactory.js";
 import { FIGHTER_CLASSES } from "../../fighterDefinitions.js";
 
 const BASE_SECONDS = 5;
 const COPY_SECONDS = 11;
-const EXCLUDED = new Set(["Mimic", "Mahoraga", "Mutant"]);
+const EXCLUDED = new Set(["Mimic", "Mahoraga", "Mutant", "Summoner"]);
 export const MIMIC_CLASSES = Object.keys(FIGHTER_CLASSES).filter(name => !EXCLUDED.has(name));
 
 const SHARED_ABILITY_FIELDS = new Set([
     "attackType", "cooldown", "cooldownTimer", "weaponAngle", "weaponSpin",
     "weaponReach", "weaponHot"
 ]);
-const PERSISTENT_UNITS = new Set(["clones", "summons", "root", "generation", "totalClones", "cloneLimit"]);
+const PERSISTENT_UNITS = new Set(["clones", "root", "generation", "totalClones", "cloneLimit"]);
 const copiedPrototypes = new Map();
 
 function prototypeFor(prototype) {
@@ -40,7 +39,6 @@ export class Mimic extends FighterBase {
         this.mimicAbilityCleaned = false;
         this.placedAttacks = [];
         this.clones = [];
-        this.summons = [];
         this.root = null;
         this.generation = 0;
         this.totalClones = 0;
@@ -67,13 +65,6 @@ export class Mimic extends FighterBase {
                 return;
             }
             if (form !== "Duplicator" && this.clones.length) this.updateClones(step, opponent);
-            if (form !== "Summoner") {
-                this.summons = this.summons.filter(summon => {
-                    if (!summon.isDead && summon.health > 0) return true;
-                    summon.killCloneTree?.();
-                    return false;
-                });
-            }
             this.mimicTimer -= step;
             remaining -= step;
             if (this.mimicTimer <= 1e-9) {
@@ -101,8 +92,6 @@ export class Mimic extends FighterBase {
             saved.set(key, Object.hasOwn(this, key) ? { value: this[key] } : null);
             this[key] = value;
         }
-        // A fresh Summoner normally waits its full summon interval, longer than a copied form.
-        if (name === "Summoner") this.summonTimer = 0;
         for (const key of ["speed", "damage", "dodgeChance", "isCharging", "chargeProgress"]) {
             if (!saved.has(key)) saved.set(key, Object.hasOwn(this, key) ? { value: this[key] } : null);
         }
@@ -227,7 +216,6 @@ export class Mimic extends FighterBase {
         this.placedAttacks = [];
         for (const clone of this.clones) clone.killCloneTree();
         this.clones = [];
-        Summoner.prototype.killSummons.call(this);
     }
 
     killCloneTree() {
@@ -248,11 +236,6 @@ export class Mimic extends FighterBase {
         if (this.isDead || this.health <= 0) return;
         this.drawPlacedAttacks(ctx);
         if (this.mimicForm !== "Duplicator") Duplicator.prototype.drawClones.call(this, ctx);
-        if (this.mimicForm !== "Summoner") {
-            for (const summon of this.summons) {
-                if (!summon.isDead && summon.health > 0) summon.draw(ctx);
-            }
-        }
         const draw = this.mimicPrototype?.draw ?? FighterBase.prototype.draw;
         draw.call(this, ctx);
         if (!this.mimicForm && !this.isFrozen) {
