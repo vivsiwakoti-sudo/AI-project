@@ -50,3 +50,58 @@ test('touches stop cloning once the swarm reaches 50 clones', () => {
   frame(duplicator, victim, true);
   assert.equal(duplicator.totalClones, 50, 'at 50 clones a touch no longer duplicates');
 });
+
+test('clones start with 15 HP at every generation', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  duplicator.spawnClone();
+  duplicator.clones[0].spawnClone();
+
+  assert.deepEqual(duplicator.clones.map(c => c.health), [15, 15]);
+  assert.deepEqual(duplicator.clones.map(c => c.maxHealth), [15, 15]);
+});
+
+test('a fighter touching a clone deals 3 damage even when it is not the aim', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const aim = new FighterBase(dummyStats, 700, 700);
+  const other = new FighterBase(dummyStats, 300, 300);
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  duplicator.victims = [aim, other];
+  clone.x = other.x;
+  clone.y = other.y;
+
+  duplicator.updateClones(1 / 60, aim);
+
+  assert.equal(clone.health, 12, 'the touch lands on the clone for 3');
+});
+
+test('a clone deals its 2 touch damage to any fighter it touches, not only the aim', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const aim = new FighterBase(dummyStats, 700, 700);
+  const other = new FighterBase(dummyStats, 300, 300);
+  // The list the parent held when the clone was made must not decide what the clone can touch.
+  duplicator.touchVictims = [aim];
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  duplicator.victims = [aim, other];
+  clone.x = other.x;
+  clone.y = other.y;
+
+  duplicator.updateClones(1 / 60, aim);
+
+  assert.equal(other.totalDamageTaken, 2, 'the clone bites the fighter it is touching');
+});
+
+test('a fighter resting against a clone deals its 3 damage once, not every frame', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const other = new FighterBase(dummyStats, 300, 300);
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  duplicator.victims = [other];
+  clone.x = other.x;
+  clone.y = other.y;
+
+  for (let i = 0; i < 30; i++) duplicator.updateClones(1 / 60, other);
+
+  assert.equal(clone.health, 12, 'staying in contact does not keep dealing damage');
+});

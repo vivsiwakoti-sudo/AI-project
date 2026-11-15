@@ -106,7 +106,7 @@ node index.js
 
     
 
-* **\- Duplicator:** Upon touching the opponent, it does 2 damage, but adds a clone with 25% less HP, and if the original fighter is killed, they all die. The clone limit is 50; the HP goes down for every generation of clones.  
+* **\- Duplicator:** Upon touching the opponent, it does 2 damage and adds a clone with 15 HP, and if the original fighter is killed, they all die. Any fighter that touches a clone deals it 3 damage. The clone limit is 50.  
   *   \- Health: 75  
   *   \- Damage: 2  
   *   \- Effect: Exponential Growth  

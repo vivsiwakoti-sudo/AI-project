@@ -2,6 +2,10 @@ import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { CollisionSystem } from "../../systems/CollisionSystem.js";
 
+const CLONE_HEALTH = 15;
+// Damage a clone takes from each new contact with any fighter.
+const CLONE_TOUCH_DAMAGE = 3;
+
 export class Duplicator extends FighterBase {
     constructor(data, x, y, generation = 0, initialHealth = null) {
         super(data, x, y);
@@ -15,6 +19,7 @@ export class Duplicator extends FighterBase {
         this.maxHealth = this.health;
         this.clones = [];
         this.touchingVictims = new Set(); // Victims in contact last frame; a clone spawns only when one newly enters contact.
+        this.touchedBy = new Set();       // Fighters touching this clone last frame; each new contact deals CLONE_TOUCH_DAMAGE.
         this.root = null;          // Set to the original Duplicator for every clone.
         this.totalClones = 0;      // Shared clone cap across the whole swarm.
         this.cloneLimit = data.cloneLimit ?? 50;
@@ -103,15 +108,6 @@ export class Duplicator extends FighterBase {
             });
         }
 
-        if (DamageSystem.checkHitbox(opponent, clone, "Body")) {
-            // Clone collisions happen on the opponent's behalf, so they must not
-            // consume the opponent's attack cooldown against the real fighter.
-            DamageSystem.applyDamage(opponent, clone, opponent.damage, "Body", { ignoreCooldown: true });
-            if (opponent.name === "Berserker" && opponent.rotationSpeed !== undefined) {
-                opponent.rotationSpeed *= 1.1;
-            }
-        }
-
         if (Array.isArray(opponent.projectiles)) {
             opponent.projectiles.forEach(projectile => {
                 if (projectile.active && DamageSystem.checkHitbox({
@@ -126,6 +122,27 @@ export class Duplicator extends FighterBase {
         }
     }
 
+    // Any fighter that touches a clone deals CLONE_TOUCH_DAMAGE. It lands once per new
+    // contact, the same event that spawns a clone, so a fighter resting against a clone
+    // is not drained every frame.
+    applyCloneContact(clone, victims) {
+        const touching = new Set();
+        for (const victim of victims) {
+            if (clone.isDead) break;
+            if (victim.isDead || victim.health <= 0) continue;
+            if (!DamageSystem.checkHitbox(victim, clone, "Body")) continue;
+            touching.add(victim);
+            if (!clone.touchedBy.has(victim)) {
+                // Contact is not a new attack, so it must not consume the victim's attack cooldown.
+                DamageSystem.applyDamage(victim, clone, CLONE_TOUCH_DAMAGE, "Body", { ignoreCooldown: true });
+            }
+            if (victim.name === "Berserker" && victim.rotationSpeed !== undefined) {
+                victim.rotationSpeed *= 1.1;
+            }
+        }
+        clone.touchedBy = touching;
+    }
+
     update(dt, opponent) {
         if (this.isDead) {
             this.clones.forEach(clone => clone.killCloneTree());
@@ -138,19 +155,22 @@ export class Duplicator extends FighterBase {
     }
 
     updateClones(dt, opponent) {
-        // A clone needs the same victim list and opponent reference as a real
-        // fighter: without them it could only ever hit the one opponent the
-        // parent was aiming at, and only when standing exactly on it.
-        const cloneVictims = this.victims;
+        // A clone is hit by and touches every fighter the parent can, not only the
+        // one it aims at, so every contact is checked against the same victim list.
+        const cloneVictims = this.victims ?? [];
+        // Set fresh each frame: a clone copies its parent's fields at spawn, which
+        // would otherwise leave it with a stale touch list.
+        const touchVictims = cloneVictims.filter(v => !v.isInvulnerable);
         const clones = this.clones.filter(c => !c.isDead && c.health > 0);
         clones.forEach(clone => {
             clone.victims = cloneVictims;
-            const aim = opponent && !opponent.isDead ? opponent : cloneVictims?.find(v => !v.isDead) ?? null;
+            clone.touchVictims = touchVictims;
+            const aim = opponent && !opponent.isDead ? opponent : cloneVictims.find(v => !v.isDead) ?? null;
             clone.opponent = aim;
+            // update() also runs the clone's own touch check (its outgoing bite).
             clone.update(dt, aim);
-            this.applyCloneCombatHits(clone, aim);
-            // A clone's body is the same weapon as the original's.
-            clone.checkTouchDamage(aim);
+            cloneVictims.forEach(victim => this.applyCloneCombatHits(clone, victim));
+            this.applyCloneContact(clone, cloneVictims);
             this.keepCloneInArena(clone);
         });
         this.resolveCloneCollisions(clones, cloneVictims);
@@ -180,8 +200,6 @@ export class Duplicator extends FighterBase {
         const root = this.root || this;
         if (root.totalClones >= this.cloneLimit) return;
         root.totalClones = (root.totalClones || 0) + 1;
-        // Each generation keeps 75% of its parent's health, per the class spec.
-        const cloneHealth = Math.max(5, this.health * 0.75);
         const clone = new Duplicator(
             this.name === "Mimic" ? {
                 name: "Duplicator",
@@ -198,12 +216,12 @@ export class Duplicator extends FighterBase {
             this.x + (Math.random() - 0.5) * 40,
             this.y + (Math.random() - 0.5) * 40,
             this.generation + 1,
-            cloneHealth
+            CLONE_HEALTH
         );
         clone.root = root;
         clone.arenaSize = this.arenaSize;
-        clone.health = cloneHealth;
-        clone.maxHealth = cloneHealth;
+        clone.health = CLONE_HEALTH;
+        clone.maxHealth = CLONE_HEALTH;
         root.clones.push(clone);
     }
 
