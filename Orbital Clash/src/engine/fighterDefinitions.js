@@ -240,7 +240,7 @@ export const FIGHTER_CLASSES = {
   "Berserker": {
     name: "Berserker",
     color: "#8B0000",
-    health: 150,
+    health: 125,
     damage: 8,
     speed: 5,
     bodySize: 40,

@@ -13,7 +13,7 @@ export class Knight extends FighterBase {
         // of its last growth (37.5px -> 56.25px blade), with a matching faster
         // sweep so the longer blade still covers the ring at a threatening rate.
         this.swordLength = 56.25;
-        this.weaponSpin = 3.6;   // up from 2.6: a longer blade needs a quicker turn
+        this.weaponSpin = 5.4;   // 50% faster than the previous 3.6 sweep
         this.weaponReach = this.radius + 8 + this.swordLength;
         // The Knight's BODY must reach the border before he bounces. Only his
         // actual silhouette reaches past the body: the shield dome (radius + 10)
