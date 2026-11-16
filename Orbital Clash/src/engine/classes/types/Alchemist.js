@@ -3,6 +3,7 @@ import { Projectile } from "../Projectile.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { audioManager } from "../../audio/AudioManager.js";
+import { notifyStatusEvent } from "../../systems/StatusVisuals.js";
 
 // Same inset as the inner border in CollisionSystem.resolveFighterWall.
 const WALL_INSET = 20;
@@ -115,7 +116,9 @@ export class Alchemist extends FighterBase {
         if (effect.type === "percent") {
             blast.forEach(victim => {
                 const percentageDamage = victim.health * 0.2;
-                DamageSystem.applyDamage(this, victim, percentageDamage, "AOE", { ignoreCooldown: true });
+                if (DamageSystem.applyDamage(this, victim, percentageDamage, "AOE", { ignoreCooldown: true })) {
+                    notifyStatusEvent(victim, "percent");
+                }
             });
             return;
         }
@@ -140,6 +143,7 @@ export class Alchemist extends FighterBase {
 
         if (effect.type === "vampire" && hits > 0) {
             this.health = Math.min(this.maxHealth, this.health + effect.heal);
+            notifyStatusEvent(this, "heal");
         }
     }
 

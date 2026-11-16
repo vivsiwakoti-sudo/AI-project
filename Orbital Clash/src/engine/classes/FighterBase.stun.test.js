@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { installTestAudio } from '../audio/testAudioStub.js';
 import { FighterBase } from './FighterBase.js';
+
+installTestAudio();
 
 const makeFighter = () => new FighterBase({
   name: 'Dummy',

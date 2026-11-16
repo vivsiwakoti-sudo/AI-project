@@ -118,6 +118,25 @@ function playZap(ctx, dest, time, opts = {}) {
   playTone(ctx, dest, freq * 0.7, time, 0.08, { type: "square", gain: gain * 0.5, attack: 0.001, release: 0.06 });
 }
 
+// A tone that glides from `from` to `to` Hz: bubbles, digital pulses and whooshes.
+function playSweep(ctx, dest, time, opts = {}) {
+  const { type = "sine", from = 400, to = 800, duration = 0.1, gain = 0.2 } = opts;
+  const osc = ctx.createOscillator();
+  osc.type = type;
+  osc.frequency.setValueAtTime(from, time);
+  osc.frequency.exponentialRampToValueAtTime(to, time + duration);
+
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0.0001, time);
+  env.gain.exponentialRampToValueAtTime(gain, time + Math.min(0.01, duration / 4));
+  env.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+  osc.connect(env);
+  env.connect(dest);
+  osc.start(time);
+  osc.stop(time + duration + 0.05);
+}
+
 // A deep, round explosion with a bright crack on top.
 function playExplosion(ctx, dest, time, opts = {}) {
   const { gain = 0.5, freq = 90 } = opts;
@@ -402,6 +421,7 @@ class AudioManager {
     this.muted = false;
     this.sfxSilenced = false;
     this.lastHitTime = -Infinity;
+    this.lastStatusSfx = {};
     this.battleIntensity = 0;
     this.pausedMusicType = null;
   }
@@ -916,6 +936,87 @@ class AudioManager {
     const now = ctx.currentTime;
     playNoiseBurst(ctx, this.sfxGain, now, 0.2, { filterType: "bandpass", filterFreq: 3200, sweepTo: 500, q: 1.4, gain: 0.22 });
     playTone(ctx, this.sfxGain, 1560, now, 0.03, { type: "sine", gain: 0.07, attack: 0.002, release: 0.06 });
+  }
+
+  // Status cues share a per-status throttle so several fighters catching the same
+  // status in one frame produce one cue instead of a stacked smear.
+  statusSfxReady(name, gap = 0.08) {
+    const now = this.ctx.currentTime;
+    if (now - (this.lastStatusSfx[name] ?? -Infinity) < gap) return false;
+    this.lastStatusSfx[name] = now;
+    return true;
+  }
+
+  // Stun: two quick electric zaps.
+  playStunSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("stun")) return;
+    const now = ctx.currentTime;
+    playZap(ctx, this.sfxGain, now, { gain: 0.3, freq: 1800 });
+    playZap(ctx, this.sfxGain, now + 0.07, { gain: 0.22, freq: 1200 });
+  }
+
+  // Freeze: a cluster of bright, glassy tinkles with a brief frost tick.
+  playFreezeSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("freeze")) return;
+    const now = ctx.currentTime;
+    [2637, 3136, 3951, 4699].forEach((freq, i) => {
+      playTone(ctx, this.sfxGain, freq, now + i * 0.03 + Math.random() * 0.01, 0.12, { type: "sine", gain: 0.12, attack: 0.001, release: 0.25 });
+    });
+    playNoiseBurst(ctx, this.sfxGain, now, 0.06, { filterType: "highpass", filterFreq: 6000, gain: 0.12 });
+  }
+
+  // Burn: a scatter of short, high-passed crackles over about a third of a second.
+  playBurnSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("burn")) return;
+    const now = ctx.currentTime;
+    for (let i = 0; i < 9; i++) {
+      playNoiseBurst(ctx, this.sfxGain, now + Math.random() * 0.35, 0.025 + Math.random() * 0.03, {
+        filterType: "highpass", filterFreq: 2500 + Math.random() * 3000, gain: 0.14
+      });
+    }
+  }
+
+  // Poison: rising sine blips that read as bubbles coming up.
+  playPoisonSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("poison")) return;
+    const now = ctx.currentTime;
+    for (let i = 0; i < 4; i++) {
+      playSweep(ctx, this.sfxGain, now + i * 0.09 + Math.random() * 0.03, {
+        type: "sine", from: 260 + Math.random() * 80, to: 520 + Math.random() * 120, duration: 0.07, gain: 0.2
+      });
+    }
+  }
+
+  // Percentage damage: two falling digital pulses.
+  playPercentSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("percent")) return;
+    const now = ctx.currentTime;
+    playSweep(ctx, this.sfxGain, now, { type: "square", from: 1400, to: 300, duration: 0.12, gain: 0.12 });
+    playSweep(ctx, this.sfxGain, now + 0.16, { type: "square", from: 1400, to: 300, duration: 0.12, gain: 0.12 });
+  }
+
+  // Healing: a rising three-note bell chime.
+  playHealSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("heal")) return;
+    const now = ctx.currentTime;
+    [1046.5, 1318.5, 1568].forEach((freq, i) => {
+      playTone(ctx, this.sfxGain, freq, now + i * 0.07, 0.35, { type: "sine", gain: 0.16, attack: 0.003, release: 0.5 });
+    });
+  }
+
+  // Momentum boost: a rising electronic whoosh, air noise sweeping up under a saw tone.
+  playBoostSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("boost", 0.3)) return;
+    const now = ctx.currentTime;
+    playNoiseBurst(ctx, this.sfxGain, now, 0.5, { filterType: "bandpass", filterFreq: 400, sweepTo: 4000, q: 1.2, gain: 0.26 });
+    playSweep(ctx, this.sfxGain, now, { type: "sawtooth", from: 180, to: 900, duration: 0.45, gain: 0.06 });
   }
 }
 

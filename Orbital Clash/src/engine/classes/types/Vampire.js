@@ -1,6 +1,7 @@
 import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { drawStake, weaponTrail } from "../../systems/Weapons.js";
+import { notifyStatusEvent } from "../../systems/StatusVisuals.js";
 
 export class Vampire extends FighterBase {
     constructor(data, x, y) {
@@ -93,6 +94,7 @@ export class Vampire extends FighterBase {
             this.drainTicks++;
             if (DamageSystem.applyDamage(this, target, 4, "AOE", { ignoreCooldown: true })) {
                 this.health = Math.min(this.maxHealth, this.health + 4);
+                notifyStatusEvent(this, "heal");
                 if (this.particleSystem) {
                     this.particleSystem.emit(target.x, target.y, "#ff2038", 10, { angle: this.drainAngle, spread: 0.6, speed: 200, size: 2.6 });
                 }
@@ -118,6 +120,7 @@ export class Vampire extends FighterBase {
         const heal = this.evolutionLevel >= 2 ? 10 : this.evolutionLevel >= 1 ? 7 : 5;
         this.health = Math.min(this.maxHealth, this.health + heal);
         this.successfulHeals++;
+        notifyStatusEvent(this, "heal");
 
         if (this.successfulHeals >= 3 && this.evolutionLevel < 3) {
             this.evolve();

@@ -3,6 +3,7 @@ import { Projectile } from "../Projectile.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { audioManager } from "../../audio/AudioManager.js";
+import { notifyStatusEvent } from "../../systems/StatusVisuals.js";
 
 const DIE_SIZE = 44;
 const DIE_RADIUS = DIE_SIZE / 2;
@@ -100,17 +101,22 @@ export class Gambler extends FighterBase {
                 if (!victim.isDead) this.applyBurn(victim, this);
                 break;
             case "percent":
-                DamageSystem.applyDamage(this, victim, victim.maxHealth * PERCENT_DAMAGE, "AOE", { ignoreCooldown: true });
+                if (DamageSystem.applyDamage(this, victim, victim.maxHealth * PERCENT_DAMAGE, "AOE", { ignoreCooldown: true })) {
+                    notifyStatusEvent(victim, "percent");
+                }
                 break;
             case "heal":
                 if (!victim.isDead) {
                     victim.health = Math.min(victim.maxHealth, victim.health + HEAL_AMOUNT);
                     victim.triggerHealFlash?.();
+                    notifyStatusEvent(victim, "heal");
                 }
                 break;
             case "selfPercent":
                 // The Gambler is both attacker and victim here, so it has no attacker to pass in.
-                DamageSystem.applyDamage(null, this, this.maxHealth * PERCENT_DAMAGE, "AOE", { ignoreCooldown: true });
+                if (DamageSystem.applyDamage(null, this, this.maxHealth * PERCENT_DAMAGE, "AOE", { ignoreCooldown: true })) {
+                    notifyStatusEvent(this, "percent");
+                }
                 break;
             case "selfBurn":
                 this.applyBurn(this, null);

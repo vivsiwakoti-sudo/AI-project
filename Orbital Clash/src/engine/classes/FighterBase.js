@@ -2,6 +2,7 @@ import { EffectSystem } from "../systems/EffectSystem.js";
 import { audioManager } from "../audio/AudioManager.js";
 import { glowCircle, hitFlash, squashTransform, critBurst, castSigil } from "../systems/Fx.js";
 import { traceShape } from "../systems/Shapes.js";
+import { BOOST_TRAIL_POINTS, drawStatusTrail, drawStatusVisuals, updateStatusVisuals } from "../systems/StatusVisuals.js";
 
 // Longest a pin/stun may last when the class that applied it never set a timer.
 // Grappler pins run 2s and Spearman impales 2-3s; four seconds guarantees even a
@@ -318,14 +319,15 @@ export class FighterBase {
         this.angularVelocity *= Math.pow(0.06, dt); // exponential spin decay
         this.spinAngle += this.angularVelocity * dt;
 
-        // Motion trail: only sample while genuinely moving.
+        // Motion trail: only sample while genuinely moving. Momentum boost keeps a longer streak.
         const speed = Math.hypot(this.vx, this.vy);
+        const trailCap = EffectSystem.has(this, "MomentumBoost") ? BOOST_TRAIL_POINTS : 8;
         if (speed > 0.25 && !this.isDead) {
             this.trailPoints.push({ x: this.x, y: this.y, life: 0.28 });
-            if (this.trailPoints.length > 8) this.trailPoints.shift();
         } else if (this.trailPoints.length) {
             this.trailPoints.shift();
         }
+        while (this.trailPoints.length > trailCap) this.trailPoints.shift();
     }
 
     // 0 -> just used, 1 -> ready again.
@@ -409,6 +411,7 @@ export class FighterBase {
             this.pinTimer -= dt;
             if (this.pinTimer <= 0) this.releasePin();
         }
+        updateStatusVisuals(this, dt);
     }
 
     emitBurst(color = this.color, count = 16, speed = 300) {
@@ -655,6 +658,9 @@ export class FighterBase {
         // entirely rather than relying on this alone.
         if (this.isDead || this.health <= 0) return;
 
+        // Momentum boost streak sits behind everything else on the fighter.
+        drawStatusTrail(ctx, this);
+
         // Contact ring while a deflection is still fresh, so bounces read clearly.
         if (this.bounceTimer > 0) {
             const p = 1 - this.bounceTimer / 0.28;
@@ -893,6 +899,8 @@ export class FighterBase {
         // Quick melee swing arc (shared by every melee class).
         this.drawSwing(ctx);
 
+        // Status overlays and icons sit outside the squash transform so they stay upright.
+        drawStatusVisuals(ctx, this);
         this.drawDamageNumbers(ctx);
     }
     die(particleSystem) {
