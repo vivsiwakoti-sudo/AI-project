@@ -161,16 +161,16 @@ test('the shield face blocks the next three hits and then lapses', () => {
   assert.equal(gambler.health, 140);
 });
 
-test('the vulnerable face doubles the next two hits and then lapses', () => {
+test('the vulnerable face doubles the next three hits and then lapses', () => {
   const gambler = makeGambler();
   gambler.applyFace('vulnerable', gambler);
 
-  const health = [1, 2, 3].map(() => {
+  const health = [1, 2, 3, 4].map(() => {
     hitGambler(gambler);
     return gambler.health;
   });
 
-  assert.deepEqual(health, [130, 110, 100]);
+  assert.deepEqual(health, [130, 110, 90, 80]);
 });
 
 test('blocked hits do not use up the vulnerable charges', () => {
@@ -181,8 +181,8 @@ test('blocked hits do not use up the vulnerable charges', () => {
   [1, 2, 3].forEach(() => hitGambler(gambler));
   assert.equal(gambler.health, 150);
 
-  [1, 2].forEach(() => hitGambler(gambler));
-  assert.equal(gambler.health, 110);
+  [1, 2, 3].forEach(() => hitGambler(gambler));
+  assert.equal(gambler.health, 90);
 });
 
 test('sudden death ignores the shield and does not use up a charge', () => {

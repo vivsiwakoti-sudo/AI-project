@@ -17,7 +17,7 @@ const MAX_BURNS = 5;
 const PERCENT_DAMAGE = 0.15;
 const HEAL_AMOUNT = 15;
 const SHIELD_HITS = 3;
-const VULNERABLE_HITS = 2;
+const VULNERABLE_HITS = 3;
 const VULNERABLE_MULTIPLIER = 2;
 
 // One entry per face of the die. Each face is rolled with equal chance.

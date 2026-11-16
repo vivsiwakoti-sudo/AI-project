@@ -16,6 +16,7 @@ import {
 } from "../engine/tournament";
 import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { drawBattleFrame } from "../engine/systems/BattleSimulation";
+import { createFighterAssembly } from "../engine/systems/FighterAssembly";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import TournamentBracket, { isLongFighterName } from "./TournamentBracket";
@@ -137,6 +138,8 @@ function TournamentScreenView({
   const mountedRef = useRef(true);
   // The live bout being watched, and the canvas it paints into.
   const boutRef = useRef(null);
+  // The bout being assembled during its countdown, with its fighter-forming effect.
+  const assemblyRef = useRef(null);
   const canvasRef = useRef(null);
   const arenaWrapRef = useRef(null);
 
@@ -277,6 +280,13 @@ function TournamentScreenView({
     setHudFighters(bout.fighters.map((fighter, index) => ({ fighter, index })));
     setMatchClock(bout.remainingSeconds);
 
+    assemblyRef.current = {
+      bout,
+      assembly: createFighterAssembly(bout.fighters, {
+        arenaSize: bout.arenaSize,
+        graphicsQuality: getSettings().graphicsQuality
+      })
+    };
     setPhase("countdown");
     for (const step of [3, 2, 1]) {
       if (token !== runTokenRef.current) { bout.destroy(); return null; }
@@ -377,6 +387,44 @@ function TournamentScreenView({
     return () => cancelAnimationFrame(frameId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, activeMatch]);
+
+  // During the countdown the fighters form from their particles. The bout is not
+  // simulated yet, so this only paints the bodies that have settled plus the
+  // particles still converging on the rest.
+  useEffect(() => {
+    if (phase !== "countdown") return undefined;
+    const pending = assemblyRef.current;
+    const ctx = canvasRef.current?.getContext("2d") || null;
+    if (!pending || !ctx) return undefined;
+    const { bout, assembly } = pending;
+    applyGlowScale(ctx, graphicsProfile(getSettings().graphicsQuality).glowScale);
+    const borderColor = ROUND_COLORS[activeMatch?.round];
+    let frameId = 0;
+    let lastTime = null;
+
+    const loop = time => {
+      if (!mountedRef.current) return;
+      if (lastTime === null) lastTime = time;
+      const dt = Math.min(Math.max((time - lastTime) / 1000, 0), MAX_FRAME_SECONDS);
+      lastTime = time;
+      assembly.advance(dt * speedRef.current);
+
+      drawBattleFrame(ctx, {
+        fighters: bout.fighters.filter(fighter => !assembly.hidesFighter(fighter)),
+        particles: bout.particles,
+        arenaSize: bout.arenaSize,
+        borderColor,
+        time: 0,
+        onFighterError: (fighter, error) => console.error(`Draw failed for ${fighter.name}`, error)
+      });
+      assembly.draw(ctx);
+      frameId = requestAnimationFrame(loop);
+    };
+
+    frameId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frameId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   // Once the deciding blow lands, keep the arena (and its explosion) on screen
   // for a short beat, then fold the result into the bracket.

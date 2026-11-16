@@ -448,7 +448,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 5,
     description: "Throws a die that rolls a random face when it lands.",
-    description2: "Every 5 seconds the Gambler throws a 44 px die at its target. The die deals 15 damage when it lands, then rolls one of eight faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), deal 15% of the target's max HP, or shield itself, blocking the next 3 hits. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, set itself on fire (5 burn damage over 5 seconds), or leave itself open, taking 2x damage from the next 2 hits. Sudden death ignores the shield and the 2x penalty. A parried or dodged die does not roll. A die that misses the arena does not roll.",
+    description2: "Every 5 seconds the Gambler throws a 44 px die at its target. The die deals 15 damage when it lands, then rolls one of eight faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), deal 15% of the target's max HP, or shield itself, blocking the next 3 hits. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, set itself on fire (5 burn damage over 5 seconds), or leave itself open, taking 2x damage from the next 3 hits. Sudden death ignores the shield and the 2x penalty. A parried or dodged die does not roll. A die that misses the arena does not roll.",
     keywords: ["dice", "gamble", "luck", "stun", "burn", "projectile"],
   },
   "Mimic": {

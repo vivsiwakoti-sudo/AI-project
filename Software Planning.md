@@ -59,6 +59,10 @@ node index.js
 
 * \- When the HP of one fighter is 0 or below, it explodes into pixels of its respective color, and 2 seconds after the death of one, the end screen appears.
 
+  ## Spawn
+
+* \- During the 3-2-1-GO countdown, each fighter forms before the fight. Particles drift in from around the fighter and settle onto its real outline and inner design, each in the color of the spot it forms. The body appears once its particles have settled.
+
 
 #  Universal Combat Rules
 

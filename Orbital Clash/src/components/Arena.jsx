@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FighterFactory } from "../engine/FighterFactory";
 import { ParticleSystem } from "../engine/systems/ParticleSystem";
+import { createFighterAssembly } from "../engine/systems/FighterAssembly";
 import { squashTransform } from "../engine/systems/Fx";
 import { audioManager } from "../engine/audio/AudioManager";
 import StatsPanel from "./StatsPanel";
@@ -280,6 +281,8 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
     // Set once the afterglow expires so the onFinish hand-off fires exactly once.
     handoffStarted: false,
     particles: new ParticleSystem({ graphicsQuality: getSettings().graphicsQuality }),
+    // Fighters form from their particles during the countdown, before the bell.
+    assembly: createFighterAssembly(fighterState.fighters, { arenaSize: ARENA_SIZE, graphicsQuality: getSettings().graphicsQuality }),
     replayTime: 0,
     nextReplayCapture: 0,
     replayEndTime: null,
@@ -391,6 +394,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       const simulationDt = pausedRef.current ? 0 : Math.min(dt, 0.1) * speedMultiplierRef.current;
       const renderTime = time / 1000;
       let shouldCaptureReplayFrame = false;
+      if (!pausedRef.current) gameState.current.assembly.advance(Math.min(dt, 0.1));
 
       // A resolved battle still runs a stripped-down simulation for the
       // resolutionGrace window (see the victory branch below), so the final
@@ -619,6 +623,8 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
         // Duplicator's clones, which recurse back through this same draw) in one
         // place instead of needing a guard in every class.
         if (f.isDead || f.health <= 0) return;
+        // The body is still forming from its particles; it appears once they settle.
+        if (gameState.current.assembly.hidesFighter(f)) return;
 
         ctx.save();
         // Re-apply the clip defensively: if a previous draw() unbalanced the
@@ -671,6 +677,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
         ctx.restore();
         ctx.restore();
       });
+      gameState.current.assembly.draw(ctx);
       gameState.current.particles.draw(ctx);
       ctx.restore();
 
