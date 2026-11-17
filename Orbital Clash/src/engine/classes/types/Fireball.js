@@ -7,6 +7,9 @@ import { audioManager } from "../../audio/AudioManager.js";
 const BURN_DURATION = 5;
 const BURN_TICK_INTERVAL = 1;
 const BURN_TICK_DAMAGE = 1;
+const MAX_BURNS = 5;
+// Shared across every Fireball so burns from different fighters never collide by name.
+let burnSerial = 0;
 
 export class Fireball extends FighterBase {
     constructor(data, x, y) {
@@ -14,7 +17,6 @@ export class Fireball extends FighterBase {
         this.projectiles = [];
         this.attackTimer = 0;
         this.shotsFired = 0;
-        this.fireballId = 0;
     }
 
     update(dt, opponent) {
@@ -50,12 +52,13 @@ export class Fireball extends FighterBase {
             if (struck) {
                 // The projectile is handed to the damage system so a parrying
                 // target can turn this exact shot aside rather than merely void it.
-                const landed = DamageSystem.applyDamage(this, struck, p.damage, "Projectile", { projectile: p });
+                // Each fireball is its own hit, so it skips the attacker's shared hit cooldown;
+                // otherwise the first fireball of a volley would block the rest.
+                const landed = DamageSystem.applyDamage(this, struck, p.damage, "Projectile", { projectile: p, ignoreCooldown: true });
                 if (!landed) { p.active = false; return; }
-                const MAX_BURNS = 5;
                 const burns = struck.statusEffects.filter(e => e.name.startsWith("burn-"));
                 // At the cap a new hit renews the oldest burn instead of stacking another.
-                const burnName = burns.length >= MAX_BURNS ? burns[0].name : `burn-${this.fireballId++}`;
+                const burnName = burns.length >= MAX_BURNS ? burns[0].name : `burn-${burnSerial++}`;
                 EffectSystem.addEffect(struck, {
                     name: burnName,
                     duration: BURN_DURATION,
