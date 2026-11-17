@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { FighterBase } from '../FighterBase.js';
 import { FighterFactory } from '../../FighterFactory.js';
 import { installTestAudio } from '../../audio/testAudioStub.js';
+import { audioManager } from '../../audio/AudioManager.js';
 
 installTestAudio();
 
@@ -104,4 +105,40 @@ test('a fighter resting against a clone deals its 3 damage once, not every frame
   for (let i = 0; i < 30; i++) duplicator.updateClones(1 / 60, other);
 
   assert.equal(clone.health, 12, 'staying in contact does not keep dealing damage');
+});
+
+test('killing the original runs every clone through die(), the same death as the original', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  duplicator.spawnClone();
+  duplicator.spawnClone();
+  duplicator.clones[0].spawnClone();
+  const dying = [];
+  for (const clone of duplicator.clones) {
+    const die = clone.die.bind(clone);
+    clone.die = (particles) => { dying.push(clone); die(particles); };
+  }
+
+  duplicator.killCloneTree();
+
+  assert.equal(dying.length, 3, 'each clone dies through die()');
+  assert.ok(duplicator.clones.every(c => c.isDead), 'every clone is dead');
+});
+
+test('a swarm dying at the same moment plays one death sound, not one per clone', () => {
+  const ctx = audioManager.ensureContext();
+  const createOscillator = ctx.createOscillator;
+  let oscillators = 0;
+  ctx.createOscillator = (...args) => { oscillators++; return createOscillator.apply(ctx, args); };
+  ctx.currentTime = 500;
+
+  try {
+    audioManager.playDeathSfx();
+    const firstDeath = oscillators;
+    audioManager.playDeathSfx();
+    audioManager.playDeathSfx();
+    assert.ok(firstDeath > 0, 'the first death plays its sound');
+    assert.equal(oscillators, firstDeath, 'the rest of the same-moment deaths are silent');
+  } finally {
+    ctx.createOscillator = createOscillator;
+  }
 });

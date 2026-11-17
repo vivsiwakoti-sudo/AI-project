@@ -64,10 +64,14 @@ export class Duplicator extends FighterBase {
     }
 
 
-    killCloneTree() {
+    killCloneTree(particleSystem = this.particleSystem) {
+        // Each clone goes through die() so it gets the same death burst and sound as the original.
+        this.clones.forEach(clone => {
+            clone.die(particleSystem);
+            clone.killCloneTree(particleSystem);
+        });
         this.isDead = true;
         this.health = 0;
-        this.clones.forEach(clone => clone.killCloneTree());
     }
 
     keepCloneInArena(clone) {
@@ -236,18 +240,16 @@ export class Duplicator extends FighterBase {
         ctx.save();
         ctx.translate(this.x, this.y);
         
-        // Generation badge (concentric circles)
+        // Same badge on every Duplicator, so a clone looks exactly like the original.
         ctx.strokeStyle = "rgba(0, 255, 0, 0.6)";
         ctx.lineWidth = 1;
-        for (let i = 0; i < Math.min(this.generation + 1, 3); i++) {
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 8 + i * 4, 0, Math.PI * 2);
-            ctx.stroke();
-        }
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
+        ctx.stroke();
         
-        // Clone count indicator (swarm size, shared across all generations)
+        // Swarm size is shown once, on the original only.
         const swarmSize = (this.root || this).totalClones || this.clones.length;
-        if (swarmSize > 0) {
+        if (!this.root && swarmSize > 0) {
             ctx.fillStyle = "rgba(0, 255, 0, 0.8)";
             ctx.font = "9px 'Share Tech Mono', 'Rajdhani', monospace";
             ctx.textAlign = "center";
@@ -259,22 +261,6 @@ export class Duplicator extends FighterBase {
     }
 
     drawClones(ctx) {
-        this.clones.forEach(c => {
-            ctx.globalAlpha = 0.3 + (1 - (c.generation * 0.1)) * 0.3;
-            c.draw(ctx);
-            
-            // Connection line to parent
-            if (this.clones.indexOf(c) < 3) { // Only show for first few clones
-                ctx.strokeStyle = `rgba(100, 255, 100, ${0.2 * (1 - c.generation * 0.1)})`;
-                ctx.lineWidth = 1;
-                ctx.setLineDash([3, 3]);
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(c.x, c.y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-        });
-        ctx.globalAlpha = 1.0;
+        this.clones.forEach(c => c.draw(ctx));
     }
 }

@@ -847,6 +847,8 @@ class AudioManager {
 
   playDeathSfx() {
     const ctx = this.ensureContext();
+    // A clone swarm dying together plays one boom, not dozens stacked on top of each other.
+    if (!this.statusSfxReady("death", 0.06)) return;
     const now = ctx.currentTime;
     // Big low boom plus a descending "power-down" tone, so a kill lands hard.
     playExplosion(ctx, this.sfxGain, now, { gain: 0.5, freq: 120 });
