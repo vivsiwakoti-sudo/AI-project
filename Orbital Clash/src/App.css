@@ -832,7 +832,7 @@
   grid-column: 1 / -1;
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 6px;
   min-width: 0;
   color: var(--text-secondary);
@@ -847,7 +847,6 @@
   color: color-mix(in srgb, var(--class-accent) 40%, #ffffff);
   font: 0.72rem var(--font-mono);
   letter-spacing: 0.02em;
-  text-align: right;
 }
 
 .fighter-card-record-new {

@@ -1004,6 +1004,16 @@ export function loadTournamentHistory() {
   }
 }
 
+// Best finish taken from the saved standings, the same rows the champion screen
+// shows. Stored placements can hold bracket buckets (such as 17th for every
+// opening-round loser), so they only apply to classes with no saved standings.
+export function bestExactPlacement(name, history, storedPlacement = null) {
+  const placements = history.flatMap(tournament => tournament.standings
+    .filter(row => row.name === name)
+    .map(row => row.placement));
+  return placements.length ? Math.min(...placements) : storedPlacement;
+}
+
 function writeTournamentHistory(entries) {
   if (!storageAvailable()) return;
   try {

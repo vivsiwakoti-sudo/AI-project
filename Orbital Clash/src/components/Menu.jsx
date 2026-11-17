@@ -4,7 +4,7 @@ import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
 import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
-import { clearTournamentStats, hasResumableTournament, loadTournamentStats } from "../engine/tournament";
+import { bestExactPlacement, clearTournamentStats, hasResumableTournament, loadTournamentHistory, loadTournamentStats } from "../engine/tournament";
 import { favoriteLastReplay, listFavoriteReplays, loadLastReplayMeta, removeFavoriteReplay, MAX_FAVORITE_REPLAYS } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
@@ -105,6 +105,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [canResumeTournament, setCanResumeTournament] = useState(hasResumableTournament);
   // Read once on mount: the menu is remounted after every tournament, so it is fresh.
   const [tournamentStats, setTournamentStats] = useState(loadTournamentStats);
+  const [tournamentHistory] = useState(loadTournamentHistory);
   // The reigning champion is the winner of the last completed tournament.
   const champion = tournamentStats.lastChampion;
 
@@ -278,7 +279,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   };
 
   const statFor = (name) => {
-    const placement = tournamentStats.classes[name]?.bestPlacement;
+    const placement = bestExactPlacement(name, tournamentHistory, tournamentStats.classes[name]?.bestPlacement);
     return {
       ...statsFromRecords(records, name),
       bestFinish: placement == null ? "N/A" : ordinal(placement)

@@ -34,6 +34,7 @@ const {
   TOURNAMENT_STATS_KEY,
   allMatches,
   applyMatchResult,
+  bestExactPlacement,
   bestRoundForPlacement,
   buildTournamentBracket,
   createTournamentBout,
@@ -203,6 +204,16 @@ test('older best finishes infer known rounds and do not invent an opening-round 
   assert.equal(stats.classes.Ghost.bestRound, null);
   assert.equal(bestRoundForPlacement(stats.classes.Ghost.bestPlacement), 'Opening round');
   assert.equal(bestRoundForPlacement(null), null);
+});
+
+test('best finish comes from saved standings, with stored placements only as a fallback', () => {
+  const history = [
+    { standings: [{ name: 'Fireball', placement: 22 }, { name: 'Ghost', placement: 4 }] },
+    { standings: [{ name: 'Fireball', placement: 19 }] }
+  ];
+  assert.equal(bestExactPlacement('Fireball', history, 17), 19);
+  assert.equal(bestExactPlacement('Yeti', history, 17), 17);
+  assert.equal(bestExactPlacement('Yeti', [], null), null);
 });
 
 test('all 32 classes enter the Round of 32 with no byes', () => {
