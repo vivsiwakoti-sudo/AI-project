@@ -10,7 +10,8 @@ export class Samurai extends FighterBase {
 
     constructor(data, x, y) {
         super(data, x, y);
-        this.comboTimer = 0;
+        // Own field: FighterBase uses comboTimer for the damage-number window, which would reset this.
+        this.comboCooldown = 0;
         this.isInvisible = false;
         this.invisibilityTimer = 0;
         this.critChance = 0.05;
@@ -28,6 +29,8 @@ export class Samurai extends FighterBase {
 
     update(dt, opponent) {
         super.update(dt, opponent);
+        // Ticks through combos and invisibility alike, so nothing restarts it mid-cooldown.
+        if (this.comboCooldown > 0) this.comboCooldown = Math.max(0, this.comboCooldown - dt);
 
         // The katana never stops orbiting; the blade sweeps the ring every frame
         // and cuts whoever it crosses, capped to one hit per revolution.
@@ -35,7 +38,7 @@ export class Samurai extends FighterBase {
         if (opponent && !opponent.isDead) {
             const target = this.bladeTouchTarget(tip.x, tip.y, opponent, 7);
             const reaching = target !== null;
-            if (reaching && !this.weaponHot && this.comboTimer <= 0) {
+            if (reaching && !this.weaponHot && this.comboCooldown <= 0) {
                 this.weaponHot = true;
                 const isCrit = Math.random() < this.critChance;
                 // 6 damage for a normal katana cut (the class's defined damage), 15
@@ -63,7 +66,6 @@ export class Samurai extends FighterBase {
             if (this.comboPassTimer <= 0) {
                 if (this.comboPass >= 3) {
                     this.comboActive = false;
-                    this.comboTimer = this.cooldown || 3;
                     if (Math.random() < Samurai.INVISIBILITY_CHANCE) this.performCombo(opponent);
                 } else {
                     this.startComboPass(opponent);
@@ -82,9 +84,7 @@ export class Samurai extends FighterBase {
             return;
         }
 
-        if (this.comboTimer > 0) this.comboTimer -= dt;
-
-        if (opponent && this.comboTimer <= 0) {
+        if (opponent && this.comboCooldown <= 0) {
             const dx = opponent.x - this.x;
             const dy = opponent.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -94,7 +94,7 @@ export class Samurai extends FighterBase {
                 this.comboPass = 0;
                 this.startComboPass(opponent);
                 // Combos are paced by the class cooldown, not just proximity.
-                this.comboTimer = this.cooldown || 3;
+                this.comboCooldown = this.cooldown || 3;
             }
         }
     }

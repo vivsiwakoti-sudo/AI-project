@@ -83,3 +83,39 @@ test('a finished combo leaves the Samurai visible when the 35% roll fails', () =
   assert.equal(samurai.isInvisible, false);
 });
 
+test('invisibility does not restart the cooldown, which keeps running from the combo start', () => {
+  const samurai = new Samurai({ ...samuraiStats, cooldown: 7 }, 200, 400);
+  const opponent = new FighterBase(opponentStats, 240, 400);
+  let elapsed = 0;
+  const step = () => { samurai.update(FRAME, opponent); elapsed += FRAME; };
+
+  withRandom(0.2, () => {
+    step();
+    elapsed = 0; // the combo starts on this frame, so the cooldown is 7 from here
+    for (let i = 0; i < 120 && samurai.comboActive; i++) step();
+  });
+  assert.equal(samurai.isInvisible, true);
+  while (samurai.isInvisible) step();
+
+  assert.ok(Math.abs(samurai.comboCooldown - Math.max(0, 7 - elapsed)) < FRAME / 2, 'cooldown ran down through the combo and invisibility');
+});
+
+test('a visible Samurai counts its cooldown down at the normal rate', () => {
+  const samurai = new Samurai({ ...samuraiStats, cooldown: 7 }, 200, 400);
+  const opponent = new FighterBase(opponentStats, 700, 400);
+  samurai.comboCooldown = 7;
+
+  for (let i = 0; i < 60; i++) samurai.update(FRAME, opponent);
+
+  assert.ok(Math.abs(samurai.comboCooldown - 6) < FRAME / 2, 'one second costs one second of cooldown');
+});
+
+test('a hit taken does not overwrite the Samurai cooldown', () => {
+  const samurai = new Samurai({ ...samuraiStats, cooldown: 7 }, 200, 400);
+  samurai.comboCooldown = 5;
+
+  samurai.addDamageNumber(4);
+
+  assert.equal(samurai.comboCooldown, 5);
+});
+
