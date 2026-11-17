@@ -18,7 +18,7 @@ export const FIGHTER_CLASSES = {
     color: "#32CD32",
     health: 100,
     damage: 2,
-    speed: 4,
+    speed: 6,
     bodySize: 42,
     shape: "crescent",
     attackType: "Trail",
