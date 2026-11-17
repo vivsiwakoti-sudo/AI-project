@@ -1018,6 +1018,34 @@ class AudioManager {
     playNoiseBurst(ctx, this.sfxGain, now, 0.5, { filterType: "bandpass", filterFreq: 400, sweepTo: 4000, q: 1.2, gain: 0.26 });
     playSweep(ctx, this.sfxGain, now, { type: "sawtooth", from: 180, to: 900, duration: 0.45, gain: 0.06 });
   }
+
+  // Invisibility: a high electronic shimmer that fades out over about 0.7 seconds.
+  playInvisibilitySfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("invisible")) return;
+    const now = ctx.currentTime;
+    playSweep(ctx, this.sfxGain, now, { type: "sine", from: 1400, to: 2800, duration: 0.7, gain: 0.12 });
+    playSweep(ctx, this.sfxGain, now + 0.04, { type: "triangle", from: 2100, to: 3400, duration: 0.6, gain: 0.06 });
+    playNoiseBurst(ctx, this.sfxGain, now, 0.6, { filterType: "highpass", filterFreq: 5000, sweepTo: 9000, gain: 0.05, q: 0.8 });
+  }
+
+  // Slowness: a low tone sliding down, like a machine winding down.
+  playSlowSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("slow", 0.3)) return;
+    const now = ctx.currentTime;
+    playSweep(ctx, this.sfxGain, now, { type: "sine", from: 300, to: 70, duration: 0.6, gain: 0.26 });
+    playSweep(ctx, this.sfxGain, now, { type: "triangle", from: 310, to: 75, duration: 0.6, gain: 0.12 });
+  }
+
+  // Electric: one sharp zap with a crack on top.
+  playElectricSfx() {
+    const ctx = this.ensureContext();
+    if (!this.statusSfxReady("electric")) return;
+    const now = ctx.currentTime;
+    playZap(ctx, this.sfxGain, now, { gain: 0.34, freq: 2600 });
+    playNoiseBurst(ctx, this.sfxGain, now, 0.03, { filterType: "highpass", filterFreq: 6000, gain: 0.2 });
+  }
 }
 
 export const audioManager = new AudioManager();

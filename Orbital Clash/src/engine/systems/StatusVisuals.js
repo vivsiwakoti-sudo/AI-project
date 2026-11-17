@@ -6,7 +6,7 @@
 // gets the matching visual with no extra wiring.
 
 import { EffectSystem } from "./EffectSystem.js";
-import { expandingRing, motionTrail, TAU } from "./Fx.js";
+import { expandingRing, lightningBolt, motionTrail, shockwaveRing, TAU } from "./Fx.js";
 import { audioManager } from "../audio/AudioManager.js";
 
 export const STATUS_COLORS = {
@@ -16,7 +16,10 @@ export const STATUS_COLORS = {
     poison: "#b65cff",
     boost: "#ff5fd2",
     percent: "#ff3b4e",
-    heal: "#46e6a0"
+    heal: "#46e6a0",
+    invisible: "#cfe4ff",
+    slow: "#5aa9ff",
+    electric: "#ffe84a"
 };
 
 // Momentum boost keeps a longer streak than ordinary movement (8 samples).
@@ -26,16 +29,24 @@ const EVENT_SECONDS = 0.8;
 const RING_SECONDS = 0.6;
 const HEAL_RING_DELAY = 0.18;
 const EMBER_INTERVAL = 0.12;
-const ICON_ORDER = ["stun", "freeze", "burn", "poison", "boost", "percent", "heal"];
+const ICON_ORDER = ["stun", "freeze", "burn", "poison", "boost", "percent", "heal", "invisible", "slow", "electric"];
 const ICON_SPACING = 22;
 const ICON_RADIUS = 8;
+// Electric arcs live for about a seventh of a second and are re-spawned in quick, irregular bursts.
+const ARC_LIFE = 0.14;
+const ARC_GAP_MIN = 0.05;
+const ARC_GAP_MAX = 0.16;
+const ARC_FLASH_SECONDS = 0.08;
 
 const ONSET_BURST = {
     stun: { color: "#ffd84a", count: 10, speed: 260 },
     freeze: { color: "#d8fbff", count: 12, speed: 180 },
     burn: { color: "#ff8a1f", count: 12, speed: 200 },
     poison: { color: "#b65cff", count: 10, speed: 120 },
-    boost: { color: "#ff5fd2", count: 14, speed: 320 }
+    boost: { color: "#ff5fd2", count: 14, speed: 320 },
+    invisible: { color: "#cfe4ff", count: 8, speed: 120 },
+    slow: { color: "#5aa9ff", count: 10, speed: 110 },
+    electric: { color: "#ffe84a", count: 12, speed: 280 }
 };
 
 const ONSET_SOUND = {
@@ -43,7 +54,10 @@ const ONSET_SOUND = {
     freeze: () => audioManager.playFreezeSfx(),
     burn: () => audioManager.playBurnSfx(),
     poison: () => audioManager.playPoisonSfx(),
-    boost: () => audioManager.playBoostSfx()
+    boost: () => audioManager.playBoostSfx(),
+    invisible: () => audioManager.playInvisibilitySfx(),
+    slow: () => audioManager.playSlowSfx(),
+    electric: () => audioManager.playElectricSfx()
 };
 
 const EVENT_SOUND = {
@@ -56,7 +70,7 @@ const states = new WeakMap();
 function stateOf(fighter) {
     let state = states.get(fighter);
     if (!state) {
-        state = { clock: 0, active: new Map(), events: [], emberTimer: 0 };
+        state = { clock: 0, active: new Map(), events: [], emberTimer: 0, arcs: [], arcTimer: 0 };
         states.set(fighter, state);
     }
     return state;
@@ -87,7 +101,34 @@ function readStatuses(fighter) {
     }
     if (EffectSystem.has(fighter, "poison")) found.set("poison", { remaining: timed("poison"), stacks: 1 });
     if (EffectSystem.has(fighter, "MomentumBoost")) found.set("boost", { remaining: timed("MomentumBoost"), stacks: 1 });
+    if (fighter.isInvisible) {
+        const left = fighter.invisibilityTimer;
+        found.set("invisible", { remaining: Number.isFinite(left) ? left : null, stacks: 1 });
+    }
+    if (isSlowed(fighter)) {
+        const timers = ["slow", "trail-slow"].map(timed).filter(v => v != null);
+        found.set("slow", { remaining: timers.length ? Math.max(...timers) : null, stacks: 1 });
+    }
+    if (EffectSystem.has(fighter, "electric")) found.set("electric", { remaining: timed("electric"), stacks: 1 });
     return found;
+}
+
+// Both timed slows: the ice/alchemy "slow" and the snake venom's "trail-slow".
+function isSlowed(fighter) {
+    return EffectSystem.has(fighter, "slow") || EffectSystem.has(fighter, "trail-slow");
+}
+
+function makeArc(fighter, at) {
+    const a = Math.random() * TAU;
+    const b = a + (Math.random() - 0.5) * 1.4;
+    const reach = fighter.radius * (1.5 + Math.random() * 0.8);
+    return {
+        at,
+        life: ARC_LIFE * (0.7 + Math.random() * 0.6),
+        from: { x: fighter.x + Math.cos(a) * fighter.radius, y: fighter.y + Math.sin(a) * fighter.radius },
+        to: { x: fighter.x + Math.cos(b) * reach, y: fighter.y + Math.sin(b) * reach },
+        color: Math.random() < 0.5 ? "#ffe84a" : "#6ff3ff"
+    };
 }
 
 function emitEmbers(fighter, count) {
@@ -149,6 +190,15 @@ export function updateStatusVisuals(fighter, dt) {
             emitEmbers(fighter, 1);
         }
     }
+
+    state.arcs = state.arcs.filter(arc => state.clock - arc.at < arc.life);
+    if (now.has("electric")) {
+        state.arcTimer -= dt;
+        if (state.arcTimer <= 0) {
+            state.arcs.push(makeArc(fighter, state.clock));
+            state.arcTimer = ARC_GAP_MIN + Math.random() * (ARC_GAP_MAX - ARC_GAP_MIN);
+        }
+    }
     return onsets;
 }
 
@@ -180,10 +230,34 @@ export function activeStatusIcons(fighter) {
     return icons;
 }
 
-// Momentum boost's streak, drawn behind the body so the fighter stays readable.
+// Momentum boost's streak and the slowed fighter's dim blue trail, drawn behind the body
+// so the fighter stays readable.
 export function drawStatusTrail(ctx, fighter) {
-    if (!EffectSystem.has(fighter, "MomentumBoost")) return;
-    motionTrail(ctx, fighter.trailPoints, STATUS_COLORS.boost, { lineWidth: fighter.radius * 1.9, alpha: 0.8, blur: 28 });
+    if (EffectSystem.has(fighter, "MomentumBoost")) {
+        motionTrail(ctx, fighter.trailPoints, STATUS_COLORS.boost, { lineWidth: fighter.radius * 1.9, alpha: 0.8, blur: 28 });
+    }
+    if (isSlowed(fighter)) drawSlowTrail(ctx, fighter);
+}
+
+// Tapers from transparent at the tail to a faint blue at the head.
+function drawSlowTrail(ctx, fighter) {
+    const points = fighter.trailPoints;
+    if (!points || points.length < 2) return;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.strokeStyle = STATUS_COLORS.slow;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = STATUS_COLORS.slow;
+    for (let i = 1; i < points.length; i++) {
+        const t = i / points.length;
+        ctx.globalAlpha = 0.3 * t;
+        ctx.lineWidth = fighter.radius * (0.3 + 0.9 * t);
+        ctx.beginPath();
+        ctx.moveTo(points[i - 1].x, points[i - 1].y);
+        ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
+    }
+    ctx.restore();
 }
 
 function starPath(ctx, x, y, outer, inner, rotation) {
@@ -292,6 +366,43 @@ function drawRing(ctx, x, y, radius, age, color, delay) {
     expandingRing(ctx, x, y, p, radius + 4, radius + 34, color, { lineWidth: 3 });
 }
 
+// Faint glowing outline; sets its own alpha so a subclass's dimmed body doesn't dim it.
+function drawInvisibleOutline(ctx, x, y, radius, t) {
+    ctx.save();
+    ctx.strokeStyle = STATUS_COLORS.invisible;
+    ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = STATUS_COLORS.invisible;
+    ctx.globalAlpha = 0.3 + 0.1 * Math.sin(t * 2.5);
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 1, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+}
+
+// A dashed ring turning slowly, so the slowed fighter reads as moving through syrup.
+function drawSlowRing(ctx, x, y, radius, t) {
+    shockwaveRing(ctx, x, y, radius + 5, STATUS_COLORS.slow, { alpha: 0.55, lineWidth: 1.5, dash: [5, 7], rotation: -t * 0.6 });
+}
+
+// Live arcs crackle over the body, with a short bright flash right after each new arc.
+function drawElectric(ctx, x, y, radius, t, arcs) {
+    for (const arc of arcs) {
+        const p = (t - arc.at) / arc.life;
+        if (p < 0 || p >= 1) continue;
+        lightningBolt(ctx, arc.from.x, arc.from.y, arc.to.x, arc.to.y, {
+            color: arc.color, alpha: 1 - p, lineWidth: 2, segments: 5, jitter: radius * 0.6, blur: 10
+        });
+    }
+    const latest = arcs[arcs.length - 1];
+    if (latest) {
+        const age = t - latest.at;
+        if (age < ARC_FLASH_SECONDS) {
+            shockwaveRing(ctx, x, y, radius + 2, "#fff6b8", { alpha: 0.6 * (1 - age / ARC_FLASH_SECONDS), lineWidth: 2.5 });
+        }
+    }
+}
+
 const GLYPHS = {
     stun: (ctx, x, y, color) => {
         ctx.fillStyle = color;
@@ -348,6 +459,40 @@ const GLYPHS = {
         ctx.fillStyle = color;
         ctx.fillRect(x - 1, y - 4, 2, 8);
         ctx.fillRect(x - 4, y - 1, 8, 2);
+    },
+    invisible: (ctx, x, y, color) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 4.5, 2.6, 0, 0, TAU);
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.3, 0, TAU);
+        ctx.fill();
+    },
+    slow: (ctx, x, y, color) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x - 3.5, y - 4);
+        ctx.lineTo(x + 3.5, y - 4);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + 3.5, y + 4);
+        ctx.lineTo(x - 3.5, y + 4);
+        ctx.closePath();
+        ctx.fill();
+    },
+    electric: (ctx, x, y, color) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x + 1.5, y - 5);
+        ctx.lineTo(x - 3, y + 0.8);
+        ctx.lineTo(x - 0.2, y + 0.8);
+        ctx.lineTo(x - 1.5, y + 5);
+        ctx.lineTo(x + 3, y - 0.8);
+        ctx.lineTo(x + 0.2, y - 0.8);
+        ctx.closePath();
+        ctx.fill();
     }
 };
 
@@ -391,6 +536,9 @@ export function drawStatusVisuals(ctx, fighter) {
     const burn = state.active.get("burn");
     if (burn) drawFlames(ctx, x, y, radius, t, burn.stacks);
     if (state.active.has("poison")) drawBubbles(ctx, x, y, radius, t);
+    if (state.active.has("invisible")) drawInvisibleOutline(ctx, x, y, radius, t);
+    if (state.active.has("slow")) drawSlowRing(ctx, x, y, radius, t);
+    if (state.active.has("electric")) drawElectric(ctx, x, y, radius, t, state.arcs);
 
     for (const event of state.events) {
         const age = t - event.at;

@@ -173,13 +173,6 @@ export class Samurai extends FighterBase {
             // Invisible shimmer effect
             super.draw(ctx);
             ctx.globalAlpha = 1.0;
-
-            // Outline to show presence
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.stroke();
         } else {
             super.draw(ctx);
             ctx.save();

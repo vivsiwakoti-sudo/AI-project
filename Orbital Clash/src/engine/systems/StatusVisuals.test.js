@@ -62,7 +62,30 @@ test('an instant heal flashes an icon briefly and then clears', () => {
   assert.deepEqual(activeStatusIcons(fighter), []);
 });
 
-test('a pinned fighter shows the stun status with its pin timer', () => {
+test('invisibility, slowness and electric each get their own icon', () => {
+  const fighter = makeFighter();
+  fighter.isInvisible = true;
+  fighter.invisibilityTimer = 4;
+  EffectSystem.addEffect(fighter, { name: 'trail-slow', duration: 0.4, multiplier: 0.5 });
+  EffectSystem.addEffect(fighter, { name: 'electric', duration: 2.5 });
+  updateStatusVisuals(fighter, 0);
+
+  const names = activeStatusIcons(fighter).map(icon => icon.name);
+  assert.deepEqual(names, ['invisible', 'slow', 'electric']);
+});
+
+test('an electric status shows its icon only while the effect lasts', () => {
+  const fighter = makeFighter();
+  EffectSystem.addEffect(fighter, { name: 'electric', duration: 2.5 });
+  updateStatusVisuals(fighter, 0);
+  assert.deepEqual(activeStatusIcons(fighter).map(icon => icon.name), ['electric']);
+
+  EffectSystem.removeEffects(fighter, effect => effect.name === 'electric');
+  updateStatusVisuals(fighter, 0);
+  assert.deepEqual(activeStatusIcons(fighter), []);
+});
+
+test('a pinned fighter shows a stun icon for the whole pin', () => {
   const fighter = makeFighter();
   fighter.isPinned = true;
   fighter.pinTimer = 2;
@@ -105,8 +128,13 @@ test('every status draws without error on a canvas context', () => {
   EffectSystem.addEffect(fighter, { name: 'burn-1', duration: 3 });
   EffectSystem.addEffect(fighter, { name: 'poison', duration: 3 });
   EffectSystem.addEffect(fighter, { name: 'MomentumBoost', duration: 3 });
+  EffectSystem.addEffect(fighter, { name: 'slow', duration: 2 });
+  EffectSystem.addEffect(fighter, { name: 'electric', duration: 2 });
+  fighter.isInvisible = true;
+  fighter.invisibilityTimer = 2;
   fighter.vx = 2;
   updateStatusVisuals(fighter, 0);
+  updateStatusVisuals(fighter, 0.1);
   notifyStatusEvent(fighter, 'heal');
   notifyStatusEvent(fighter, 'percent');
   const ctx = stubContext();
