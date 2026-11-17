@@ -63,7 +63,7 @@ export class Samurai extends FighterBase {
             if (this.comboPassTimer <= 0) {
                 if (this.comboPass >= 3) {
                     this.comboActive = false;
-                    this.comboTimer = 3;
+                    this.comboTimer = this.cooldown || 3;
                     if (Math.random() < Samurai.INVISIBILITY_CHANCE) this.performCombo(opponent);
                 } else {
                     this.startComboPass(opponent);
@@ -93,7 +93,7 @@ export class Samurai extends FighterBase {
                 this.comboActive = true;
                 this.comboPass = 0;
                 this.startComboPass(opponent);
-                // Combos are paced by the sword's 3-second gap, not just proximity.
+                // Combos are paced by the class cooldown, not just proximity.
                 this.comboTimer = this.cooldown || 3;
             }
         }
