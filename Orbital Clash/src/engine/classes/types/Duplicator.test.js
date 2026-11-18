@@ -64,7 +64,7 @@ test('clones start with 15 HP at every generation', () => {
 test('a fighter touching a clone deals 3 damage even when it is not the aim', () => {
   const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
   const aim = new FighterBase(dummyStats, 700, 700);
-  const other = new FighterBase(dummyStats, 300, 300);
+  const other = new FighterBase({ ...dummyStats, attackType: 'Melee' }, 300, 300);
   duplicator.spawnClone();
   const clone = duplicator.clones[0];
   duplicator.victims = [aim, other];
@@ -74,6 +74,18 @@ test('a fighter touching a clone deals 3 damage even when it is not the aim', ()
   duplicator.updateClones(1 / 60, aim);
 
   assert.equal(clone.health, 12, 'the touch lands on the clone for 3');
+});
+
+test('a body fighter adds its normal contact damage to the clone contact damage', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const bodyFighter = new FighterBase({ ...dummyStats, name: 'Mutant', damage: 7 }, 300, 300);
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  clone.x = bodyFighter.x;
+  clone.y = bodyFighter.y;
+  duplicator.applyCloneContact(clone, [bodyFighter]);
+
+  assert.equal(clone.health, 5, '3 clone contact damage plus 7 body damage equals 10');
 });
 
 test('a clone deals its 2 touch damage to any fighter it touches, not only the aim', () => {
@@ -95,7 +107,7 @@ test('a clone deals its 2 touch damage to any fighter it touches, not only the a
 
 test('a fighter resting against a clone deals its 3 damage once, not every frame', () => {
   const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
-  const other = new FighterBase(dummyStats, 300, 300);
+  const other = new FighterBase({ ...dummyStats, attackType: 'Melee' }, 300, 300);
   duplicator.spawnClone();
   const clone = duplicator.clones[0];
   duplicator.victims = [other];
@@ -115,7 +127,7 @@ test('five separate fighter contacts kill a clone and trigger its death effect',
     emitImpact() {}
   };
   duplicator.particleSystem = particles;
-  const other = new FighterBase(dummyStats, 300, 300);
+  const other = new FighterBase({ ...dummyStats, attackType: 'Melee' }, 300, 300);
   other.particleSystem = particles;
   duplicator.spawnClone();
   const clone = duplicator.clones[0];

@@ -139,8 +139,11 @@ export class Duplicator extends FighterBase {
             if (!DamageSystem.checkHitbox(victim, clone, "Body")) continue;
             touching.add(victim);
             if (!clone.touchedBy.has(victim)) {
-                // Contact is not a new attack, so it must not consume the victim's attack cooldown.
-                DamageSystem.applyDamage(victim, clone, CLONE_TOUCH_DAMAGE, "Body", { ignoreCooldown: true });
+                // A clone's contact bite always costs 3 HP. Body fighters also land
+                // their ordinary contact hit on the same touch.
+                const damage = CLONE_TOUCH_DAMAGE
+                    + (DamageSystem.isBodyAttacker(victim) ? (victim.damage || 0) : 0);
+                DamageSystem.applyDamage(victim, clone, damage, "Body", { ignoreCooldown: true });
             }
             if (victim.name === "Berserker" && victim.rotationSpeed !== undefined) {
                 victim.rotationSpeed *= 1.1;
