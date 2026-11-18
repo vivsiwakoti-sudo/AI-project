@@ -6,6 +6,7 @@ import { installTestAudio } from '../../audio/testAudioStub.js';
 installTestAudio();
 
 const { Alchemist } = await import('./Alchemist.js');
+const { FIGHTER_CLASSES } = await import('../../fighterDefinitions.js');
 
 const makeAlchemist = () => new Alchemist({
   name: 'Alchemist',
@@ -66,6 +67,21 @@ test('the vampire potion deals 10 damage and heals the Alchemist for 7', () => {
 
   assert.equal(opponent.health, 990);
   assert.equal(alchemist.health, 57);
+});
+
+test('potions are 25% smaller and travel 75% faster', () => {
+  const alchemist = makeAlchemist();
+  const opponent = makeVictim(500);
+
+  alchemist.throwPotion(opponent);
+  const potion = alchemist.projectiles[0];
+
+  assert.ok(Math.abs(potion.vx - 8.75) < 1e-9);
+  assert.equal(potion.hitboxRadius, 21);
+});
+
+test('Alchemist has 100 health', () => {
+  assert.equal(FIGHTER_CLASSES.Alchemist.health, 100);
 });
 
 test('a potion that lands damages the opponent in a one-on-one fight', () => {

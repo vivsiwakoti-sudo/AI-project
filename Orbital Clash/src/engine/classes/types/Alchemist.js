@@ -10,14 +10,16 @@ const WALL_INSET = 20;
 
 // The flask is drawn at this multiple of its base shape. Its hitbox scales with it
 // so what you see is what collides.
-const FLASK_SCALE = 4;
+const FLASK_SCALE = 3;
 const FLASK_HITBOX_RADIUS = 7 * FLASK_SCALE;
+const FLASK_SPEED = 5 * 1.75;
 
 class Potion extends Projectile {
     constructor(x, y, vx, vy, owner, effect) {
         super(x, y, vx, vy, effect.damage, owner);
         this.effect = effect;
         this.impactRadius = 40;
+        this.hitboxRadius = FLASK_HITBOX_RADIUS;
     }
 }
 
@@ -53,7 +55,7 @@ export class Alchemist extends FighterBase {
             // or on the arena wall if it gets there first.
             const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
             const struck = candidates.find(f => f && !f.isDead
-                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: FLASK_HITBOX_RADIUS }, f, "Body")) || null;
+                && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: potion.hitboxRadius }, f, "Body")) || null;
             if (!struck && !this.touchesWall(potion)) return;
 
             this.impactEffects.push({
@@ -81,7 +83,7 @@ export class Alchemist extends FighterBase {
         const effect = effects[Math.floor(Math.random() * effects.length)];
 
         const angle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
-        const p = new Potion(this.x, this.y, Math.cos(angle)*5, Math.sin(angle)*5, this, effect);
+        const p = new Potion(this.x, this.y, Math.cos(angle) * FLASK_SPEED, Math.sin(angle) * FLASK_SPEED, this, effect);
         this.throwAngle = angle;
         this.throwAnimation = 0.35;
         this.projectiles.push(p);

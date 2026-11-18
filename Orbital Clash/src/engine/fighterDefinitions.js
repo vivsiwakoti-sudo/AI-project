@@ -165,7 +165,7 @@ export const FIGHTER_CLASSES = {
   "Alchemist": {
     name: "Alchemist",
     color: "#9932CC",
-    health: 90,
+    health: 100,
     damage: 12,
     damageLabel: "Varies",
     speed: 5,
@@ -174,7 +174,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 5,
     description: "Throws potions with varied effects.",
-    description2: "Lobs a random potion on a 5-second cooldown: slowness (5 damage), poison (10 damage over time), stun (7 damage), percentage damage (20% of current health) or vampiric drain (10 damage and 7 healing).",
+    description2: "Lobs a smaller, faster random potion on a 5-second cooldown: slowness (5 damage), poison (10 damage over time), stun (7 damage), percentage damage (20% of current health) or vampiric drain (10 damage and 7 healing).",
     keywords: ["potion", "random", "poison", "stun", "lifesteal"],
   },
   "Assassin": {
