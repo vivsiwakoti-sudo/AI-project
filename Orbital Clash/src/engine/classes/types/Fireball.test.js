@@ -88,3 +88,31 @@ test('burn stacks on one opponent cap at five', () => {
 
   assert.equal(burnsOn(victim).length, 5);
 });
+
+test('a parried fireball is turned back and hits the fighter that fired it', () => {
+  const fireball = new Fireball(stats('Fireball'), 100, 400);
+  const victim = new FighterBase(stats('Dummy'), 300, 400);
+  victim.getParryChance = () => 1;
+  victim.onParried = (attacker, category, projectile) => {
+    projectile.vx *= -1;
+    projectile.vy *= -1;
+    projectile.owner = victim;
+  };
+  fireball.attackTimer = 99;
+  fireball.x = 250; // the launcher now sits in the path of the returning shot
+  const shot = new Projectile(290, 400, 1, 0, 5, fireball);
+  fireball.projectiles.push(shot);
+
+  fireball.update(1 / 60, victim);
+  assert.equal(victim.totalDamageTaken, 0, 'the parry blocks the impact');
+  assert.equal(shot.active, true, 'a parried fireball stays in flight');
+
+  // The launcher drifts while it updates, so pin it where the returning shot will meet it.
+  for (let i = 0; i < 120 && shot.active; i++) {
+    fireball.x = 250;
+    fireball.y = 400;
+    fireball.update(1 / 60, victim);
+  }
+  assert.equal(fireball.totalDamageTaken, 5, 'the returning fireball damages its launcher');
+  assert.equal(victim.totalDamageTaken, 0);
+});

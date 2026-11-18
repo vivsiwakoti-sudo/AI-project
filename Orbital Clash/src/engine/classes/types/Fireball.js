@@ -45,17 +45,20 @@ export class Fireball extends FighterBase {
             p.update(dt);
             // A fireball is a travelling hitbox, so it can strike any fighter it
             // crosses rather than only the one opponent reference handed over by
-            // the arena.
-            const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
-            const struck = candidates.find(f => f && !f.isDead
+            // the arena. A reflected fireball only ever flies back at its launcher.
+            const candidates = p.isReflected(this) ? [this]
+                : this.victims?.length ? this.victims : (opponent ? [opponent] : []);
+            const struck = candidates.find(f => f && !f.isDead && !p.dodgedVictims?.has(f)
                 && DamageSystem.checkHitbox({ x: p.x, y: p.y, radius: 5 }, f, "Body"));
             if (struck) {
                 // The projectile is handed to the damage system so a parrying
                 // target can turn this exact shot aside rather than merely void it.
                 // Each fireball is its own hit, so it skips the attacker's shared hit cooldown;
                 // otherwise the first fireball of a volley would block the rest.
-                const landed = DamageSystem.applyDamage(this, struck, p.damage, "Projectile", { projectile: p, ignoreCooldown: true });
-                if (!landed) { p.active = false; return; }
+                const source = p.owner;
+                const landed = DamageSystem.applyDamage(source, struck, p.damage, "Projectile", { projectile: p, ignoreCooldown: true });
+                // A parried fireball is turned back toward its launcher; anything else is spent.
+                if (!landed) { p.active = p.keepsFlying(this, struck); return; }
                 const burns = struck.statusEffects.filter(e => e.name.startsWith("burn-"));
                 // At the cap a new hit renews the oldest burn instead of stacking another.
                 const burnName = burns.length >= MAX_BURNS ? burns[0].name : `burn-${burnSerial++}`;
@@ -69,7 +72,7 @@ export class Fireball extends FighterBase {
                             // Burn ticks are a damage-over-time source, not the
                             // class's attack, so they must not put the Fireball's
                             // own touch damage on cooldown.
-                            DamageSystem.applyDamage(this, fighter, BURN_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
+                            DamageSystem.applyDamage(source, fighter, BURN_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
                             effect.tickTimer -= BURN_TICK_INTERVAL;
                         }
                     }

@@ -231,7 +231,14 @@ test('Mahoraga only gains a melee parry once it has adapted to melee', () => {
   for (const category of ['Body', 'Beam', 'AOE']) {
     assert.equal(adapted.getParryChance(category, KNIGHT), 0, `${category} is never parried`);
   }
-  assert.equal(adaptedMahoraga('Projectile').getParryChance('Projectile', KNIGHT), 0.35);
+  assert.equal(adaptedMahoraga('Projectile').getParryChance('Projectile', KNIGHT), 0, 'the first adaptation step does not unlock reflection');
+});
+
+test('projectile reflection unlocks at the 2nd adaptation step, on any attack', () => {
+  const mahoraga = makeMahoraga();
+  mahoraga.health = mahoraga.maxHealth = 1e9;
+  for (let i = 0; i < 5; i++) mahoraga.onDamaged(8, 'Melee', { attacker: KNIGHT });
+  assert.equal(mahoraga.getParryChance('Projectile', makeAttacker()), 0.35);
 });
 
 test('a parried melee strike deals no damage and stuns the attacker', () => {

@@ -10,6 +10,9 @@ const ADAPTATION_STEPS = [
     { hits: 7, resistance: 0.7 }
 ];
 
+// Projectile reflection unlocks with the 2nd adaptation step, earned on any attack.
+const REFLECT_UNLOCK_RESISTANCE = ADAPTATION_STEPS[1].resistance;
+
 // Adaptations take effect the moment they are earned, but the wheel reveals them
 // one at a time, at least this many seconds apart, so back-to-back adaptations
 // do not blur together.
@@ -87,14 +90,16 @@ export class Mahoraga extends FighterBase {
         return this.adaptedAttacks.some(a => a.key === key);
     }
 
-    // Parries only unlock with the matching adaptation to that exact attack: once
-    // he has adapted to a Knight's sword it is parried (25%) and stuns the
-    // attacker, and once he has adapted to a projectile it is swatted (35%). Body
+    // Melee parries only unlock with the matching adaptation to that exact attack:
+    // once he has adapted to a Knight's sword it is parried (25%) and stuns the
+    // attacker. Projectile reflection (35%) unlocks once he reaches the 2nd
+    // adaptation step on any attack, and then turns every projectile aside. Body
     // slams, beams and AOE are never parried.
     getParryChance(category, attacker) {
-        const key = attackKeyOf(attacker, category);
-        if (category === "Projectile") return this.hasAdaptedTo(key) ? 0.35 : 0;
-        if (category === "Melee") return this.hasAdaptedTo(key) ? MELEE_PARRY_CHANCE : 0;
+        if (category === "Projectile") {
+            return this.adaptedAttacks.some(a => a.resistance === REFLECT_UNLOCK_RESISTANCE) ? 0.35 : 0;
+        }
+        if (category === "Melee") return this.hasAdaptedTo(attackKeyOf(attacker, category)) ? MELEE_PARRY_CHANCE : 0;
         return 0;
     }
 

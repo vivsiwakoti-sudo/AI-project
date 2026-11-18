@@ -49,7 +49,7 @@ export class Gunner extends FighterBase {
             if (struck) {
                 // A parry deflects the bullet itself, so a reflected shot keeps
                 // flying; only a bullet that did not connect is spent.
-                if (DamageSystem.applyDamage(this, struck, p.damage, "Projectile", { projectile: p })) {
+                if (DamageSystem.applyDamage(p.owner, struck, p.damage, "Projectile", { projectile: p })) {
                     p.active = false;
                 }
             }
@@ -57,9 +57,11 @@ export class Gunner extends FighterBase {
         this.projectiles = this.projectiles.filter(p => p.active);
     }
 
-    // The first live fighter whose body the projectile is currently inside.
+    // The first live fighter whose body the projectile is currently inside. A
+    // reflected bullet only ever comes back at its launcher.
     projectileVictims(opponent, projectile, hitRadius) {
-        const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
+        const candidates = projectile.isReflected(this) ? [this]
+            : this.victims?.length ? this.victims : (opponent ? [opponent] : []);
         for (const victim of candidates) {
             if (victim.isDead || victim.health <= 0 || projectile.dodgedVictims?.has(victim)) continue;
             if (DamageSystem.checkHitbox({ x: projectile.x, y: projectile.y, radius: hitRadius }, victim, "Body")) {

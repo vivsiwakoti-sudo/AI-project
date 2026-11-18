@@ -52,22 +52,16 @@ export class Alchemist extends FighterBase {
         this.projectiles.forEach(potion => {
             potion.update(dt);
             // A thrown flask is a travelling hitbox: it bursts on the first victim it reaches,
-            // or on the arena wall if it gets there first.
-            const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
-            const struck = candidates.find(f => f && !f.isDead
+            // or on the arena wall if it gets there first. A reflected flask only ever
+            // bursts on its launcher, never on the wall.
+            const reflected = potion.isReflected(this);
+            const candidates = reflected ? [this]
+                : this.victims?.length ? this.victims : (opponent ? [opponent] : []);
+            const struck = candidates.find(f => f && !f.isDead && !potion.dodgedVictims?.has(f)
                 && DamageSystem.checkHitbox({ x: potion.x, y: potion.y, radius: potion.hitboxRadius }, f, "Body")) || null;
-            if (!struck && !this.touchesWall(potion)) return;
-
-            this.impactEffects.push({
-                x: potion.x,
-                y: potion.y,
-                radius: potion.impactRadius,
-                timer: 0.35,
-                color: potion.effect.type === "slow" ? "#63d9ff" : potion.effect.type === "poison" ? "#75e35f" : "#ff9f5a"
-            });
-            this.applyPotionEffect(potion, struck);
-            // The flask is spent on impact, whether or not the hit lands.
-            potion.active = false;
+            if (!struck && (reflected || !this.touchesWall(potion))) return;
+            // The flask is spent on impact, unless a parry turned it back toward its launcher.
+            potion.active = this.applyPotionEffect(potion, struck);
         });
         this.projectiles = this.projectiles.filter(potion => potion.active);
     }
@@ -98,19 +92,40 @@ export class Alchemist extends FighterBase {
     }
 
     // Living fighters whose body reaches within impactRadius of the burst.
-    // The struck fighter, if there is one, is always included.
+    // The struck fighter, if there is one, is always included. A reflected flask
+    // bursts on its launcher alone.
     blastVictims(potion, struck) {
-        const pool = this.victims?.length ? this.victims : (struck ? [struck] : []);
+        const pool = potion.isReflected(this) ? [struck]
+            : this.victims?.length ? this.victims : (struck ? [struck] : []);
         return pool.filter(f => f && !f.isDead && (f === struck
             || Math.hypot(f.x - potion.x, f.y - potion.y) <= potion.impactRadius + f.radius));
     }
 
     // `struck` is the fighter the flask hit, or null for a wall burst. A parry on a
     // direct hit stops the whole flask; otherwise every fighter inside the blast takes the effect.
+    // Returns true when a parry turned the flask back toward its launcher and it keeps flying.
     applyPotionEffect(potion, struck) {
         const { effect } = potion;
+        // Damage and healing are credited to whoever currently owns the flask: the
+        // thrower, or the fighter that parried it back.
+        const source = potion.owner;
         const blast = this.blastVictims(potion, struck);
 
+        // A direct hit is the flask's own strike, which a parry can stop. A parried
+        // flask keeps flying and shows no burst.
+        let struckHit = false;
+        if (struck && effect.type !== "percent") {
+            struckHit = DamageSystem.applyDamage(source, struck, potion.damage, "Projectile", { projectile: potion, ignoreCooldown: true });
+            if (!struckHit && potion.keepsFlying(this, struck)) return true;
+        }
+
+        this.impactEffects.push({
+            x: potion.x,
+            y: potion.y,
+            radius: potion.impactRadius,
+            timer: 0.35,
+            color: effect.type === "slow" ? "#63d9ff" : effect.type === "poison" ? "#75e35f" : "#ff9f5a"
+        });
         const burstColor = effect.type === "slow" ? "#63d9ff" : effect.type === "poison" ? "#75e35f" : effect.type === "stun" ? "#ffe066" : "#ff9f5a";
         this.particleSystem?.emit(potion.x, potion.y, burstColor, 20, { speed: 340, size: 3 });
         this.particleSystem?.ring(potion.x, potion.y, burstColor, { startRadius: 8, endRadius: potion.impactRadius * 1.6, life: 0.4, lineWidth: 4 });
@@ -118,18 +133,18 @@ export class Alchemist extends FighterBase {
         if (effect.type === "percent") {
             blast.forEach(victim => {
                 const percentageDamage = victim.health * 0.2;
-                if (DamageSystem.applyDamage(this, victim, percentageDamage, "AOE", { ignoreCooldown: true })) {
+                if (DamageSystem.applyDamage(source, victim, percentageDamage, "AOE", { ignoreCooldown: true })) {
                     notifyStatusEvent(victim, "percent");
                 }
             });
-            return;
+            return false;
         }
+
+        // A dodged direct hit spends the flask without splash.
+        if (struck && !struckHit) return false;
 
         let hits = 0;
         if (struck) {
-            // The struck fighter takes the flask's own hit, which a parry can stop.
-            const landed = DamageSystem.applyDamage(this, struck, effect.damage, "Projectile", { projectile: potion, ignoreCooldown: true });
-            if (!landed) return;
             this.applyStatus(effect, struck);
             hits++;
         }
@@ -137,16 +152,17 @@ export class Alchemist extends FighterBase {
         // The splash is area damage, so it is never parried.
         blast.forEach(victim => {
             if (victim === struck) return;
-            if (DamageSystem.applyDamage(this, victim, effect.damage, "AOE", { ignoreCooldown: true })) {
+            if (DamageSystem.applyDamage(source, victim, effect.damage, "AOE", { ignoreCooldown: true })) {
                 this.applyStatus(effect, victim);
                 hits++;
             }
         });
 
         if (effect.type === "vampire" && hits > 0) {
-            this.health = Math.min(this.maxHealth, this.health + effect.heal);
-            notifyStatusEvent(this, "heal");
+            source.health = Math.min(source.maxHealth, source.health + effect.heal);
+            notifyStatusEvent(source, "heal");
         }
+        return false;
     }
 
     applyStatus(effect, victim) {

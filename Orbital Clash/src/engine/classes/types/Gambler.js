@@ -64,12 +64,13 @@ export class Gambler extends FighterBase {
             if (!die.active) return;
             die.spin += dt * 8;
             // A die is a travelling hitbox: it resolves on the first fighter it reaches.
-            const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
-            const struck = candidates.find(f => f && !f.isDead
+            // A reflected die only ever comes back at its thrower.
+            const candidates = die.isReflected(this) ? [this]
+                : this.victims?.length ? this.victims : (opponent ? [opponent] : []);
+            const struck = candidates.find(f => f && !f.isDead && !die.dodgedVictims?.has(f)
                 && DamageSystem.checkHitbox({ x: die.x, y: die.y, radius: DIE_RADIUS }, f, "Body")) || null;
             if (!struck) return;
 
-            die.active = false;
             this.resolveImpact(die, struck);
         });
         this.dice = this.dice.filter(die => die.active);
@@ -82,11 +83,19 @@ export class Gambler extends FighterBase {
     }
 
     // A parried or dodged die deals nothing and does not roll, so the gamble only
-    // happens when the die actually lands.
+    // happens when the die actually lands. A parried die is turned back toward its
+    // thrower and keeps flying.
     resolveImpact(die, struck) {
-        const landed = DamageSystem.applyDamage(this, struck, DIE_DAMAGE, "Projectile", { projectile: die, ignoreCooldown: true });
-        if (!landed) return;
+        const landed = DamageSystem.applyDamage(die.owner, struck, die.damage, "Projectile", { projectile: die, ignoreCooldown: true });
+        if (!landed) {
+            die.active = die.keepsFlying(this, struck);
+            return;
+        }
+        die.active = false;
 
+        // A die that lands after being turned back only deals damage; the face roll
+        // belongs to the thrower's own gamble.
+        if (die.isReflected(this)) return;
         const face = FACES[Math.floor(Math.random() * FACES.length)];
         this.particleSystem?.emit(die.x, die.y, face.good ? "#f2c94c" : "#8a8f98", 16, { speed: 300, size: 3 });
         this.applyFace(face.id, struck);

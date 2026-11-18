@@ -48,6 +48,7 @@ const dropSlowFlaskOn = (alchemist, victim) => {
   alchemist.throwPotion(victim);
   const flask = alchemist.projectiles[0];
   flask.effect = { type: 'slow', damage: 5, duration: 2 };
+  flask.damage = 5;
   flask.vx = 0;
   flask.vy = 0;
   flask.x = victim.x;
@@ -62,7 +63,9 @@ test('the vampire potion deals 10 damage and heals the Alchemist for 7', () => {
   alchemist.opponent = opponent;
   alchemist.health = 50;
 
-  const potion = { x: opponent.x, y: opponent.y, impactRadius: 40, effect: { type: 'vampire', damage: 10, heal: 7 } };
+  alchemist.throwPotion(opponent);
+  const potion = alchemist.projectiles[0];
+  Object.assign(potion, { x: opponent.x, y: opponent.y, effect: { type: 'vampire', damage: 10, heal: 7 }, damage: 10 });
   alchemist.applyPotionEffect(potion, opponent);
 
   assert.equal(opponent.health, 990);
@@ -151,10 +154,11 @@ test('a parried potion does nothing, including its splash', () => {
   assert.equal(bystander.health, 1000);
 });
 
-test('a potion that reaches the wall bursts there and hits only fighters within 20px', () => {
+test('a potion that reaches the wall bursts there and hits only fighters inside its blast', () => {
   const alchemist = makeAlchemist();
   const far = makeVictim(200);
-  const near = makeVictim(44); // centre 30px from the burst at x=14, body edge 16px away: inside the radius
+  // Centre 45px from the burst at x=14: outside the flask's own 21px hitbox, inside the 54px blast.
+  const near = makeVictim(59);
   alchemist.victims = [far, near];
   alchemist.opponent = far;
   far.victims = [alchemist, near];
@@ -162,6 +166,7 @@ test('a potion that reaches the wall bursts there and hits only fighters within 
   alchemist.throwPotion(far);
   const flask = alchemist.projectiles[0];
   flask.effect = { type: 'slow', damage: 5, duration: 2 };
+  flask.damage = 5;
   flask.vx = 0;
   flask.vy = 0;
   flask.x = 14; // inside the 20px wall inset

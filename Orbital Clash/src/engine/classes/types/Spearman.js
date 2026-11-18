@@ -181,17 +181,18 @@ export class Spearman extends FighterBase {
             // it unharmed.
             if (!spear.isStuck && !spear.active) return;
             if (!spear.isStuck) {
-                const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
-                const struck = candidates.find(f => f && !f.isDead
+                // A reflected spear only ever comes back at its thrower.
+                const candidates = spear.isReflected(this) ? [this]
+                    : this.victims?.length ? this.victims : (opponent ? [opponent] : []);
+                const struck = candidates.find(f => f && !f.isDead && !spear.dodgedVictims?.has(f)
                     && DamageSystem.checkHitbox({x: spear.x, y: spear.y, radius: 5}, f, "Body"));
                 if (struck) {
                     // Apply initial impact damage. The spear is handed over so a parry
                     // can knock it aside instead of letting it pin the target.
-                    // A parried spear is consumed here: left active it would keep
-                    // re-testing the same parry every frame for as long as it
-                    // travelled through the victim, and would keep pinning them.
-                    if (!DamageSystem.applyDamage(this, struck, 5, "Projectile", { projectile: spear })) {
-                        spear.active = false;
+                    // A parried spear is turned back toward the Spearman and keeps
+                    // flying; one that is dodged or otherwise fails to connect is spent.
+                    if (!DamageSystem.applyDamage(spear.owner, struck, 5, "Projectile", { projectile: spear })) {
+                        spear.active = spear.keepsFlying(this, struck);
                         return;
                     }
 

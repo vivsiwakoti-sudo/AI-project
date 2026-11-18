@@ -31,13 +31,14 @@ export class Tunneler extends FighterBase {
             spike.update(dt);
             // A spike fan is a travelling hitbox, so it can strike any fighter it
             // crosses rather than only the one opponent reference handed over by
-            // the arena.
-            const candidates = this.victims?.length ? this.victims : (opponent ? [opponent] : []);
+            // the arena. A reflected spike only ever comes back at its launcher.
+            const candidates = spike.isReflected(this) ? [this]
+                : this.victims?.length ? this.victims : (opponent ? [opponent] : []);
             const struck = candidates.find(victim => victim && !victim.isDead && !spike.dodgedVictims?.has(victim)
                 && DamageSystem.checkHitbox({ x: spike.x, y: spike.y, radius: 4 }, victim, "Body"));
             if (struck) {
                 // A parried spike is turned around instead of being consumed.
-                if (DamageSystem.applyDamage(this, struck, spike.damage, "Projectile", { projectile: spike })) {
+                if (DamageSystem.applyDamage(spike.owner, struck, spike.damage, "Projectile", { projectile: spike })) {
                     spike.active = false;
                 }
             }
