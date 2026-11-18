@@ -21,6 +21,9 @@ const SORT_OPTIONS = [
   { key: "appearances", label: "APPEARANCES" },
 ];
 
+// Fighters that show under every roster category filter, not just their attack type's.
+const MATCHES_EVERY_CATEGORY = new Set(["Mimic"]);
+
 // Persistent win/loss records for every class (the +1 shown on the end screen).
 function loadRecords() {
   if (typeof window === "undefined") return {};
@@ -318,7 +321,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
       return stats.appearances;
     };
     return Object.entries(FIGHTER_CLASSES)
-      .filter(([, fighter]) => filter === "ALL" || getFilterCategory(fighter.attackType) === filter)
+      .filter(([name, fighter]) => filter === "ALL" || MATCHES_EVERY_CATEGORY.has(name) || getFilterCategory(fighter.attackType) === filter)
       .sort(([nameA], [nameB]) => {
         const byName = nameA.localeCompare(nameB);
         const comparison = sortKey === "name" ? byName : (metricFor(nameA) - metricFor(nameB)) || byName;
