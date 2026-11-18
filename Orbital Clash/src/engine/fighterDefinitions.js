@@ -101,7 +101,7 @@ export const FIGHTER_CLASSES = {
   "Mine Layer": {
     name: "Mine Layer",
     color: "#FFD700",
-    health: 70,
+    health: 90,
     damage: 10,
     speed: 5, // CONFIGURATION: Defaulted to 5, unspecified in spec.
     bodySize: 40,
