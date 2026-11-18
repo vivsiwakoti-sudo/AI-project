@@ -12,6 +12,9 @@
 
 import { CollisionSystem } from "./CollisionSystem.js";
 import { DamageSystem } from "./DamageSystem.js";
+import { outlineColorFor, OUTLINE_WIDTH } from "../classes/FighterBase.js";
+import { squashTransform } from "./Fx.js";
+import { traceShape } from "./Shapes.js";
 
 // --- Targeting helpers (moved verbatim from Arena.jsx) -----------------------
 
@@ -318,6 +321,44 @@ export function decayScreenShake(fighters, dt) {
 const GRID_CELL = 40;
 const GRID_STROKE = "rgba(0, 242, 255, 0.12)";
 
+// The final fighter pass is shared by live battles and tournaments. It is drawn
+// AFTER class-specific weapons and auras, because those may otherwise cover the
+// body edge. Drawing it here also prevents the two renderers from drifting: a
+// tournament must not silently lose the readable silhouette and accent ring.
+export function drawFighterOutlines(ctx, fighter) {
+  if (!fighter || fighter.isDead || fighter.health <= 0) return;
+
+  ctx.save();
+  ctx.translate(fighter.x, fighter.y);
+  squashTransform(ctx, fighter.squashX ?? 1, fighter.squashY ?? 1, fighter.squashAngle ?? 0);
+  ctx.globalAlpha = fighter.isUntargetable ? 0.35 : 1;
+  ctx.shadowBlur = 0;
+  ctx.lineJoin = "round";
+
+  traceShape(ctx, fighter.radius, fighter.shape, {
+    angle: (fighter.lastAngle || 0) - Math.PI / 2,
+    spinAngle: fighter.spinAngle || 0
+  });
+  ctx.strokeStyle = outlineColorFor(fighter.hitColor || fighter.color);
+  ctx.lineWidth = OUTLINE_WIDTH;
+  ctx.stroke();
+
+  ctx.strokeStyle = fighter.bounceTimer > 0 ? "#ffffff" : fighter.color;
+  ctx.lineWidth = 3.5 + (fighter.impactStrength ?? 0) * 1.5;
+  ctx.shadowBlur = 6 + (fighter.impactStrength ?? 0) * 8;
+  ctx.shadowColor = fighter.color;
+  ctx.beginPath();
+  ctx.arc(0, 0, fighter.radius + 6, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = fighter.color;
+  ctx.beginPath();
+  ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 // Caller must clip to the playable area first.
 export function drawGridLines(ctx, arenaSize) {
   const inner = 20;
@@ -399,6 +440,7 @@ export function drawBattleFrame(ctx, {
     ctx.shadowBlur = 0;
     try {
       f.draw(ctx, time);
+      drawFighterOutlines(ctx, f);
     } catch (error) {
       onFighterError?.(f, error);
     }

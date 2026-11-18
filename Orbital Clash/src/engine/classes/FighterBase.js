@@ -18,9 +18,9 @@ const STUN_FALLBACK_SECONDS = 4;
 // with a guaranteed luminance separation: pushed toward white, unless the colour
 // is already very bright, in which case it is pushed toward the dark side. Either
 // way the rim stays readable against both the dark arena and the white-hot core.
-const OUTLINE_WIDTH = 3;
+export const OUTLINE_WIDTH = 5.5;
 
-function outlineColorFor(color) {
+export function outlineColorFor(color) {
     const hex = typeof color === "string" ? color.replace("#", "") : "";
     if (!/^[0-9a-f]{6}$/i.test(hex)) return "#ffffff";
     const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -728,6 +728,7 @@ export class FighterBase {
         ctx.shadowBlur = 0;
         ctx.strokeStyle = outlineColorFor(this.hitColor || this.color);
         ctx.lineWidth = OUTLINE_WIDTH;
+        ctx.lineJoin = "round";
         ctx.stroke();
 
         if (this.isFrozen) this.drawIceBlock(ctx);

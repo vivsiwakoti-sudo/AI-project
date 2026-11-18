@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { FighterFactory } from "../engine/FighterFactory";
 import { ParticleSystem } from "../engine/systems/ParticleSystem";
 import { createFighterAssembly } from "../engine/systems/FighterAssembly";
-import { squashTransform } from "../engine/systems/Fx";
 import { audioManager } from "../engine/audio/AudioManager";
 import StatsPanel from "./StatsPanel";
 import NeonBackdrop from "./NeonBackdrop";
@@ -11,7 +10,7 @@ import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import { REPLAY_SECONDS } from "../engine/replayStore";
-import { countAlive, decayScreenShake, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
+import { countAlive, decayScreenShake, drawFighterOutlines, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
 
 // Distributes the fighter HUD panels across the two sides of the arena.
 //
@@ -654,27 +653,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
           // A single broken class must never blank the whole arena.
           console.error(`Draw failed for ${f.name}`, error);
         }
-        // Outer ring follows the body's squash so bounces stay coherent. Only
-        // reached for a living fighter - dead ones returned above, so this no
-        // longer needs its own `isDead` check.
-        ctx.save();
-        ctx.translate(f.x, f.y);
-        squashTransform(ctx, f.squashX ?? 1, f.squashY ?? 1, f.squashAngle ?? 0);
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = f.bounceTimer > 0 ? "#ffffff" : f.color;
-        ctx.lineWidth = 2 + (f.impactStrength ?? 0) * 1.5;
-        ctx.shadowBlur = 6 + (f.impactStrength ?? 0) * 8;
-        ctx.shadowColor = f.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, f.radius + 4, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = f.color;
-        ctx.beginPath();
-        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.restore();
+        drawFighterOutlines(ctx, f);
         ctx.restore();
       });
       gameState.current.assembly.draw(ctx);
