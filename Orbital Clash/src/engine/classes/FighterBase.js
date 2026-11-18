@@ -692,7 +692,7 @@ export class FighterBase {
         // The colourful gradient core is shared, and the aimable shapes lean
         // toward whichever way the fighter is facing.
         const aimAngle = this.lastAngle - Math.PI / 2;
-        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle });
+        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true });
         if (this.slowVisual) {
             ctx.fillStyle = "rgba(80, 180, 255, 0.8)";
         } else {

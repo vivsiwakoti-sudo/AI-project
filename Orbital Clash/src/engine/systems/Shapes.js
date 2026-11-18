@@ -195,7 +195,7 @@ const SHAPES = {
     }
 };
 
-export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0 } = {}) {
+export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0, outlineOnly = false } = {}) {
     const def = SHAPES[shape] || SHAPES.round;
     ctx.save();
     ctx.scale(radius, radius);
@@ -211,7 +211,8 @@ export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0 } = {}
     // black rock instead of its outline. Each loop is explicitly closed so the
     // nonzero fill rule treats the holes (a void's core, a skull's eyes) as
     // holes rather than cancelling parts of the silhouette.
-    const loops = def.path ? def.path : [def.points];
+    const allLoops = def.path ? def.path : [def.points];
+    const loops = outlineOnly ? allLoops.slice(0, 1) : allLoops;
     ctx.beginPath();
     for (const loop of loops) {
         loop.forEach(([px, py], i) => {
