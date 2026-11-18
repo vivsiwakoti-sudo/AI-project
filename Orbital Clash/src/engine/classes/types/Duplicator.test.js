@@ -107,6 +107,41 @@ test('a fighter resting against a clone deals its 3 damage once, not every frame
   assert.equal(clone.health, 12, 'staying in contact does not keep dealing damage');
 });
 
+test('five separate fighter contacts kill a clone and trigger its death effect', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const particles = {
+    emit() {},
+    ring() {},
+    emitImpact() {}
+  };
+  duplicator.particleSystem = particles;
+  const other = new FighterBase(dummyStats, 300, 300);
+  other.particleSystem = particles;
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  duplicator.victims = [other];
+  const playDeathSfx = audioManager.playDeathSfx;
+  let deathSounds = 0;
+  audioManager.playDeathSfx = () => { deathSounds++; };
+
+  try {
+    for (let contact = 0; contact < 5; contact++) {
+      clone.x = other.x;
+      clone.y = other.y;
+      clone.touchedBy.clear();
+      duplicator.applyCloneContact(clone, [other]);
+      clone.x += clone.radius + other.radius + 1;
+    }
+
+    assert.equal(clone.health, 0, 'five 3-damage contacts consume all 15 HP');
+    assert.equal(clone.isDead, true, 'the clone is eliminated after the fifth contact');
+    assert.equal(deathSounds, 1, 'the clone runs the normal death sound effect once');
+    assert.equal(clone.particleSystem, particles, 'the clone receives the parent particle system');
+  } finally {
+    audioManager.playDeathSfx = playDeathSfx;
+  }
+});
+
 test('killing the original runs every clone through die(), the same death as the original', () => {
   const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
   duplicator.spawnClone();

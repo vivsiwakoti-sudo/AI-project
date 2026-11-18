@@ -34,7 +34,9 @@ export class Duplicator extends FighterBase {
         // in a 3 or 4-way brawl the class only ever sees one of them, so the
         // others used to be able to sit inside the Duplicator for free.
         // `this.opponent` is the fallback for a fighter driven outside the arena.
-        const victims = this.touchVictims?.length ? this.touchVictims : (this.opponent ? [this.opponent] : []);
+        const victims = this.touchVictims?.length
+            ? this.touchVictims
+            : (opponent ? [opponent] : (this.opponent ? [this.opponent] : []));
         const touching = new Set();
         for (const victim of victims) {
             if (victim.isDead || victim.health <= 0) continue;
@@ -224,6 +226,7 @@ export class Duplicator extends FighterBase {
         );
         clone.root = root;
         clone.arenaSize = this.arenaSize;
+        clone.particleSystem = this.particleSystem ?? root.particleSystem;
         clone.health = CLONE_HEALTH;
         clone.maxHealth = CLONE_HEALTH;
         root.clones.push(clone);
