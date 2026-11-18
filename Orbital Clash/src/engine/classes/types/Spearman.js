@@ -3,6 +3,7 @@ import { Projectile } from "../Projectile.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { audioManager } from "../../audio/AudioManager.js";
 import { drawSpear } from "../../systems/Weapons.js";
+import { CollisionSystem } from "../../systems/CollisionSystem.js";
 
 class Spear extends Projectile {
     constructor(x, y, vx, vy, owner) {
@@ -21,10 +22,11 @@ class Spear extends Projectile {
     setWallTarget(arenaSize) {
         const target = this.stuckTarget;
         const innerBoundary = 20;
-        const minX = innerBoundary + target.radius;
-        const maxX = arenaSize - innerBoundary - target.radius;
-        const minY = innerBoundary + target.radius;
-        const maxY = arenaSize - innerBoundary - target.radius;
+        const wallInset = target.radius + CollisionSystem.visualMargin(target);
+        const minX = innerBoundary + wallInset;
+        const maxX = arenaSize - innerBoundary - wallInset;
+        const minY = innerBoundary + wallInset;
+        const maxY = arenaSize - innerBoundary - wallInset;
         const directionX = this.vx / Math.hypot(this.vx, this.vy);
         const directionY = this.vy / Math.hypot(this.vx, this.vy);
         const intersections = [];
@@ -98,7 +100,7 @@ class Spear extends Projectile {
                 if (this.damageTimer <= 0) {
                     // Impale ticks are a lingering effect; ignore the attack
                     // cooldown so they never block the Spearman's next throw.
-                    DamageSystem.applyDamage(this.owner, this.stuckTarget, 2, "Body", { ignoreCooldown: true });
+                    DamageSystem.applyDamage(this.owner, this.stuckTarget, 3, "Body", { ignoreCooldown: true });
                     this.damageTimer = 1; // Damage every 1 second
                 }
             }
