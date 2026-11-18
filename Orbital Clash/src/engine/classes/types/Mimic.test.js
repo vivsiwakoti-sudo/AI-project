@@ -55,6 +55,42 @@ test('Mimic repeats five seconds in base form and eleven in a copied form', () =
   }
 });
 
+test('Mimic finishes a Solar Beam already in progress before changing form', () => {
+  const mimic = makeMimic();
+  const opponent = FighterFactory.createFighter('Gunner', 600, 200);
+  mimic.victims = [opponent];
+  mimic.startCopiedForm('Solar Beam');
+  mimic.mimicTimer = 0.5;
+  mimic.isCharging = true;
+  mimic.chargeTimer = 1.5;
+
+  mimic.update(0.6, opponent);
+  assert.equal(mimic.mimicForm, 'Solar Beam', 'the released beam must keep the form active');
+  assert.equal(mimic.beamActive, true, 'the beam was not cancelled at the timer boundary');
+
+  mimic.update(1, opponent);
+  assert.equal(mimic.mimicForm, null, 'the form switches after the beam finishes');
+  assert.equal(mimic.beamActive, undefined, 'solar-beam state was cleaned up');
+});
+
+test('Mimic finishes a Meteor strike after its copy timer expires', () => {
+  const mimic = makeMimic();
+  const opponent = FighterFactory.createFighter('Gunner', 200, 200);
+  mimic.victims = [opponent];
+  mimic.startCopiedForm('Meteor');
+  mimic.mimicTimer = 0.5;
+  mimic.startStrike();
+  mimic.warningTimer = 0.25;
+  mimic.targetZone = { x: 0, y: 0, width: 400, height: 400 };
+
+  mimic.update(0.3, opponent);
+  assert.equal(mimic.mimicForm, 'Meteor', 'the meteor telegraph is still active');
+
+  mimic.update(0.3, opponent);
+  assert.equal(mimic.mimicForm, null, 'the form switches after the meteor lands');
+  assert.ok(opponent.health < opponent.maxHealth, 'the meteor impact still dealt damage');
+});
+
 test('copying preserves Mimic stats and gives the copied weapon and defense', () => {
   const mimic = makeMimic();
   mimic.health = 90;
@@ -204,6 +240,11 @@ test('each eligible copied form runs in the battle loop with Mimic stats', () =>
     for (let frame = 0; frame < 660 && !mimic.isDead && !opponent.isDead; frame++) {
       stepBattle([mimic, opponent], { dt: 1 / 60, arenaSize: 800 });
       if (frame % 120 === 0) mimic.draw(context);
+    }
+    // A move started on the final copy frame may need travel/impact time before
+    // the transformation is allowed to finish (Solar Beam is the main example).
+    for (let frame = 0; frame < 300 && mimic.mimicForm; frame++) {
+      stepBattle([mimic, opponent], { dt: 1 / 60, arenaSize: 800 });
     }
     assert.equal(mimic.mimicForm, null, name);
   }

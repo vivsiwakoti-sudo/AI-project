@@ -54,7 +54,16 @@ export class Mimic extends FighterBase {
 
         let remaining = dt;
         while (remaining > 0 && !this.isDead && this.health > 0) {
-            const step = Math.min(remaining, this.mimicTimer);
+            if (this.mimicForm && this.mimicTimer <= 0) {
+                if (!this.hasActiveCopiedAttack()) {
+                    this.endCopiedForm();
+                    continue;
+                }
+                this.holdCopiedAttackStarts();
+            }
+            const step = this.mimicTimer > 0
+                ? Math.min(remaining, this.mimicTimer)
+                : remaining;
             const form = this.mimicForm;
             this.updatePlacedAttacks(step, opponent);
             const update = this.mimicPrototype?.update ?? FighterBase.prototype.update;
@@ -68,9 +77,74 @@ export class Mimic extends FighterBase {
             this.mimicTimer -= step;
             remaining -= step;
             if (this.mimicTimer <= 1e-9) {
-                if (this.mimicForm) this.endCopiedForm();
-                else this.startCopiedForm(MIMIC_CLASSES[Math.floor(Math.random() * MIMIC_CLASSES.length)]);
+                if (this.mimicForm) {
+                    // A copy-cycle ending is presentation timing, not an attack
+                    // cancellation. Finish the active move, then restore the base form.
+                    if (!this.hasActiveCopiedAttack()) this.endCopiedForm();
+                } else {
+                    this.startCopiedForm(MIMIC_CLASSES[Math.floor(Math.random() * MIMIC_CLASSES.length)]);
+                }
             }
+        }
+    }
+
+    holdCopiedAttackStarts() {
+        // Existing attacks keep updating, but every copied class's next cast is
+        // held so a finishing move cannot chain into a fresh move forever.
+        // Solar Beam starts and advances its charge under the same cooldown
+        // condition, so freezing that field here would freeze the beam at 1.78s.
+        // Its release sets a normal cooldown, which prevents a second charge.
+        if ("cooldownTimer" in this && this.mimicForm !== "Solar Beam") {
+            this.cooldownTimer = Infinity;
+        }
+        if ("spearCooldown" in this) this.spearCooldown = Infinity;
+        if ("attackTimer" in this) this.attackTimer = Infinity;
+        if ("dashRoll" in this) this.dashRoll = Infinity;
+    }
+
+    hasActiveCopiedAttack() {
+        if (!this.mimicForm) return false;
+
+        // Projectile-like attacks keep their class update loop alive until they
+        // hit, expire, or leave the arena.
+        const movingAttacks = [
+            this.projectiles,
+            this.dice,
+            this.spikes,
+            this.planes,
+            this.bombs
+        ];
+        if (movingAttacks.some(attacks => attacks?.some(attack => attack?.active !== false))) {
+            return true;
+        }
+
+        switch (this.mimicForm) {
+            case "Solar Beam":
+                return this.isCharging || this.beamActive || Boolean(this.beamProjectile);
+            case "Meteor":
+                return this.warningTimer > 0 || Boolean(this.targetZone);
+            case "Black Hole":
+                return Boolean(this.activeHole);
+            case "Dragon":
+                return this.windupTimer !== null && this.windupTimer !== undefined;
+            case "Tornado":
+                return this.aoeActive;
+            case "Ninja":
+                return this.ropeActive || Boolean(this.ropeDart);
+            case "Grappler":
+                return this.isHookActive || this.latched;
+            case "Yeti":
+                return this.leapState !== "idle";
+            case "Vampire":
+                return this.dashState !== "idle";
+            case "Tunneler":
+                return this.isUnderground;
+            case "Samurai":
+                return this.comboActive;
+            case "Ghost":
+                return this.isGhost;
+            default:
+                return false;
         }
     }
 
