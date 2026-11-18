@@ -418,6 +418,7 @@ class AudioManager {
     this.sfxGain = null;
     this.currentMusicType = null;
     this.activeStoppers = [];
+    this.activeSfxStoppers = new Set();
     this.muted = false;
     this.sfxSilenced = false;
     this.lastHitTime = -Infinity;
@@ -496,9 +497,19 @@ class AudioManager {
   stopMusic({ immediate = true } = {}) {
     this.activeStoppers.forEach(stop => stop());
     this.activeStoppers = [];
+    this.stopLoopingSfx();
     this.currentMusicType = null;
     this.pausedMusicType = null;
     this.silenceMusicBus(immediate);
+  }
+
+  // Stops battle effects that are independent of music, such as an open
+  // Black Hole's gravity rumble. These loops would otherwise survive a battle
+  // resolution because the simulation freezes before their normal expiry.
+  stopLoopingSfx() {
+    const stoppers = [...this.activeSfxStoppers];
+    this.activeSfxStoppers.clear();
+    stoppers.forEach(stop => stop());
   }
 
   // Drops the music bus to zero (fading over `fadeSeconds`, or instantly when 0)
@@ -916,7 +927,16 @@ class AudioManager {
     // A loop started while sfx is silenced (menu scenery) would keep running and wake up later.
     if (this.sfxSilenced) return () => {};
     const ctx = this.ensureContext();
-    return playBlackHoleLoop(ctx, this.sfxGain, { gain: 0.14 });
+    const stopLoop = playBlackHoleLoop(ctx, this.sfxGain, { gain: 0.14 });
+    let active = true;
+    const trackedStop = () => {
+      if (!active) return;
+      active = false;
+      this.activeSfxStoppers.delete(trackedStop);
+      stopLoop();
+    };
+    this.activeSfxStoppers.add(trackedStop);
+    return trackedStop;
   }
 
   // The Solar Beam connecting with an opponent: a searing solar burn.

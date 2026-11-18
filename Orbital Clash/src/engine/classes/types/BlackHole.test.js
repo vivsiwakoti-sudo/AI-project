@@ -5,6 +5,7 @@ import { FighterBase } from '../FighterBase.js';
 import { Projectile } from '../Projectile.js';
 import { BlackHole } from './BlackHole.js';
 import { installTestAudio } from '../../audio/testAudioStub.js';
+import { audioManager } from '../../audio/AudioManager.js';
 
 installTestAudio();
 
@@ -149,4 +150,15 @@ test('the projectile can open a hole on a non-targeted enemy', () => {
   blackHole.projectiles.push(new Projectile(290, 400, 1, 0, 0, blackHole));
   blackHole.update(1 / 60, target);
   assert.ok(blackHole.activeHole);
+});
+
+test('stopping battle audio also stops a still-active Black Hole loop', () => {
+  audioManager.stopMusic();
+  const stopHoleLoop = audioManager.startBlackHoleLoop();
+
+  assert.equal(audioManager.activeSfxStoppers.size, 1);
+  audioManager.stopMusic();
+  assert.equal(audioManager.activeSfxStoppers.size, 0);
+
+  assert.doesNotThrow(() => stopHoleLoop());
 });
