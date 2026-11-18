@@ -8,6 +8,7 @@ import TournamentScreen from "./components/TournamentScreen";
 import ChampionScreen from "./components/ChampionScreen";
 import ScreenTransition from "./components/ScreenTransition";
 import PredictionModal from "./components/PredictionModal";
+import BattleIntro from "./components/BattleIntro";
 import { audioManager } from "./engine/audio/AudioManager";
 import { DEFAULT_ARENA_SIZE } from "./engine/config";
 import { FIGHTER_CLASSES } from "./engine/fighterDefinitions";
@@ -135,7 +136,7 @@ function App() {
         setSelectedFighters(f);
         setArenaSize(size);
         setRosterIntro(false);
-        setScreen("game");
+        setScreen("battleIntro");
       };
       setPendingPrediction({
         kind: "battle",
@@ -150,6 +151,7 @@ function App() {
         }
       });
     }} onStartTournament={startTournament} />,
+    battleIntro: <BattleIntro fighters={selectedFighters} onComplete={() => setScreen("game")} />,
     game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => {
       const aborted = Boolean(meta?.aborted);
       resolveBattlePrediction({ winner: res?.find(f => f.placement === 1)?.name ?? null, aborted });
