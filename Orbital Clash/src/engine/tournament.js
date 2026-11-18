@@ -116,10 +116,10 @@ export function withArenaSize(tournament, size) {
 // A tournament match runs on a SHORTER clock than a free-for-all. A tournament is
 // 31 bouts back to back, so at the arena's five-minute limit a single stubborn
 // pairing (two classes that cannot hurt each other) could hold up a spectator for
-// minutes. Ninety seconds is long enough for every normal matchup to resolve on
+// minutes. Two minutes is long enough for every normal matchup to resolve on
 // its own - measured across the roster, real fights end well inside it - after
 // which sudden death forces a decision so the bracket always advances.
-export const MATCH_CLOCK_SECONDS = 90;
+export const MATCH_CLOCK_SECONDS = 120;
 
 // Combat guard rails. The live arena ends a bout when the countdown expires and
 // keeps ticking until someone dies; a headless match cannot rely on a timer, so
