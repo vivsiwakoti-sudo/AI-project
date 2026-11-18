@@ -100,6 +100,17 @@ test('a die that lands deals 15 damage and rolls a face on the victim', () => {
   assert.equal(gambler.dice.length, 0);
 });
 
+test('rolling the stun face sets the Gambler cooldown to half', () => {
+  const gambler = makeGambler();
+  const victim = makeVictim(200);
+  gambler.cooldownTimer = gambler.cooldown;
+
+  gambler.applyFace('stun', victim);
+
+  assert.equal(victim.isStuck, true);
+  assert.equal(gambler.cooldownTimer, 2.5);
+});
+
 test('a die roll picks one of eight faces by equal chance', () => {
   const gambler = makeGambler();
   const victim = makeVictim(200, { health: 500 });

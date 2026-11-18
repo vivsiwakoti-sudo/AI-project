@@ -69,6 +69,17 @@ test('the vampire potion deals 10 damage and heals the Alchemist for 7', () => {
   assert.equal(alchemist.health, 57);
 });
 
+test('landing a stun potion sets the Alchemist cooldown to half', () => {
+  const alchemist = makeAlchemist();
+  const opponent = makeVictim(200);
+  alchemist.cooldownTimer = alchemist.cooldown;
+
+  alchemist.applyStatus({ type: 'stun', duration: 3 }, opponent);
+
+  assert.equal(opponent.isStuck, true);
+  assert.equal(alchemist.cooldownTimer, 2.5);
+});
+
 test('potions are 25% smaller and travel 75% faster', () => {
   const alchemist = makeAlchemist();
   const opponent = makeVictim(500);

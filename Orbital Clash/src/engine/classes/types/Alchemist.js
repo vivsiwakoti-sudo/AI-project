@@ -177,6 +177,7 @@ export class Alchemist extends FighterBase {
                 onEnd: (fighter) => { fighter.isStuck = false; }
             });
             victim.isStuck = true;
+            this.cooldownTimer = this.cooldown / 2;
         }
     }
 
