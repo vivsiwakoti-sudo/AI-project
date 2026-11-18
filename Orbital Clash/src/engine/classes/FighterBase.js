@@ -18,7 +18,7 @@ const STUN_FALLBACK_SECONDS = 4;
 // with a guaranteed luminance separation: pushed toward white, unless the colour
 // is already very bright, in which case it is pushed toward the dark side. Either
 // way the rim stays readable against both the dark arena and the white-hot core.
-export const OUTLINE_WIDTH = 5.5;
+export const OUTLINE_WIDTH = 2.75;
 
 export function outlineColorFor(color) {
     const hex = typeof color === "string" ? color.replace("#", "") : "";
