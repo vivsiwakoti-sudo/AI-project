@@ -207,7 +207,6 @@ export class Mimic extends FighterBase {
     }
 
     updateClones(dt, opponent) { Duplicator.prototype.updateClones.call(this, dt, opponent); }
-    applyCloneCombatHits(clone, opponent) { Duplicator.prototype.applyCloneCombatHits.call(this, clone, opponent); }
     applyCloneContact(clone, victims) { Duplicator.prototype.applyCloneContact.call(this, clone, victims); }
     resolveCloneCollisions(clones, victims) { Duplicator.prototype.resolveCloneCollisions.call(this, clones, victims); }
     keepCloneInArena(clone) { Duplicator.prototype.keepCloneInArena.call(this, clone); }

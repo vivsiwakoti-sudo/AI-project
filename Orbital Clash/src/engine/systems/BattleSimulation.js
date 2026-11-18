@@ -36,7 +36,7 @@ export function isValidTarget(candidate, self) {
 // A summon fights for its summoner, so the two share a team. Anything without an
 // owner is its own team.
 export function teamOf(fighter) {
-  return fighter?.owner ?? fighter;
+  return fighter?.owner ?? fighter?.root ?? fighter;
 }
 
 export function isTeammate(a, b) {
@@ -56,6 +56,26 @@ export function collectBodies(fighters) {
       if (!summon.isDead && summon.health > 0) bodies.push(summon);
     }
   }
+  return bodies;
+}
+
+// Every living body that combat effects may hit. Duplicator clones and nested
+// summons stay outside the main update list (their owner advances them), but
+// weapons, projectiles, trails and mines must still see them as real targets.
+export function collectCombatBodies(fighters) {
+  const bodies = [];
+  const seen = new Set();
+
+  const visit = fighter => {
+    if (!fighter || seen.has(fighter)) return;
+    seen.add(fighter);
+    if (fighter.isDead || fighter.health <= 0) return;
+    bodies.push(fighter);
+    for (const clone of fighter.clones ?? []) visit(clone);
+    for (const summon of fighter.summons ?? []) visit(summon);
+  };
+
+  for (const fighter of fighters ?? []) visit(fighter);
   return bodies;
 }
 
@@ -206,13 +226,18 @@ export function stepBattle(fighters, options = {}) {
 
   // Summons are stepped alongside their owners (see collectBodies).
   const bodies = collectBodies(fighters);
+  const combatBodies = collectCombatBodies(fighters);
 
-  bodies.forEach((f, i) => {
+  bodies.forEach(f => {
     // With up to four fighters in the arena, every class targets one valid
     // living opponent (see chooseTarget). Each class's update() only ever
     // reads a single opponent, so this keeps their AI unchanged while
     // making free-for-alls work.
-    const opponent = chooseTarget(bodies, i, fighters.length === 2 ? fighters : null);
+    const opponent = chooseTarget(
+      combatBodies,
+      combatBodies.indexOf(f),
+      fighters.length === 2 ? fighters : null
+    );
     f.opponent = opponent;
     // Other classes' target selection will overwrite f.target below; keep
     // the reference tally here so it stays an accurate "who is aiming at me".
@@ -220,7 +245,7 @@ export function stepBattle(fighters, options = {}) {
     // The opponents THIS fighter may actually hit. A class only ever sees a
     // single opponent, so anything that has to reach every fighter (touch
     // damage, an explosion, a web) reads this list instead.
-    f.victims = bodies.filter(other => !isTeammate(other, f) && canBeVictim(other));
+    f.victims = combatBodies.filter(other => !isTeammate(other, f) && canBeVictim(other));
     // Who this fighter may body-check. Body attack type is the ONLY gate for
     // touch damage, and it is read through DamageSystem.isBodyAttacker so the
     // arena and the class-level contact hooks can never disagree about who is

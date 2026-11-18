@@ -5,6 +5,8 @@ import { FighterBase } from '../FighterBase.js';
 import { FighterFactory } from '../../FighterFactory.js';
 import { installTestAudio } from '../../audio/testAudioStub.js';
 import { audioManager } from '../../audio/AudioManager.js';
+import { Projectile } from '../Projectile.js';
+import { stepBattle } from '../../systems/BattleSimulation.js';
 
 installTestAudio();
 
@@ -152,6 +154,54 @@ test('five separate fighter contacts kill a clone and trigger its death effect',
   } finally {
     audioManager.playDeathSfx = playDeathSfx;
   }
+});
+
+test('ordinary projectiles can hit a Duplicator clone through the shared victim list', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const gunner = FighterFactory.createFighter('Gunner', 500, 500);
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  clone.x = 300;
+  clone.y = 300;
+  gunner.cooldownTimer = 999;
+  gunner.projectiles.push(new Projectile(clone.x, clone.y, 0, 0, 7, gunner));
+
+  stepBattle([duplicator, gunner], { dt: 0, arenaSize: 800 });
+
+  assert.equal(clone.health, 8, 'the clone takes the normal 7 projectile damage');
+  assert.equal(gunner.projectiles.length, 0, 'the projectile is consumed on the clone');
+});
+
+test('mines explode normally when a Duplicator clone triggers them', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const mineLayer = FighterFactory.createFighter('Mine Layer', 500, 500);
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  clone.x = 300;
+  clone.y = 300;
+  mineLayer.mineCooldown = 999;
+  mineLayer.mines.push({ x: clone.x, y: clone.y, age: 0 });
+
+  stepBattle([duplicator, mineLayer], { dt: 0, arenaSize: 800 });
+
+  assert.equal(clone.health, 5, 'the clone takes the mine damage');
+  assert.equal(mineLayer.mines.length, 0, 'the triggered mine is consumed');
+});
+
+test('Snake trail damage and slow effects apply to Duplicator clones', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
+  const snake = FighterFactory.createFighter('Snake', 500, 500);
+  duplicator.spawnClone();
+  const clone = duplicator.clones[0];
+  clone.x = 300;
+  clone.y = 300;
+  snake.dropTimer = 999;
+  snake.trail.push({ x: clone.x, y: clone.y, age: 0 });
+
+  stepBattle([duplicator, snake], { dt: 0, arenaSize: 800 });
+
+  assert.equal(clone.health, 13, 'the clone takes the trail contact damage');
+  assert.ok(clone.statusEffects.some(effect => effect.name === 'trail-slow'));
 });
 
 test('killing the original runs every clone through die(), the same death as the original', () => {

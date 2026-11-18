@@ -99,35 +99,6 @@ export class Duplicator extends FighterBase {
         }
     }
 
-    applyCloneCombatHits(clone, opponent) {
-        if (clone.isDead || !opponent) return;
-
-        if (opponent.name === "Berserker") {
-            const bladeDistance = opponent.radius + 37.5;
-            [opponent.bladeAngle, opponent.bladeAngle + Math.PI].forEach(angle => {
-                const bladeX = opponent.x + Math.cos(angle) * bladeDistance;
-                const bladeY = opponent.y + Math.sin(angle) * bladeDistance;
-                if (opponent.bladeTouches(bladeX, bladeY, clone, opponent.bladeEdgeRadius)) {
-                    DamageSystem.applyDamage(opponent, clone, 8, "Melee", { ignoreCooldown: true });
-                    opponent.rotationSpeed *= 1.1;
-                }
-            });
-        }
-
-        if (Array.isArray(opponent.projectiles)) {
-            opponent.projectiles.forEach(projectile => {
-                if (projectile.active && DamageSystem.checkHitbox({
-                    x: projectile.x,
-                    y: projectile.y,
-                    radius: projectile.radius || 5
-                }, clone, "Body")) {
-                    DamageSystem.applyDamage(opponent, clone, projectile.damage, "Projectile");
-                    projectile.active = false;
-                }
-            });
-        }
-    }
-
     // Any fighter that touches a clone deals CLONE_TOUCH_DAMAGE. It lands once per new
     // contact, the same event that spawns a clone, so a fighter resting against a clone
     // is not drained every frame.
@@ -178,7 +149,6 @@ export class Duplicator extends FighterBase {
             clone.opponent = aim;
             // update() also runs the clone's own touch check (its outgoing bite).
             clone.update(dt, aim);
-            cloneVictims.forEach(victim => this.applyCloneCombatHits(clone, victim));
             this.applyCloneContact(clone, cloneVictims);
             this.keepCloneInArena(clone);
         });
