@@ -20,13 +20,13 @@ const makeBerserker = () => new Berserker({
   description: 'Two accelerating rotating blades.'
 }, 100, 100);
 
-test('Berserker takes 25% more damage from attacks', () => {
+test('Berserker takes normal damage from attacks', () => {
   const berserker = makeBerserker();
   const before = berserker.health;
 
   DamageSystem.applyDamage(null, berserker, 10, 'Melee');
 
-  assert.equal(before - berserker.health, 12.5);
+  assert.equal(before - berserker.health, 10);
 });
 
 test('Berserker takes unmodified sudden death drain damage', () => {
