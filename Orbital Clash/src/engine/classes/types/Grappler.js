@@ -2,6 +2,9 @@ import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 
+// Release speed: a 250% increase, so the victim leaves at 3.5x its momentum.
+const RELEASE_SPEED_MULTIPLIER = 3.5;
+
 export class Grappler extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -78,17 +81,17 @@ export class Grappler extends FighterBase {
                 this.cooldownTimer = this.cooldownDuration;
                 if (hooked) {
                     hooked.releasePin();
-                    // Released at double momentum, then decays back when the effect ends.
-                    hooked.vx *= 2;
-                    hooked.vy *= 2;
+                    // Released at boosted momentum, then decays back when the effect ends.
+                    hooked.vx *= RELEASE_SPEED_MULTIPLIER;
+                    hooked.vy *= RELEASE_SPEED_MULTIPLIER;
 
                     // Add MomentumBoost
                     EffectSystem.addEffect(hooked, {
                         name: "MomentumBoost",
                         duration: 2.5,
                         onEnd: (fighter) => {
-                            if (fighter.vx) fighter.vx /= 2;
-                            if (fighter.vy) fighter.vy /= 2;
+                            if (fighter.vx) fighter.vx /= RELEASE_SPEED_MULTIPLIER;
+                            if (fighter.vy) fighter.vy /= RELEASE_SPEED_MULTIPLIER;
                         }
                     });
                 }

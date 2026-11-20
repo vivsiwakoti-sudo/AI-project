@@ -45,6 +45,31 @@ test('an active grapple pins and pauses the victim', () => {
   assert.ok(target.attackPauseTimer > 0, 'a grappled victim has its attacks paused');
 });
 
+test('a released victim leaves at 3.5x speed and decays back to normal', async () => {
+  const { EffectSystem } = await import('../../systems/EffectSystem.js');
+  const grappler = new Grappler(data('Grappler'), 100, 100);
+  const target = victim();
+  target.vx = 2;
+
+  // Record the speed the victim has the moment its pin is released, since the
+  // latch itself can change its velocity through ordinary collisions.
+  let speedAtRelease = null;
+  const releasePin = target.releasePin;
+  target.releasePin = function () {
+    speedAtRelease = this.vx;
+    releasePin.call(this);
+  };
+
+  // Hold the hook for its full 2s latch.
+  const dt = 1 / 60;
+  for (let t = 0; t < 2.1; t += dt) grappler.update(dt, target);
+  assert.notEqual(speedAtRelease, null, 'the victim is released');
+  assert.ok(Math.abs(target.vx - speedAtRelease * 3.5) < 1e-9, 'the release is a 250% increase (3.5x)');
+
+  EffectSystem.updateEffects(target, 2.6);
+  assert.ok(Math.abs(target.vx - speedAtRelease) < 1e-9, 'the boost decays back once MomentumBoost ends');
+});
+
 test('the hook cooldown is 8 seconds', async () => {
   // The class reads its cooldown from the fighter definition, so a fighter built
   // with the shipped data must wait 8 seconds between hooks.
