@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { recordBattle } from "../engine/battleHistory";
+import { onWinningSide } from "../engine/teamModes";
 
 const RECORDS_KEY = "arena-battles-records";
 
@@ -70,29 +71,28 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
   const [records, setRecords] = useState(null);
   const committed = useRef(false);
 
-  // Ranked by survival time, longest first: the fighter who stayed alive last is
-  // 1st, the one knocked out first is last. The arena stamps `placement` from the
-  // same ordering, so it agrees with this sort; survival time itself is the
-  // primary key here because it is the number shown in the SURVIVED column, and
-  // ranking by anything else would print a table that contradicts its own order.
-  // Ties keep the incoming (spawn) order, compared explicitly so the result is
-  // identical in every engine rather than relying on sort stability.
+  // Ranked by the arena's placement, which is side-aware in team battles: the winning
+  // side takes the top places, and within each side the longest survivor leads. In
+  // free-for-all the placement is the survival order, so this matches the SURVIVED
+  // column there. Survival time and then spawn order break any remaining ties, and
+  // they are compared explicitly so the result is identical in every engine.
   const ordered = results
     .map((fighter, index) => ({ fighter, index }))
     .sort((a, b) => {
-      const bySurvival = (b.fighter.survivalTime ?? 0) - (a.fighter.survivalTime ?? 0);
-      if (bySurvival !== 0) return bySurvival;
       const byPlacement = (a.fighter.placement ?? Number.MAX_SAFE_INTEGER) - (b.fighter.placement ?? Number.MAX_SAFE_INTEGER);
       if (byPlacement !== 0) return byPlacement;
+      const bySurvival = (b.fighter.survivalTime ?? 0) - (a.fighter.survivalTime ?? 0);
+      if (bySurvival !== 0) return bySurvival;
       return a.index - b.index;
     })
     .map(entry => entry.fighter);
 
   const winner = aborted ? null : ordered[0] ?? null;
-  // Everyone who is not the winner lost this battle. With four fighters that is
-  // three losers, not one, so the record is applied per fighter rather than to a
-  // single "loser" slot.
-  const losers = aborted || !winner ? [] : ordered.slice(1);
+  const isTeamBattle = winner?.team != null;
+  // Everyone on the winning side won; everyone else lost. Records are applied per
+  // fighter, so a 3v3 win gives three wins and three losses are split the same way.
+  const winners = aborted || !winner ? [] : ordered.filter(f => onWinningSide(f, winner));
+  const losers = aborted || !winner ? [] : ordered.filter(f => !onWinningSide(f, winner));
   // The battle length is the same for every fighter (it is the whole match, not a
   // per-fighter survival time), so take the longest reported value rather than
   // trusting the first element - the array order is spawn order, not ranking.
@@ -133,7 +133,8 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
       return next;
     };
 
-    const updated = { [winner.name]: apply(winner, true) };
+    const updated = {};
+    winners.forEach(fighter => { updated[fighter.name] = apply(fighter, true); });
     losers.forEach(fighter => { updated[fighter.name] = apply(fighter, false); });
     setRecords(updated);
     writeRecords(stored);
@@ -177,8 +178,9 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
       ) : (
         <>
           <WinnerMark color={winner.color} />
-          <div className="roster-eyebrow">WINNER</div>
-          <h1>{winner.name}</h1>
+          <div className="roster-eyebrow">{isTeamBattle ? "WINNING TEAM" : "WINNER"}</div>
+          <h1>{isTeamBattle ? `TEAM ${winner.team + 1}` : winner.name}</h1>
+          {isTeamBattle && <p className="results-team-members">{winners.map(f => f.name).join(" · ")}</p>}
           <div className="results-rule" />
 
           <div className="results-summary">
@@ -192,7 +194,7 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
       <div className="results-table">
         {ordered.map((f, i) => {
           const stats = statBlock(f);
-          const isWinner = !aborted && f === winner;
+          const isWinner = !aborted && winners.includes(f);
           // Placement is stamped by the arena; fall back to the sorted position so
           // the table is still meaningful if a battle handed over partial results.
           const placement = f.placement ?? i + 1;

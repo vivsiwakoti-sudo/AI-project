@@ -1,4 +1,5 @@
 import { audioManager } from "../audio/AudioManager.js";
+import { isTeammate, isTeamBattle } from "./teams.js";
 
 // See DamageSystem.isBodyAttacker. Listed explicitly because a body class that
 // reaches the arena without an attack type (a clone built from a parent object,
@@ -107,6 +108,9 @@ export class DamageSystem {
         // A corpse cannot keep dealing damage either, but a field or a hazard that
         // has no owner at all must still be able to apply its damage.
         if (attacker && attacker.isDead && !options.allowSelfDamage) return false;
+        // In a team battle a side never damages its own members. Hazards and sudden
+        // death have no attacker, so they are unaffected.
+        if (attacker && attacker !== victim && isTeamBattle(attacker) && isTeammate(attacker, victim)) return false;
         if (attacker && attacker !== victim && attacker.attackPauseTimer > 0) return false;
         if (attacker && attacker.damageCooldown > 0 && !options.ignoreCooldown) return false;
         if (victim.isInvulnerable || victim.isUntargetable) return false;

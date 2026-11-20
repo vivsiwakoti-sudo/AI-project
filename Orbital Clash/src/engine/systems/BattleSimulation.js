@@ -15,6 +15,7 @@ import { DamageSystem } from "./DamageSystem.js";
 import { outlineColorFor, OUTLINE_WIDTH } from "../classes/FighterBase.js";
 import { squashTransform } from "./Fx.js";
 import { traceShape } from "./Shapes.js";
+import { teamOf, isTeammate } from "./teams.js";
 
 // --- Targeting helpers (moved verbatim from Arena.jsx) -----------------------
 
@@ -33,15 +34,7 @@ export function isValidTarget(candidate, self) {
   return true;
 }
 
-// A summon fights for its summoner, so the two share a team. Anything without an
-// owner is its own team.
-export function teamOf(fighter) {
-  return fighter?.owner ?? fighter?.root ?? fighter;
-}
-
-export function isTeammate(a, b) {
-  return teamOf(a) === teamOf(b);
-}
+export { teamOf, isTeammate };
 
 // Every body taking part in the fight: each top-level fighter followed by its live
 // summons. Summons are stepped, targeted and collided like any fighter, but they
@@ -185,11 +178,31 @@ export function countAlive(fighters) {
   return alive;
 }
 
-// Results-screen order: longest survival first. Fighters knocked out in the same
-// frame share one timestamp, so that tie is broken the way a tournament draw is
-// (see resolveDraw): more damage dealt wins, then spawn order.
+// Counts the sides that still have a living fighter. The battle ends when one side
+// is left. In free-for-all every fighter is its own side, so this equals countAlive.
+export function countAliveTeams(fighters) {
+  const sides = new Set();
+  for (const fighter of fighters) {
+    if (fighter && !fighter.isDead && fighter.health > 0) sides.add(teamOf(fighter));
+  }
+  return sides.size;
+}
+
+// Results-screen order: longest survival first. In a team battle a side is ranked
+// by its longest-surviving member, so the last side standing comes first and its
+// members follow each other. Fighters knocked out in the same frame share one
+// timestamp, so that tie is broken the way a tournament draw is (see resolveDraw):
+// more damage dealt wins, then spawn order.
 export function rankBySurvival(fighters) {
+  const sideSurvival = new Map();
+  for (const f of fighters) {
+    const side = teamOf(f);
+    sideSurvival.set(side, Math.max(sideSurvival.get(side) ?? -Infinity, f.survivalTime ?? 0));
+  }
+  const survivalOf = (f) => sideSurvival.get(teamOf(f));
   return [...fighters].sort((a, b) => {
+    const bySide = survivalOf(b) - survivalOf(a);
+    if (bySide !== 0) return bySide;
     const bySurvival = (b.survivalTime ?? 0) - (a.survivalTime ?? 0);
     if (bySurvival !== 0) return bySurvival;
     const byDamage = (b.totalDamageDealt || 0) - (a.totalDamageDealt || 0);

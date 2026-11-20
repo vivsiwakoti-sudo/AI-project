@@ -1702,6 +1702,60 @@
 
 .prediction-cancel-button:hover { color: var(--danger); border-color: var(--danger); }
 
+/* --- Team format ------------------------------------------------------ */
+.team-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.team-mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.team-mode-card b { font-size: 15px; letter-spacing: 0.08em; color: var(--cyan); }
+
+.team-mode-card span { font-size: 11px; letter-spacing: 0.06em; color: var(--text-secondary); }
+
+.team-mode-card:hover { border-color: var(--cyan); box-shadow: 0 0 18px color-mix(in srgb, var(--cyan) 35%, transparent); }
+
+.team-custom-list {
+  display: grid;
+  gap: 8px;
+}
+
+.team-custom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--fighter-color) 55%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fighter-color) 10%, transparent);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.team-custom-row b { font-size: 12px; letter-spacing: 0.08em; color: var(--cyan); }
+
+.team-custom-row:hover { box-shadow: 0 0 16px color-mix(in srgb, var(--fighter-color) 45%, transparent); }
+
+.team-custom-summary { margin: 12px 0 0; font-size: 12px; letter-spacing: 0.08em; color: var(--text-secondary); }
+
+.team-error { margin: 12px 0 0; font-size: 12px; color: var(--danger); }
+
+.results-team-members { margin: 4px 0 0; font-size: 13px; letter-spacing: 0.08em; color: var(--text-secondary); }
+
 /* --- Battle report ---------------------------------------------------- */
 .results-screen { width: min(720px, calc(100% - 32px)); margin: 64px auto 60px; text-align: center; }
 

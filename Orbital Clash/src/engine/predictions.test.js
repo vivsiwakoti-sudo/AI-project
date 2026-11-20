@@ -44,6 +44,14 @@ test('a battle outcome marks each guess right or wrong', () => {
   assert.deepEqual(entry.guesses.map(g => g.correct), [true, false]);
 });
 
+test('a team battle settles a guess right when it names anyone on the winning side', () => {
+  installStorage();
+  addPrediction({ kind: 'battle', guesses: ['Gunner', 'Ghost', 'Ninja'] });
+  const [entry] = resolveBattlePrediction({ winner: 'Gunner', winners: ['Gunner', 'Ghost'] });
+  assert.equal(entry.winner, 'Gunner');
+  assert.deepEqual(entry.guesses.map(g => g.correct), [true, true, false]);
+});
+
 test('an aborted battle voids the pending prediction and it is not tallied', () => {
   installStorage();
   addPrediction({ kind: 'battle', guesses: ['Gunner'] });

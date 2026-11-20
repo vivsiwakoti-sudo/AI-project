@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { drawBattleFrame, drawFighterOutlines, rankBySurvival } from './BattleSimulation.js';
+import { countAliveTeams, drawBattleFrame, drawFighterOutlines, rankBySurvival } from './BattleSimulation.js';
 import { OUTLINE_WIDTH } from '../classes/FighterBase.js';
 
 function makeCanvas() {
@@ -44,6 +44,25 @@ test('a complete tie on time and damage keeps spawn order', () => {
   const second = { name: 'Second', survivalTime: 5, totalDamageDealt: 3 };
   assert.deepEqual(rankBySurvival([first, second]).map(f => f.name), ['First', 'Second']);
   assert.deepEqual(rankBySurvival([second, first]).map(f => f.name), ['Second', 'First']);
+});
+
+test('a team battle ranks the whole winning side first, even above a losing member who lasted longer', () => {
+  const winnerLong = { name: 'WinLong', team: 0, survivalTime: 30, totalDamageDealt: 0 };
+  const winnerShort = { name: 'WinShort', team: 0, survivalTime: 10, totalDamageDealt: 0 };
+  const loserLate = { name: 'LoseLate', team: 1, survivalTime: 20, totalDamageDealt: 0 };
+  assert.deepEqual(
+    rankBySurvival([loserLate, winnerShort, winnerLong]).map(f => f.name),
+    ['WinLong', 'WinShort', 'LoseLate']
+  );
+});
+
+test('the battle is over when one side is left, counting sides rather than fighters', () => {
+  const alive = (name, team, extra = {}) => ({ name, team, health: 50, isDead: false, ...extra });
+  const teammates = [alive('A', 0), alive('B', 0), alive('C', 1, { isDead: true })];
+  assert.equal(countAliveTeams(teammates), 1);
+  assert.equal(countAliveTeams([alive('A', 0), alive('B', 0), alive('C', 1)]), 2);
+  // Free-for-all: every fighter is its own side.
+  assert.equal(countAliveTeams([alive('A', undefined), alive('B', undefined)]), 2);
 });
 
 test('ranking does not reorder the input array', () => {

@@ -10,7 +10,7 @@ import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import { REPLAY_SECONDS } from "../engine/replayStore";
-import { countAlive, decayScreenShake, drawFighterOutlines, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
+import { countAliveTeams, decayScreenShake, drawFighterOutlines, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
 
 // Distributes the fighter HUD panels across the two sides of the arena.
 //
@@ -24,6 +24,8 @@ import { countAlive, decayScreenShake, drawFighterOutlines, drawGridLines, rankB
 //                                        single panel on the other side keeps its
 //                                        full size
 //   4 fighters: [0, 2] skinny | [1, 3] skinny
+//   5 fighters: [0, 2, 4] skinny | [1, 3] skinny
+//   6 fighters: [0, 2, 4] skinny | [1, 3, 5] skinny
 //
 // `skinny` on a side means "this column holds more than one panel, so it must
 // share its width between them". `count` drives the CSS column width.
@@ -35,7 +37,8 @@ function planSides(count) {
   }
 
   // Any column carrying two panels is the one that narrows. With 2 fighters
-  // neither column is skinny; with 3 only the two-panel side is; with 4 both are.
+  // neither column is skinny; with 3 only the two-panel side is; with 4 or more
+  // both are.
   const leftSkinny = left.length > 1;
   const rightSkinny = right.length > 1;
 
@@ -209,6 +212,8 @@ function createFighters(fighters, arenaSize) {
     fighter.vy = vy;
     fighter.teamIndex = i;
     fighter.arenaSize = arenaSize;
+    // Team battles tag each fighter with its side. Free-for-all leaves it unset.
+    if (selection.team != null) fighter.team = selection.team;
 
     // Per-fighter battle state. Every fighter owns its own copy, so nothing is
     // shared between fighters: each has its own target, HP, cooldowns, status
@@ -511,10 +516,10 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
 
         gameState.current.particles.update(simulationDt);
 
-        if (!gameState.current.resolved && countAlive(gameState.current.fighters) <= 1) {
-            // A free-for-all ends only when at most ONE fighter is left standing -
-            // never when the first fighter dies. Everyone eliminated before that
-            // keeps the placement they earned.
+        if (!gameState.current.resolved && countAliveTeams(gameState.current.fighters) <= 1) {
+            // A battle ends only when one side is left standing - never when the
+            // first fighter dies. In a free-for-all every fighter is a side, so that
+            // means one survivor. Everyone eliminated before that keeps their placement.
             gameState.current.resolved = true;
             // Stamp the final statistics (which
             // requires the countdown clock to have run), then keep the arena moving

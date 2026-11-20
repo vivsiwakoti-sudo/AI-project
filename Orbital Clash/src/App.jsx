@@ -8,11 +8,13 @@ import TournamentScreen from "./components/TournamentScreen";
 import ChampionScreen from "./components/ChampionScreen";
 import ScreenTransition from "./components/ScreenTransition";
 import PredictionModal from "./components/PredictionModal";
+import TeamModal from "./components/TeamModal";
 import BattleIntro from "./components/BattleIntro";
 import { audioManager } from "./engine/audio/AudioManager";
 import { DEFAULT_ARENA_SIZE } from "./engine/config";
 import { FIGHTER_CLASSES } from "./engine/fighterDefinitions";
 import { saveLastReplay } from "./engine/replayStore";
+import { winningSideNames } from "./engine/teamModes";
 import {
   addPrediction,
   resolveBattlePrediction,
@@ -47,6 +49,8 @@ function App() {
   // A prediction is asked for before a battle starts or a new bracket is built.
   // `onConfirm` receives the guesses and carries on with the start it was waiting on.
   const [pendingPrediction, setPendingPrediction] = useState(null);
+  // The battle format (free-for-all or teams) is asked for after the prediction.
+  const [pendingTeams, setPendingTeams] = useState(null);
 
   // --- Tournament Mode -------------------------------------------------------
   // `tournament` is the live bracket driven by the engine; `tournamentRunId`
@@ -131,36 +135,55 @@ function App() {
   // exit animation. `screen` still drives it exactly as before.
   const screens = {
     menu: <Menu intro={rosterIntro} onStart={(f, size) => {
-      const startBattle = () => {
+      const startBattle = plan => {
         setPendingPrediction(null);
-        setSelectedFighters(f);
+        setPendingTeams(null);
+        // Free-for-all leaves the selection as it was; a team plan tags each fighter.
+        setSelectedFighters(plan?.teams ? f.map((fighter, i) => ({ ...fighter, team: plan.teams[i] })) : f);
         setArenaSize(size);
         setRosterIntro(false);
         setScreen("battleIntro");
+      };
+      // Format comes after the prediction. Cancelling it means no battle starts, so
+      // the prediction just made is voided rather than left to settle a fight that
+      // never happened.
+      const chooseFormat = () => {
+        setPendingTeams({
+          fighters: f.map(({ name, color }) => ({ name, color })),
+          onConfirm: plan => startBattle(plan),
+          onCancel: () => {
+            skipPrediction("battle");
+            setPendingTeams(null);
+          }
+        });
       };
       setPendingPrediction({
         kind: "battle",
         fighters: f.map(({ name, color }) => ({ name, color })),
         onConfirm: guesses => {
           addPrediction({ kind: "battle", guesses });
-          startBattle();
+          setPendingPrediction(null);
+          chooseFormat();
         },
         onSkip: () => {
           skipPrediction("battle");
-          startBattle();
+          setPendingPrediction(null);
+          chooseFormat();
         }
       });
     }} onStartTournament={startTournament} />,
     battleIntro: <BattleIntro fighters={selectedFighters} onComplete={() => setScreen("game")} />,
     game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => {
       const aborted = Boolean(meta?.aborted);
-      resolveBattlePrediction({ winner: res?.find(f => f.placement === 1)?.name ?? null, aborted });
+      const winner = res?.find(f => f.placement === 1)?.name ?? null;
+      // In a team battle a guess is right when it names anyone on the winning side.
+      resolveBattlePrediction({ winner, winners: winningSideNames(res), aborted });
       setBattleResults(res);
       setBattleAborted(aborted);
       // The last 25 seconds are kept for the roster's replay button.
       saveLastReplay(meta?.replayFrames, {
         aborted,
-        winner: res?.find(f => f.placement === 1)?.name ?? null,
+        winner,
         fighters: (res ?? []).map(({ name, color }) => ({ name, color }))
       });
       setScreen("end");
@@ -242,6 +265,13 @@ function App() {
               onConfirm={guesses => pendingPrediction.onConfirm(guesses)}
               onSkip={() => pendingPrediction.onSkip()}
               onCancel={() => setPendingPrediction(null)}
+            />
+          )}
+          {pendingTeams && (
+            <TeamModal
+              fighters={pendingTeams.fighters}
+              onConfirm={plan => pendingTeams.onConfirm(plan)}
+              onCancel={() => pendingTeams.onCancel()}
             />
           )}
         </>

@@ -124,34 +124,38 @@ export function skipPrediction(kind) {
   return next;
 }
 
-// Marks every pick on a pending entry as right or wrong against `winner`.
+// Marks every pick on a pending entry as right or wrong. `winners` is every fighter
+// on the winning side (just the winner in free-for-all, a whole team in team mode).
 // `winner` null (an aborted battle, or no champion) voids the entry instead.
-function settle(entry, winner) {
+function settle(entry, winner, winners = [winner]) {
   if (!winner) return { ...entry, status: "void" };
+  const winningSide = new Set(winners);
   return {
     ...entry,
     status: "resolved",
     winner,
-    guesses: entry.guesses.map(guess => ({ ...guess, correct: guess.pick === winner }))
+    guesses: entry.guesses.map(guess => ({ ...guess, correct: winningSide.has(guess.pick) }))
   };
 }
 
-function resolvePending(predicate, winner) {
+function resolvePending(predicate, winner, winners) {
   const list = loadPredictions();
   const index = list.findIndex(entry => entry.status === "pending" && predicate(entry));
   if (index === -1) return list;
   const next = list.slice();
-  next[index] = settle(list[index], winner);
+  next[index] = settle(list[index], winner, winners);
   writePredictions(next);
   return next;
 }
 
-export function resolveBattlePrediction({ winner, aborted = false }) {
+export function resolveBattlePrediction({ winner, winners, aborted = false }) {
   return resolvePending(
     entry => entry.kind === PREDICTION_KINDS.battle,
-    aborted ? null : winner ?? null
+    aborted ? null : winner ?? null,
+    winners
   );
 }
+
 
 export function resolveTournamentPrediction(tournamentId, champion) {
   if (!tournamentId) return loadPredictions();

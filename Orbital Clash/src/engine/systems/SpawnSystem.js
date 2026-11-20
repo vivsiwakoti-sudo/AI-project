@@ -1,4 +1,4 @@
-// Spawn placement for 2-4 fighters.
+// Spawn placement for 2-6 fighters.
 //
 // The arena is a square with a 20px inner border. Every fighter starts the same
 // distance in from its edge so no seat is closer to the middle than another.
@@ -6,6 +6,7 @@
 //   2 fighters: left-middle and right-middle (the original layout)
 //   3 fighters: left, right, and BOTTOM-MIDDLE
 //   4 fighters: left, right, bottom-middle, and TOP-MIDDLE
+//   5-6 fighters: the four seats above, then the TOP-LEFT and BOTTOM-RIGHT corners
 //
 // Each fighter also gets an inward-facing launch direction. The random angle is
 // applied PER FIGHTER around that inward heading, so every fighter sets off on
@@ -15,12 +16,16 @@ const EDGE_INSET = 180; // centre distance from the border for the side seats
 
 // Where each seat sits, as a fraction of the arena, plus the heading it faces.
 // Angles are in radians; 0 points right, PI/2 points down (canvas convention).
+// Corners face the centre diagonally.
 const SEATS = [
   { key: "left", x: 0.25, y: 0.5, heading: 0 },              // faces right
   { key: "right", x: 0.75, y: 0.5, heading: Math.PI },        // faces left
   { key: "bottom", x: 0.5, y: 0.75, heading: -Math.PI / 2 },   // faces up
-  { key: "top", x: 0.5, y: 0.25, heading: Math.PI / 2 }     // faces down
+  { key: "top", x: 0.5, y: 0.25, heading: Math.PI / 2 },     // faces down
+  { key: "top-left", x: 0.25, y: 0.25, heading: Math.PI / 4 },   // faces down-right
+  { key: "bottom-right", x: 0.75, y: 0.75, heading: -3 * Math.PI / 4 } // faces up-left
 ];
+
 
 // The random spread applied around a fighter's inward heading, in radians.
 const SPREAD = Math.PI / 7;

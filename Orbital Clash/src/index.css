@@ -189,9 +189,19 @@ body {
   grid-template-columns: minmax(0, 232px) minmax(0, 600px) minmax(0, 232px);
 }
 
+/* 5 and 6 fighters: each side carries up to three panels (3 x 113px + 2 x 6px gaps
+   = 351px), so both side columns are wider and the arena column takes what is left
+   and shrinks to fit. */
+.arena-layout-5,
+.arena-layout-6 {
+  grid-template-columns: minmax(0, 352px) minmax(0, 1fr) minmax(0, 352px);
+}
+
 /* The narrow column in each layout, and how the panels inside it share space. */
 .arena-layout-3 .arena-stats-skinny,
-.arena-layout-4 .arena-stats {
+.arena-layout-4 .arena-stats,
+.arena-layout-5 .arena-stats,
+.arena-layout-6 .arena-stats {
   gap: 6px;
 }
 
@@ -241,7 +251,9 @@ body {
      share - so the skinny/compact type treatment is not needed and would only
      make the HUD harder to read than it needs to be. */
   .arena-layout-3,
-  .arena-layout-4 {
+  .arena-layout-4,
+  .arena-layout-5,
+  .arena-layout-6 {
     grid-template-columns: minmax(0, 1fr);
   }
 

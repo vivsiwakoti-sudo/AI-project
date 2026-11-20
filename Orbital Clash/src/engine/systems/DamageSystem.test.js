@@ -197,3 +197,26 @@ test('melee reach accounts for the victim body size', () => {
   assert.equal(DamageSystem.checkHitbox(attacker, small, 'Melee'), false);
   assert.equal(DamageSystem.checkHitbox(attacker, huge, 'Melee'), true);
 });
+
+test('in a team battle a teammate cannot hurt a teammate but an enemy still can', () => {
+  const ally = makeFighter({ team: 0 });
+  const teammate = makeFighter({ team: 0, health: 100 });
+  const enemy = makeFighter({ team: 1, health: 100 });
+
+  assert.equal(DamageSystem.applyDamage(ally, teammate, 25, 'Melee'), false);
+  assert.equal(teammate.health, 100);
+  assert.equal(ally.totalDamageDealt, 0);
+
+  assert.equal(DamageSystem.applyDamage(ally, enemy, 25, 'Melee'), true);
+  assert.equal(enemy.health, 75);
+});
+
+test('team friendly-fire guard does not stop environmental damage to teammates', () => {
+  const ally = makeFighter({ team: 0 });
+  const teammate = makeFighter({ team: 0, health: 100 });
+
+  // Hazards and sudden death have no attacker, so they still hurt everyone.
+  assert.equal(DamageSystem.applyDamage(null, teammate, 25, 'AOE'), true);
+  assert.equal(teammate.health, 75);
+  assert.equal(ally.totalDamageDealt, 0);
+});

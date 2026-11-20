@@ -345,7 +345,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             {SORT_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
           </select>
           <button className="sort-button" onClick={() => setSortReversed(value => !value)} title="Reverse sort order">{sortAscending ? "↑ ASC" : "↓ DESC"}</button>
-          <button className="random-selection-button" onClick={handleRandomSelection} title="Select 2 to 4 random fighters">RANDOM</button>
+          <button className="random-selection-button" onClick={handleRandomSelection} title={`Select ${MIN_FIGHTERS} to ${MAX_FIGHTERS} random fighters`}>RANDOM</button>
           <button
             className="battle-history-button"
             onClick={handleOpenHistory}
@@ -647,7 +647,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
         </div>
       )}
 
-      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length}-WAY FREE FOR ALL — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize); }}>START BATTLE</button></footer>    </main>
+      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length} FIGHTERS — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize); }}>START BATTLE</button></footer>    </main>
     </>
   );
 }
