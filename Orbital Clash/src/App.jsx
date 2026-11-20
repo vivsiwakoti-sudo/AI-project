@@ -134,7 +134,7 @@ function App() {
   // so the transition wrapper can keep showing the old one for the length of its
   // exit animation. `screen` still drives it exactly as before.
   const screens = {
-    menu: <Menu intro={rosterIntro} onStart={(f, size) => {
+    menu: <Menu intro={rosterIntro} shortcutsEnabled={screen === "menu" && !showTitle && !showSettings && !pendingPrediction && !pendingTeams} onStart={(f, size) => {
       const startBattle = plan => {
         setPendingPrediction(null);
         setPendingTeams(null);

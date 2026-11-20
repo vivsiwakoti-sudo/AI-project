@@ -386,7 +386,7 @@ export const FIGHTER_CLASSES = {
     color: "#E8F6FF",
     health: 120,
     damage: 10,
-    speed: 3,
+    speed: 5,
     bodySize: 52,
     shape: "yeti",
     attackType: "Area",

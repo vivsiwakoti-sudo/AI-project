@@ -8,6 +8,7 @@ import { bestExactPlacement, clearTournamentStats, hasResumableTournament, loadT
 import { favoriteLastReplay, listFavoriteReplays, loadLastReplayMeta, removeFavoriteReplay, MAX_FAVORITE_REPLAYS } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
+import TutorialPanel from "./TutorialPanel";
 import ClassCard from "./MenuComponents/ClassCard";
 
 const RECORDS_KEY = "arena-battles-records";
@@ -79,7 +80,7 @@ function statsFromRecords(records, name) {
   };
 }
 
-export default function Menu({ onStart, onStartTournament, intro = false }) {
+export default function Menu({ onStart, onStartTournament, intro = false, shortcutsEnabled = true }) {
   const [selected, setSelected] = useState([]);
   // Captured on mount: the zoom-in plays once when the roster opens from the title.
   const [playIntro] = useState(intro);
@@ -101,6 +102,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [replayMeta, setReplayMeta] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [activeFavoriteId, setActiveFavoriteId] = useState(null);
   const [favoriteNotice, setFavoriteNotice] = useState("");
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
@@ -303,6 +305,33 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
     };
   };
 
+  const handleStartBattle = () => {
+    audioManager.playUiClick();
+    onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize);
+  };
+
+  // R and Enter only act while the roster itself is in front. App switches them
+  // off behind the title, settings and modals; the overlays below switch them off
+  // while open. Enter is consumed so a focused button does not also fire its click.
+  const overlayOpen = showHistory || showPredictions || showReplay || showFavorites || showTutorial || Boolean(info);
+  const shortcutsActive = shortcutsEnabled && !overlayOpen;
+  useEffect(() => {
+    if (!shortcutsActive) return;
+    const onKey = (event) => {
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.target?.closest?.("input, select, textarea, [contenteditable='true']")) return;
+      if (event.key === "r" || event.key === "R") {
+        event.preventDefault();
+        handleRandomSelection();
+      } else if (event.key === "Enter" && canStart) {
+        event.preventDefault();
+        handleStartBattle();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const filterOptions = ["ALL", "MELEE", "PROJECTILE", "BEAM", "AOE", "BODY", "TRAIL"];
   // Every attackType used in fighterDefinitions.js maps to one filter bucket.
   const getFilterCategory = (attackType) => {
@@ -359,7 +388,8 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
             {SORT_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
           </select>
           <button className="sort-button" onClick={() => setSortReversed(value => !value)} title="Reverse sort order">{sortAscending ? "↑ ASC" : "↓ DESC"}</button>
-          <button className="random-selection-button" onClick={handleRandomSelection} title={`Select ${MIN_FIGHTERS} to ${MAX_FIGHTERS} random fighters`}>RANDOM</button>
+          <button className="random-selection-button" onClick={handleRandomSelection} title={`Select ${MIN_FIGHTERS} to ${MAX_FIGHTERS} random fighters (R)`}>RANDOM</button>
+          <button className="tutorial-menu-button" onClick={() => { audioManager.playUiClick(); setShowTutorial(true); }} title="Learn the main game mechanics">TUTORIAL</button>
           <button
             className="battle-history-button"
             onClick={handleOpenHistory}
@@ -469,6 +499,8 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
           </div>
         </div>
       )}
+
+      {showTutorial && <TutorialPanel onClose={() => setShowTutorial(false)} />}
 
       {showHistory && (
         <div className="fighter-info-overlay" role="dialog" aria-label="Battle history">
@@ -670,7 +702,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
         </div>
       )}
 
-      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length} FIGHTERS — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={() => { audioManager.playUiClick(); onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize); }}>START BATTLE</button></footer>    </main>
+      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length} FIGHTERS — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={handleStartBattle} title="Start the battle (Enter)">START BATTLE</button></footer>    </main>
     </>
   );
 }

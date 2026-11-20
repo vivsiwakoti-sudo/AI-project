@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { MAX_GUESSERS } from "../engine/predictions";
 
@@ -13,6 +13,17 @@ export default function PredictionModal({ kind, fighters, onConfirm, onSkip, onC
   const isTournament = kind === "tournament";
   const heading = isTournament ? "TOURNAMENT WINNER" : "BATTLE WINNER";
   const counts = Array.from({ length: MAX_GUESSERS }, (_, i) => i + 1);
+
+  // S skips in both the battle and tournament prediction, whichever step is showing.
+  useEffect(() => {
+    const onKey = event => {
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key !== "s" && event.key !== "S") return;
+      onSkip();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onSkip]);
 
   const chooseCount = count => {
     audioManager.playUiClick();
@@ -70,7 +81,7 @@ export default function PredictionModal({ kind, fighters, onConfirm, onSkip, onC
         )}
 
         <div className="prediction-footer">
-          <button type="button" className="prediction-skip-button" onClick={onSkip}>SKIP PREDICTION</button>
+          <button type="button" className="prediction-skip-button" onClick={onSkip}>SKIP PREDICTION (S)</button>
           <button type="button" className="prediction-cancel-button" onClick={onCancel}>CANCEL</button>
         </div>
       </div>

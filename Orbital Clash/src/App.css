@@ -982,6 +982,7 @@
 /* Opens the saved battle log. */
 .roster-filters .battle-history-button { --btn-accent: var(--teal); }
 .roster-filters .prediction-button { --btn-accent: var(--warning); }
+.roster-filters .tutorial-menu-button { --btn-accent: var(--lavender); }
 .roster-filters .replay-menu-button { --btn-accent: var(--sky); }
 .roster-filters .replay-menu-button:disabled {
   cursor: not-allowed;
@@ -1497,6 +1498,51 @@
   font: 0.95rem/1.6 var(--font-data);
   text-align: center;
 }
+
+/* --- Tutorial (how to play, mechanics only) ---------------------------- */
+.tutorial-panel { width: min(600px, 100%); }
+
+.tutorial-body {
+  min-height: 5.5em;
+  margin: 22px 0;
+  color: var(--text-secondary);
+  font: 1rem/1.7 var(--font-data);
+}
+
+.tutorial-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tutorial-nav button {
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-h);
+  font: 700 0.7rem var(--font-ui);
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.tutorial-nav button:hover:not(:disabled) { border-color: var(--cyan); background: var(--cyan-soft); }
+.tutorial-nav button:disabled { opacity: 0.35; cursor: default; }
+.tutorial-nav .tutorial-next { border: 0; background: var(--grad-primary); color: #031018; }
+
+.tutorial-dots { display: flex; gap: 8px; }
+
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.tutorial-dot-active { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+
 
 .battle-history-list {
   list-style: none;
