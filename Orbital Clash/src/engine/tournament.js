@@ -944,11 +944,13 @@ export function saveTournamentStats(stats) {
   return stats;
 }
 
-// Wipes every tournament statistic, including each class's best finish.
+// Wipes every tournament statistic, including each class's best finish. Best
+// finishes are also derived from the saved history log, so that is cleared too.
 export function clearTournamentStats() {
   if (!storageAvailable()) return;
   try {
     window.localStorage.removeItem(TOURNAMENT_STATS_KEY);
+    window.localStorage.removeItem(TOURNAMENT_HISTORY_KEY);
   } catch {
     /* storage disabled - nothing to clear */
   }

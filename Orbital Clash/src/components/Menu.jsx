@@ -3,7 +3,7 @@ import { FIGHTER_CLASSES } from "../engine/fighterDefinitions";
 import { audioManager } from "../engine/audio/AudioManager";
 import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
-import { loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
+import { clearPredictions, loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
 import { bestExactPlacement, clearTournamentStats, hasResumableTournament, loadTournamentHistory, loadTournamentStats } from "../engine/tournament";
 import { favoriteLastReplay, listFavoriteReplays, loadLastReplayMeta, removeFavoriteReplay, MAX_FAVORITE_REPLAYS } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
@@ -95,6 +95,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [showPredictions, setShowPredictions] = useState(false);
   const [predictions, setPredictions] = useState(loadPredictions);
+  const [confirmClearPredictions, setConfirmClearPredictions] = useState(false);
   const predictionTally = useMemo(() => tallyPredictions(predictions), [predictions]);
   const [showReplay, setShowReplay] = useState(false);
   const [replayMeta, setReplayMeta] = useState(null);
@@ -108,7 +109,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const [canResumeTournament, setCanResumeTournament] = useState(hasResumableTournament);
   // Read once on mount: the menu is remounted after every tournament, so it is fresh.
   const [tournamentStats, setTournamentStats] = useState(loadTournamentStats);
-  const [tournamentHistory] = useState(loadTournamentHistory);
+  const [tournamentHistory, setTournamentHistory] = useState(loadTournamentHistory);
   // The reigning champion is the winner of the last completed tournament.
   const champion = tournamentStats.lastChampion;
 
@@ -204,6 +205,7 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
     clearTournamentStats();
     setRecords({});
     setTournamentStats(loadTournamentStats());
+    setTournamentHistory(loadTournamentHistory());
     setConfirmReset(false);
   };
 
@@ -231,7 +233,19 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
   const handleOpenPredictions = () => {
     audioManager.playUiClick();
     setPredictions(loadPredictions());
+    setConfirmClearPredictions(false);
     setShowPredictions(true);
+  };
+
+  const handleClearPredictions = () => {
+    audioManager.playUiClick();
+    if (!confirmClearPredictions) {
+      setConfirmClearPredictions(true);
+      return;
+    }
+    clearPredictions();
+    setPredictions(loadPredictions());
+    setConfirmClearPredictions(false);
   };
 
   const handleOpenReplay = () => {
@@ -643,6 +657,15 @@ export default function Menu({ onStart, onStartTournament, intro = false }) {
                 ))}
               </ol>
             )}
+
+            <button
+              className={`battle-history-clear ${confirmClearPredictions ? "battle-history-clear-confirm" : ""}`}
+              onClick={handleClearPredictions}
+              onBlur={() => setConfirmClearPredictions(false)}
+              disabled={predictions.length === 0}
+            >
+              {confirmClearPredictions ? "CONFIRM CLEAR" : "CLEAR PREDICTIONS"}
+            </button>
           </div>
         </div>
       )}

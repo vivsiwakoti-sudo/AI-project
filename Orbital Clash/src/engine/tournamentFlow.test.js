@@ -37,11 +37,13 @@ const {
   bestExactPlacement,
   bestRoundForPlacement,
   buildTournamentBracket,
+  clearTournamentStats,
   createTournamentBout,
   hasResumableTournament,
   tournamentRankings,
   tournamentRoster,
   loadActiveTournament,
+  loadTournamentHistory,
   loadTournamentStats,
   matchDetails,
   nextPendingMatch,
@@ -214,6 +216,14 @@ test('best finish comes from saved standings, with stored placements only as a f
   assert.equal(bestExactPlacement('Fireball', history, 17), 19);
   assert.equal(bestExactPlacement('Yeti', history, 17), 17);
   assert.equal(bestExactPlacement('Yeti', [], null), null);
+});
+
+test('resetting tournament stats also drops the history that best finishes are read from', () => {
+  store.set(TOURNAMENT_HISTORY_KEY, JSON.stringify([{ champion: 'Ghost', runnerUp: 'Fireball', standings: [{ name: 'Fireball', placement: 2, damageDealt: 0, survivalTime: 0, damageTaken: 0 }] }]));
+  assert.equal(bestExactPlacement('Fireball', loadTournamentHistory(), null), 2);
+  clearTournamentStats();
+  assert.deepEqual(loadTournamentHistory(), []);
+  assert.equal(bestExactPlacement('Fireball', loadTournamentHistory(), null), null);
 });
 
 test('all 32 classes enter the Round of 32 with no byes', () => {

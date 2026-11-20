@@ -66,7 +66,7 @@ test('a released victim leaves at 3.5x speed and decays back to normal', async (
   assert.notEqual(speedAtRelease, null, 'the victim is released');
   assert.ok(Math.abs(target.vx - speedAtRelease * 3.5) < 1e-9, 'the release is a 250% increase (3.5x)');
 
-  EffectSystem.updateEffects(target, 2.6);
+  EffectSystem.updateEffects(target, 4.1);
   assert.ok(Math.abs(target.vx - speedAtRelease) < 1e-9, 'the boost decays back once MomentumBoost ends');
 });
 

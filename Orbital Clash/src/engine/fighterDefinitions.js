@@ -95,7 +95,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Hook",
     cooldown: 8,
     description: "Latches and spins, manipulates momentum.",
-    description2: "Spins a 100px hook for 3 seconds. Catching the opponent deals 5 damage, whips them around for 2 seconds, then releases them at 3.5x speed (a 250% increase) for 2.5 seconds - each wall they slam into hurts for extra damage.",
+    description2: "Spins a 100px hook for 3 seconds. Catching the opponent deals 5 damage, whips them around for 2 seconds, then releases them at 3.5x speed (a 250% increase) for 4 seconds - each wall they slam into hurts for extra damage.",
     keywords: ["hook", "grab", "momentum", "wall"],
   },
   "Mine Layer": {

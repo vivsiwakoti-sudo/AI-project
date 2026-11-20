@@ -88,7 +88,7 @@ export class Grappler extends FighterBase {
                     // Add MomentumBoost
                     EffectSystem.addEffect(hooked, {
                         name: "MomentumBoost",
-                        duration: 2.5,
+                        duration: 4,
                         onEnd: (fighter) => {
                             if (fighter.vx) fighter.vx /= RELEASE_SPEED_MULTIPLIER;
                             if (fighter.vy) fighter.vy /= RELEASE_SPEED_MULTIPLIER;
