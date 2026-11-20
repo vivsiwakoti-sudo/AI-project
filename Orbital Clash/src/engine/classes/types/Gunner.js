@@ -6,10 +6,10 @@ import { audioManager } from "../../audio/AudioManager.js";
 
 // One burst per shot, picked at random. `accuracy` is the aim spread in radians.
 const GUNNER_PATTERNS = [
-    { bullets: 1, damage: 15, cooldown: 8, accuracy: 0.05 },
-    { bullets: 10, damage: 10, cooldown: 6, accuracy: 0.5 },
-    { bullets: 3, damage: 7, cooldown: 4, accuracy: 0.1 },
-    { bullets: 4, damage: 5, cooldown: 2, accuracy: 0.3 },
+    { bullets: 1, damage: 15, cooldown: 8, accuracy: 0.075 },
+    { bullets: 10, damage: 10, cooldown: 6, accuracy: 0.75 },
+    { bullets: 3, damage: 7, cooldown: 4, accuracy: 0.15 },
+    { bullets: 4, damage: 5, cooldown: 2, accuracy: 0.45 },
 ];
 
 export class Gunner extends FighterBase {
