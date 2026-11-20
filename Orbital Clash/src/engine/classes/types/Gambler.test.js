@@ -111,6 +111,16 @@ test('rolling the stun face sets the Gambler cooldown to half', () => {
   assert.equal(gambler.cooldownTimer, 2.5);
 });
 
+test('rolling the stun face never lengthens a cooldown that is already shorter than half', () => {
+  const gambler = makeGambler();
+  const victim = makeVictim(200);
+  gambler.cooldownTimer = 1;
+
+  gambler.applyFace('stun', victim);
+
+  assert.equal(gambler.cooldownTimer, 1);
+});
+
 test('a die roll picks one of eight faces by equal chance', () => {
   const gambler = makeGambler();
   const victim = makeVictim(200, { health: 500 });

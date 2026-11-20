@@ -1,5 +1,7 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { renderMotif } from "../../engine/MotifSystem";
+import { loadLastReplayFrames } from "../../engine/replayStore";
+import { BattleReplay } from "../ReplayPlayer";
 
 // A standalone motif canvas. ClassCard renders its own inline canvas, but the
 // tournament screens (bracket, live arena, champion screen) need the same motif
@@ -31,26 +33,24 @@ export function FighterCanvas({ fighter, size = 50, className = "" }) {
   return <canvas ref={canvasRef} width={size} height={size} className={className} aria-hidden="true" />;
 }
 
-// The overlay behind a selected card. It is decorative and sits at 25% opacity
-// (see .fighter-card-last-battle), so it adds context without hiding the stats.
-function LastBattle({ name, battle }) {
-  if (!battle) {
-    return <div className="fighter-card-last-battle"><small>LAST BATTLE</small><b>NO BATTLES YET</b></div>;
-  }
-  const context = battle.kind === "tournament" ? `TOURNAMENT · ${battle.round}` : "BATTLE";
-  const seconds = Math.round(battle.durationSeconds);
-  const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-  const matchup = battle.rivals.length > 0 ? `${name} vs ${battle.rivals.join(", ")}` : name;
-  return (
-    <div className="fighter-card-last-battle">
-      <small>LAST BATTLE · {context} · {duration}</small>
-      <b>{matchup}</b>
-      {battle.allies.length > 0 && <small>with {battle.allies.join(", ")}</small>}
-    </div>
-  );
+// The background of a selected card: the saved footage of that fighter's latest
+// battle, looping at 25% opacity (see .fighter-card-clip) so the stats stay readable.
+function LastFightClip() {
+  const [frames, setFrames] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLastReplayFrames().then(loaded => {
+      if (!cancelled) setFrames(loaded);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (frames.length === 0) return null;
+  return <BattleReplay frames={frames} playing loop className="fighter-card-clip" />;
 }
 
-export default function ClassCard({ fighter, isSelected, isChampion = false, onClick, onContextMenu, stats, lastBattle = null }) {
+export default function ClassCard({ fighter, isSelected, isChampion = false, onClick, onContextMenu, stats, lastClip = null }) {
   const canvasRef = useRef(null);
   // Defensive by design: the roster card is rendered from data that can come from
   // storage, so a missing entry must render as a plain card rather than throw and
@@ -77,7 +77,7 @@ export default function ClassCard({ fighter, isSelected, isChampion = false, onC
       className={`fighter-card ${isSelected ? "fighter-card-selected" : ""} ${isChampion ? "fighter-card-champion" : ""}`}
     >
       {isChampion && <span className="champion-badge" title="Winner of the last tournament">👑 CHAMPION</span>}
-      {isSelected && <LastBattle name={fighter.name} battle={lastBattle} />}
+      {isSelected && lastClip && <LastFightClip />}
       <canvas ref={canvasRef} width={50} height={50} />
       <div className="fighter-card-copy"><h3>{fighter.name}</h3><strong>{fighter.attackType}</strong></div>
       <div className="fighter-card-stats">

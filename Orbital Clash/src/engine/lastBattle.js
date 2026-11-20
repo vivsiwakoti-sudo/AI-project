@@ -11,6 +11,14 @@ export function lastBattleFor(name, battles = [], tournaments = []) {
   return fromTournament.at > fromBattle.at ? fromTournament : fromBattle;
 }
 
+// The saved clip is the most recent regular battle's footage. It belongs to a
+// fighter only when they were in that battle and it is still their latest bout;
+// a later tournament match has no clip, so nothing is shown for it.
+export function clipForFighter(name, replayMeta, battles = [], tournaments = []) {
+  if (!replayMeta?.fighters?.some(f => f.name === name)) return null;
+  return lastBattleFor(name, battles, tournaments)?.kind === "battle" ? replayMeta : null;
+}
+
 function latestBattle(name, battles) {
   for (const entry of battles) {
     const self = entry.participants.find(p => p.name === name);

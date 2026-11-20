@@ -1054,31 +1054,23 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--class-accent) 75%, transparent), 0 0 32px color-mix(in srgb, var(--class-accent) 65%, transparent), 0 0 64px color-mix(in srgb, var(--class-accent) 30%, transparent), inset 0 0 26px color-mix(in srgb, var(--class-accent) 22%, transparent) !important;
 }
 
-/* Last-battle overlay on a selected card. The card is its own stacking context
-   (isolation), so z-index -1 paints it above the card background and below the
-   stats; opacity keeps the stats readable over it. */
-.fighter-card-last-battle {
+/* The selected card's background clip. The card is its own stacking context
+   (isolation), so z-index -1 paints the canvas above the card background and below
+   the stats; opacity keeps the stats readable over it. */
+.fighter-card > canvas.fighter-card-clip {
   position: absolute;
   inset: 0;
   z-index: -1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  padding: 18px;
-  text-align: center;
+  width: 100%;
+  height: 100%;
+  grid-row: auto;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  box-shadow: none;
+  object-fit: cover;
   opacity: 0.25;
   pointer-events: none;
-  overflow: hidden;
-}
-
-.fighter-card-last-battle small {
-  letter-spacing: 0.12em;
-}
-
-.fighter-card-last-battle b {
-  font-size: 1.05em;
 }
 
 /* The reigning champion (winner of the last tournament) gets a bright gold

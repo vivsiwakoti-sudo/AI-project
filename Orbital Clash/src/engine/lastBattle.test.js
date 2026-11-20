@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lastBattleFor } from './lastBattle.js';
+import { lastBattleFor, clipForFighter } from './lastBattle.js';
 
 const battle = (timestamp, participants, extra = {}) => ({
   timestamp,
@@ -80,5 +80,29 @@ test('a team battle splits teammates from opponents', () => {
   const last = lastBattleFor('Ghost', battles, []);
   assert.deepEqual(last.allies, ['Gunner']);
   assert.deepEqual(last.rivals, ['Vanguard']);
+});
+
+test('shows the saved clip only for fighters in that latest battle', () => {
+  const replayMeta = { savedAt: 1, fighters: [{ name: 'Gunner' }, { name: 'Ghost' }] };
+  const battles = [battle(100, [
+    { name: 'Gunner', won: true, placement: 1 },
+    { name: 'Ghost', won: false, placement: 2 }
+  ])];
+  assert.equal(clipForFighter('Gunner', replayMeta, battles, []), replayMeta);
+  assert.equal(clipForFighter('Ninja', replayMeta, battles, []), null);
+});
+
+test('hides the clip once a fighter has a newer tournament match', () => {
+  const replayMeta = { savedAt: 1, fighters: [{ name: 'Gunner' }, { name: 'Ghost' }] };
+  const battles = [battle(100, [
+    { name: 'Gunner', won: true, placement: 1 },
+    { name: 'Ghost', won: false, placement: 2 }
+  ])];
+  const tournaments = [{ completedAt: 500, matches: [match('m1', 'final', 'Gunner', 'Ninja', 'Gunner')] }];
+  assert.equal(clipForFighter('Gunner', replayMeta, battles, tournaments), null);
+});
+
+test('shows no clip when none is saved', () => {
+  assert.equal(clipForFighter('Gunner', null, [], []), null);
 });
 

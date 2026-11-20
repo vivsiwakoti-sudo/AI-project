@@ -7,7 +7,7 @@ import { loadFavoriteReplayFrames, loadLastReplayFrames } from "../engine/replay
 // would cost hundreds of megabytes.
 const LOOKAHEAD = 20;
 
-function BattleReplay({ frames, playing, onEnded }) {
+export function BattleReplay({ frames, playing, onEnded, loop = false, className = "battle-replay-canvas" }) {
   const canvasRef = useRef(null);
   const onEndedRef = useRef(onEnded);
 
@@ -46,11 +46,14 @@ function BattleReplay({ frames, playing, onEnded }) {
         }
       }
     };
+    // A released frame is also forgotten as requested, so a loop back to the start
+    // decodes it again instead of waiting forever.
     const release = index => {
       for (const [i, bitmap] of ready) {
         if (i < index - 1) {
           bitmap.close();
           ready.delete(i);
+          requested.delete(i);
         }
       }
     };
@@ -88,9 +91,15 @@ function BattleReplay({ frames, playing, onEnded }) {
         drawAt(index);
         release(index);
         if (elapsed >= duration) {
+          if (loop) {
+            playbackStart = now;
+            index = 0;
+            frameRequest = requestAnimationFrame(tick);
+            return;
+          }
           request(last);
           drawAt(last);
-          onEndedRef.current();
+          onEndedRef.current?.();
           return;
         }
         frameRequest = requestAnimationFrame(tick);
@@ -104,9 +113,9 @@ function BattleReplay({ frames, playing, onEnded }) {
       ready.forEach(bitmap => bitmap.close());
       ready.clear();
     };
-  }, [frames, playing]);
+  }, [frames, playing, loop]);
 
-  return <canvas ref={canvasRef} className="battle-replay-canvas" width={800} height={800} aria-label="Replay of the last battle" />;
+  return <canvas ref={canvasRef} className={className} width={800} height={800} aria-label="Replay of the last battle" />;
 }
 
 // Loads a stored replay and plays it once on open; the button replays it. With no

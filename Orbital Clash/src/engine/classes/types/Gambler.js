@@ -162,7 +162,7 @@ export class Gambler extends FighterBase {
             onEnd: (fighter) => { fighter.isStuck = false; }
         });
         victim.isStuck = true;
-        this.cooldownTimer = this.cooldown / 2;
+        this.cooldownTimer = Math.min(this.cooldownTimer, this.cooldown / 2);
     }
 
     // Same burn as the Fireball: 1 damage every second for 5 seconds, capped at 5 stacks.
