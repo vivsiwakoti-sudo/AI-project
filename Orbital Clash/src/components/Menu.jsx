@@ -10,6 +10,7 @@ import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
 import TutorialPanel from "./TutorialPanel";
 import ClassCard from "./MenuComponents/ClassCard";
+import { lastBattleFor } from "../engine/lastBattle";
 
 const RECORDS_KEY = "arena-battles-records";
 
@@ -448,6 +449,7 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
               key={name}
               fighter={fighter}
               stats={stats}
+              lastBattle={lastBattleFor(name, history, tournamentHistory)}
               isSelected={selected.includes(name)}
               isChampion={name === champion}
               onClick={() => toggleSelect(name)}

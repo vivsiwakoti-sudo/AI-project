@@ -28,6 +28,44 @@ const results = [
   { name: 'Ghost', color: '#ffffff', placement: 2, totalKills: 0, battleDuration: 40 }
 ];
 
+test('a team battle marks every fighter on the winning side as won', () => {
+  installStorage();
+  clearHistory();
+  recordBattle([
+    { name: 'Gunner', color: '#ff0000', placement: 1, team: 0, totalKills: 1, battleDuration: 30 },
+    { name: 'Ghost', color: '#ffffff', placement: 2, team: 0, totalKills: 0, battleDuration: 30 },
+    { name: 'Vanguard', color: '#00ff00', placement: 3, team: 1, totalKills: 0, battleDuration: 30 }
+  ]);
+  const [entry] = loadHistory();
+  assert.deepEqual(entry.participants.map(p => [p.name, p.won]), [
+    ['Gunner', true],
+    ['Ghost', true],
+    ['Vanguard', false]
+  ]);
+});
+
+test('an aborted battle marks nobody as won', () => {
+  installStorage();
+  clearHistory();
+  recordBattle(results, { aborted: true });
+  const [entry] = loadHistory();
+  assert.ok(entry.participants.every(p => p.won === false));
+});
+
+test('entries recorded before the won flag fall back to the winner name', () => {
+  const store = installStorage();
+  store.set(HISTORY_KEY, JSON.stringify([{
+    timestamp: 1,
+    winner: 'Gunner',
+    aborted: false,
+    durationSeconds: 40,
+    participants: [{ name: 'Gunner', placement: 1 }, { name: 'Ghost', placement: 2 }]
+  }]));
+  const [entry] = loadHistory();
+  assert.deepEqual(entry.participants.map(p => p.won), [true, false]);
+});
+
+
 test('the battle count keeps rising past the capped log length', () => {
   installStorage();
   for (let i = 0; i < MAX_HISTORY_ENTRIES + 5; i++) recordBattle(results);

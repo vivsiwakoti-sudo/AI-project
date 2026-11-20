@@ -1,3 +1,5 @@
+import { onWinningSide } from "./teamModes.js";
+
 // Persistent battle history.
 //
 // Every completed battle is appended here as one compact entry, so the roster
@@ -43,6 +45,7 @@ function safeParse(raw) {
 // rebuilt with sane defaults.
 function normalizeEntry(entry) {
   if (!entry || typeof entry !== "object") return null;
+  const winner = typeof entry.winner === "string" ? entry.winner : null;
   const participants = Array.isArray(entry.participants)
     ? entry.participants
       .filter(p => p && typeof p.name === "string")
@@ -50,13 +53,16 @@ function normalizeEntry(entry) {
         name: p.name,
         color: typeof p.color === "string" ? p.color : "#00f2ff",
         placement: Number.isFinite(p.placement) ? p.placement : null,
-        kills: Number.isFinite(p.kills) ? Math.max(0, Math.floor(p.kills)) : 0
+        kills: Number.isFinite(p.kills) ? Math.max(0, Math.floor(p.kills)) : 0,
+        // Entries written before `won` existed fall back to the winner's name,
+        // which is only wrong for teammates of a team-battle winner.
+        won: typeof p.won === "boolean" ? p.won : p.name === winner
       }))
     : [];
   if (participants.length === 0) return null;
   return {
     timestamp: Number.isFinite(entry.timestamp) ? entry.timestamp : null,
-    winner: typeof entry.winner === "string" ? entry.winner : null,
+    winner,
     // An aborted battle is recorded as a no-contest so the log is a faithful
     // history of every battle that was played, not only the decisive ones.
     aborted: Boolean(entry.aborted),
@@ -116,11 +122,14 @@ export function recordBattle(results, { aborted = false } = {}) {
   const list = Array.isArray(results) ? results : [];
   if (list.length === 0) return loadHistory();
 
+  const winnerFighter = aborted ? null : list.find(f => f?.placement === 1) ?? list[0] ?? null;
   const participants = list.map(f => ({
     name: f?.name ?? "Unknown",
     color: typeof f?.color === "string" ? f.color : "#00f2ff",
     placement: Number.isFinite(f?.placement) ? f.placement : null,
-    kills: Math.max(0, Math.floor(f?.totalKills || 0))
+    kills: Math.max(0, Math.floor(f?.totalKills || 0)),
+    // A team battle counts everyone on the winning side as a winner.
+    won: winnerFighter != null && f != null && onWinningSide(f, winnerFighter)
   }));
 
   const winner = aborted
