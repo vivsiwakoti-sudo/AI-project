@@ -1,3 +1,5 @@
+import { teamColor } from "../engine/systems/teams.js";
+
 function formatNumber(value) {
   if (!Number.isFinite(value)) return "--";
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -44,7 +46,7 @@ function getSpecialRows(fighter) {
   }
 }
 
-export default function StatsPanel({ fighter, index, battleTime, suddenDeath }) {
+export default function StatsPanel({ fighter, index, battleTime, suddenDeath, allies = [] }) {
   if (!fighter) return null;
 
   // A fighter is out once it is dead or its HP is exhausted. With four fighters
@@ -66,7 +68,7 @@ export default function StatsPanel({ fighter, index, battleTime, suddenDeath }) 
   const iconText = fighter.name.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
 
   return (
-    <section className={`hud-panel ${isEliminated ? "hud-panel-defeated" : healthPercent <= 25 ? "hud-panel-critical" : ""}`} style={{ "--fighter-accent": fighter.color }}>
+    <section className={`hud-panel ${isEliminated ? "hud-panel-defeated" : healthPercent <= 25 ? "hud-panel-critical" : ""} ${fighter.team != null ? "hud-panel-team" : ""}`} style={{ "--fighter-accent": fighter.color, "--team-color": fighter.team != null ? teamColor(fighter.team) : undefined }}>
       <header className="hud-header">
         <div className="hud-kicker">FIGHTER {String(index + 1).padStart(2, "0")}</div>
         <div className={`hud-battle-time ${suddenDeath ? "hud-battle-time-danger" : ""}`}><span>{suddenDeath ? "SUDDEN DEATH" : "BATTLE TIME"}</span><strong>{battleTime}</strong></div>
@@ -74,6 +76,12 @@ export default function StatsPanel({ fighter, index, battleTime, suddenDeath }) 
           <div className="hud-icon" aria-hidden="true">{iconText}</div>
           <div><h2>{fighter.name}</h2><div className="hud-attack-type">{isEliminated ? "ELIMINATED" : fighter.attackType}</div></div>
         </div>
+        {fighter.team != null && (
+          <div className="hud-team">
+            <span className="hud-team-tag">TEAM {fighter.team + 1}</span>
+            <span className="hud-team-allies">{allies.length ? `WITH ${allies.join(" · ")}` : "NO TEAMMATES"}</span>
+          </div>
+        )}
       </header>
 
       <div className="hud-section hud-health-section">

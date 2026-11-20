@@ -2214,6 +2214,31 @@
 .hud-panel-defeated .hud-health-section { animation: none; }
 .hud-panel-defeated .hud-icon { animation: none; }
 
+/* Team membership: the left stripe takes the side's colour, and the tag and
+   teammate line sit under the fighter header. */
+.hud-panel-team { border-left-color: var(--team-color); }
+.hud-team {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 7px 9px;
+  border: 1px dashed color-mix(in srgb, var(--team-color) 60%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--team-color) 10%, transparent);
+}
+.hud-team-tag {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--team-color);
+  color: #050810;
+  font: 800 0.62rem var(--font-mono);
+  letter-spacing: 0.12em;
+}
+.hud-team-allies { color: var(--text-secondary); font: 0.62rem var(--font-mono); letter-spacing: 0.05em; overflow-wrap: anywhere; }
+
+
 /* --- Responsive ------------------------------------------------------- */
 @media (max-width: 900px) {
   .roster-screen { padding: 28px 16px 118px; }

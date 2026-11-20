@@ -15,7 +15,7 @@ import { DamageSystem } from "./DamageSystem.js";
 import { outlineColorFor, OUTLINE_WIDTH } from "../classes/FighterBase.js";
 import { squashTransform } from "./Fx.js";
 import { traceShape } from "./Shapes.js";
-import { teamOf, isTeammate } from "./teams.js";
+import { teamColor, teamOf, isTeammate } from "./teams.js";
 
 // --- Targeting helpers (moved verbatim from Arena.jsx) -----------------------
 
@@ -397,6 +397,41 @@ export function drawFighterOutlines(ctx, fighter) {
   ctx.fill();
   ctx.restore();
 }
+
+// Marks a team member on the arena: a dashed ring in the team colour plus a
+// "T1"-style tag above the body. Free-for-all fighters have no team and are skipped.
+export function drawTeamMarker(ctx, fighter) {
+  if (!fighter || fighter.team == null || fighter.isDead || fighter.health <= 0) return;
+
+  const color = teamColor(fighter.team);
+  const ringRadius = fighter.radius + 11;
+  ctx.save();
+  ctx.translate(fighter.x, fighter.y);
+  ctx.globalAlpha = fighter.isUntargetable ? 0.35 : 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const label = `T${fighter.team + 1}`;
+  const tagY = -(ringRadius + 8);
+  ctx.font = "bold 10px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const tagWidth = ctx.measureText(label).width + 8;
+  ctx.fillStyle = "rgba(5, 8, 16, 0.85)";
+  ctx.fillRect(-tagWidth / 2, tagY - 7, tagWidth, 14);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-tagWidth / 2, tagY - 7, tagWidth, 14);
+  ctx.fillStyle = color;
+  ctx.fillText(label, 0, tagY);
+  ctx.restore();
+}
+
 
 // Caller must clip to the playable area first.
 export function drawGridLines(ctx, arenaSize) {

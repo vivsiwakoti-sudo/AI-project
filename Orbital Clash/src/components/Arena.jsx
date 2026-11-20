@@ -10,7 +10,16 @@ import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import { REPLAY_SECONDS } from "../engine/replayStore";
-import { countAliveTeams, decayScreenShake, drawFighterOutlines, drawGridLines, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
+import { countAliveTeams, decayScreenShake, drawFighterOutlines, drawGridLines, drawTeamMarker, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
+
+// Names of the other members of a fighter's team, marking the eliminated ones.
+// Empty in free-for-all, where nobody has a team.
+function alliesOf(fighters, fighter) {
+  if (fighter.team == null) return [];
+  return fighters
+    .filter(other => other !== fighter && other.team === fighter.team)
+    .map(other => (other.isDead || other.health <= 0 ? `${other.name} ✕` : other.name));
+}
 
 // Distributes the fighter HUD panels across the two sides of the arena.
 //
@@ -659,6 +668,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
           console.error(`Draw failed for ${f.name}`, error);
         }
         drawFighterOutlines(ctx, f);
+        drawTeamMarker(ctx, f);
         ctx.restore();
       });
       gameState.current.assembly.draw(ctx);
@@ -746,7 +756,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
         <div className={`arena-layout arena-layout-${sidePlan.count}`} style={{ display: "flex", justifyContent: "center", alignItems: "center", color: "white" }}>
           <div className={`arena-stats arena-stats-left ${sidePlan.leftSkinny ? "arena-stats-skinny" : ""}`}>
             {sidePlan.left.map(i => (
-              <StatsPanel key={i} fighter={fighterState.fighters[i]} index={i} battleTime={`${Math.floor(timer / 60)}:${String(timer % 60).padStart(2, "0")}`} suddenDeath={timer === 0} />
+              <StatsPanel key={i} fighter={fighterState.fighters[i]} allies={alliesOf(fighterState.fighters, fighterState.fighters[i])} index={i} battleTime={`${Math.floor(timer / 60)}:${String(timer % 60).padStart(2, "0")}`} suddenDeath={timer === 0} />
             ))}
           </div>
           <div className="arena-scroll" style={{ position: "relative" }}>
@@ -765,7 +775,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
             </div>
           <div className={`arena-stats arena-stats-right ${sidePlan.rightSkinny ? "arena-stats-skinny" : ""}`}>
             {sidePlan.right.map(i => (
-              <StatsPanel key={i} fighter={fighterState.fighters[i]} index={i} battleTime={`${Math.floor(timer / 60)}:${String(timer % 60).padStart(2, "0")}`} suddenDeath={timer === 0} />
+              <StatsPanel key={i} fighter={fighterState.fighters[i]} allies={alliesOf(fighterState.fighters, fighterState.fighters[i])} index={i} battleTime={`${Math.floor(timer / 60)}:${String(timer % 60).padStart(2, "0")}`} suddenDeath={timer === 0} />
             ))}
           </div>
         </div>
