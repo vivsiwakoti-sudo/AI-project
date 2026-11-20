@@ -26,7 +26,7 @@ test('reports a tournament match with its round label and rival', () => {
   assert.deepEqual(lastBattleFor('Gunner', [], tournaments), {
     kind: 'tournament',
     at: 500,
-    outcome: 'win',
+    allies: [],
     rivals: ['Ghost'],
     round: 'Semifinals',
     durationSeconds: 45
@@ -43,7 +43,6 @@ test('uses the latest match a fighter played within a tournament', () => {
   }];
   const last = lastBattleFor('Gunner', [], tournaments);
   assert.equal(last.round, 'Grand Final');
-  assert.equal(last.outcome, 'loss');
   assert.deepEqual(last.rivals, ['Vanguard']);
 });
 
@@ -55,11 +54,10 @@ test('prefers the newer of a regular battle and a tournament match', () => {
   const tournaments = [{ completedAt: 500, matches: [match('m1', 'final', 'Gunner', 'Ghost', 'Gunner')] }];
   const last = lastBattleFor('Gunner', battles, tournaments);
   assert.equal(last.kind, 'battle');
-  assert.equal(last.outcome, 'loss');
   assert.deepEqual(last.rivals, ['Ghost']);
 });
 
-test('an aborted battle is reported as a no contest with no rivals', () => {
+test('an aborted battle lists every other fighter as an opponent', () => {
   const battles = [battle(100, [
     { name: 'Gunner', won: false, placement: null },
     { name: 'Ghost', won: false, placement: null }
@@ -67,20 +65,20 @@ test('an aborted battle is reported as a no contest with no rivals', () => {
   assert.deepEqual(lastBattleFor('Gunner', battles, []), {
     kind: 'battle',
     at: 100,
-    outcome: 'no-contest',
-    rivals: [],
-    placement: null,
+    allies: [],
+    rivals: ['Ghost'],
     durationSeconds: 60
   });
 });
 
-test('a team battle lists only the other side as rivals', () => {
+test('a team battle splits teammates from opponents', () => {
   const battles = [battle(100, [
     { name: 'Gunner', won: true, placement: 1 },
     { name: 'Ghost', won: true, placement: 2 },
     { name: 'Vanguard', won: false, placement: 3 }
   ])];
   const last = lastBattleFor('Ghost', battles, []);
-  assert.equal(last.outcome, 'win');
+  assert.deepEqual(last.allies, ['Gunner']);
   assert.deepEqual(last.rivals, ['Vanguard']);
 });
+

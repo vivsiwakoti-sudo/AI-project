@@ -15,14 +15,13 @@ function latestBattle(name, battles) {
   for (const entry of battles) {
     const self = entry.participants.find(p => p.name === name);
     if (!self) continue;
+    // A no-contest has no sides, so every other fighter is an opponent.
+    const others = entry.participants.filter(p => p !== self);
     return {
       kind: "battle",
       at: entry.timestamp ?? 0,
-      outcome: entry.aborted ? "no-contest" : self.won ? "win" : "loss",
-      // Everyone on the other side of the result. In a team battle this skips
-      // teammates; in a free-for-all a loss is answered by the winner alone.
-      rivals: entry.aborted ? [] : entry.participants.filter(p => p.won !== self.won).map(p => p.name),
-      placement: self.placement,
+      allies: entry.aborted ? [] : others.filter(p => p.won === self.won).map(p => p.name),
+      rivals: entry.aborted ? others.map(p => p.name) : others.filter(p => p.won !== self.won).map(p => p.name),
       durationSeconds: entry.durationSeconds
     };
   }
@@ -39,7 +38,7 @@ function latestTournamentMatch(name, tournaments) {
     return {
       kind: "tournament",
       at: tournament.completedAt ?? 0,
-      outcome: match.winner === name ? "win" : "loss",
+      allies: [],
       rivals: [match.first === name ? match.second : match.first],
       round: ROUND_LABELS[match.round] ?? match.round,
       durationSeconds: match.durationSeconds

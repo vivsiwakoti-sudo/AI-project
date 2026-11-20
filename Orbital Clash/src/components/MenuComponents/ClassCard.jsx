@@ -33,19 +33,19 @@ export function FighterCanvas({ fighter, size = 50, className = "" }) {
 
 // The overlay behind a selected card. It is decorative and sits at 25% opacity
 // (see .fighter-card-last-battle), so it adds context without hiding the stats.
-function LastBattle({ battle }) {
+function LastBattle({ name, battle }) {
   if (!battle) {
     return <div className="fighter-card-last-battle"><small>LAST BATTLE</small><b>NO BATTLES YET</b></div>;
   }
-  const verdict = battle.outcome === "no-contest" ? "NO CONTEST" : battle.outcome === "win" ? "WON" : "LOST";
   const context = battle.kind === "tournament" ? `TOURNAMENT · ${battle.round}` : "BATTLE";
   const seconds = Math.round(battle.durationSeconds);
   const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  const matchup = battle.rivals.length > 0 ? `${name} vs ${battle.rivals.join(", ")}` : name;
   return (
     <div className="fighter-card-last-battle">
-      <small>LAST BATTLE · {context}</small>
-      <b>{verdict}{battle.rivals.length > 0 && ` vs ${battle.rivals.join(", ")}`}</b>
-      <small>{duration}</small>
+      <small>LAST BATTLE · {context} · {duration}</small>
+      <b>{matchup}</b>
+      {battle.allies.length > 0 && <small>with {battle.allies.join(", ")}</small>}
     </div>
   );
 }
@@ -77,7 +77,7 @@ export default function ClassCard({ fighter, isSelected, isChampion = false, onC
       className={`fighter-card ${isSelected ? "fighter-card-selected" : ""} ${isChampion ? "fighter-card-champion" : ""}`}
     >
       {isChampion && <span className="champion-badge" title="Winner of the last tournament">👑 CHAMPION</span>}
-      {isSelected && <LastBattle battle={lastBattle} />}
+      {isSelected && <LastBattle name={fighter.name} battle={lastBattle} />}
       <canvas ref={canvasRef} width={50} height={50} />
       <div className="fighter-card-copy"><h3>{fighter.name}</h3><strong>{fighter.attackType}</strong></div>
       <div className="fighter-card-stats">
