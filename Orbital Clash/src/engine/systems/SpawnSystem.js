@@ -27,14 +27,17 @@ const SEATS = [
 ];
 
 
-// The random spread applied around a fighter's inward heading, in radians.
-const SPREAD = Math.PI / 7;
+// The launch offset from a fighter's inward heading is a random 1-45 degrees, on
+// either side of the heading, in radians.
+const MIN_LAUNCH_OFFSET = Math.PI / 180;
+const MAX_LAUNCH_OFFSET = Math.PI / 4;
 
-// Returns a launch direction for one fighter: an inward heading fanned open by a
-// random amount unique to that fighter.
+// Returns a launch direction for one fighter: an inward heading turned by a
+// random 1-45 degree offset unique to that fighter.
 export function launchDirectionFor(index) {
   const seat = SEATS[index % SEATS.length];
-  const jitter = (Math.random() - 0.5) * 2 * SPREAD;
+  const offset = MIN_LAUNCH_OFFSET + Math.random() * (MAX_LAUNCH_OFFSET - MIN_LAUNCH_OFFSET);
+  const jitter = Math.random() < 0.5 ? -offset : offset;
   const angle = seat.heading + jitter;
   return { vx: Math.cos(angle), vy: Math.sin(angle), angle };
 }
