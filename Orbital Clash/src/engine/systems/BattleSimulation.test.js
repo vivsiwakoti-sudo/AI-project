@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { countAliveTeams, drawBattleFrame, drawFighterOutlines, rankBySurvival } from './BattleSimulation.js';
+import { countAliveTeams, drawBattleFrame, drawFighterOutlines, rankBySurvival, settlePlacements } from './BattleSimulation.js';
 import { OUTLINE_WIDTH } from '../classes/FighterBase.js';
 
 function makeCanvas() {
@@ -44,6 +44,23 @@ test('a complete tie on time and damage keeps spawn order', () => {
   const second = { name: 'Second', survivalTime: 5, totalDamageDealt: 3 };
   assert.deepEqual(rankBySurvival([first, second]).map(f => f.name), ['First', 'Second']);
   assert.deepEqual(rankBySurvival([second, first]).map(f => f.name), ['Second', 'First']);
+});
+
+test('a double knockout with no survivor is a draw, so a dead fighter is never the winner', () => {
+  const summoner = { name: 'Summoner', health: 0, isDead: true, survivalTime: 35, totalDamageDealt: 10 };
+  const opponent = { name: 'Opponent', health: 0, isDead: true, survivalTime: 35, totalDamageDealt: 80 };
+  const early = { name: 'Early', health: 0, isDead: true, survivalTime: 12, totalDamageDealt: 99 };
+  settlePlacements([summoner, opponent, early]);
+  assert.deepEqual([summoner.placement, opponent.placement, early.placement], [1, 1, 3]);
+  assert.deepEqual([summoner.drawn, opponent.drawn, early.drawn], [true, true, false]);
+});
+
+test('a battle with a survivor has one winner and no draw', () => {
+  const winner = { name: 'Winner', health: 40, isDead: false, survivalTime: 30, totalDamageDealt: 0 };
+  const loser = { name: 'Loser', health: 0, isDead: true, survivalTime: 20, totalDamageDealt: 50 };
+  settlePlacements([loser, winner]);
+  assert.deepEqual([winner.placement, loser.placement], [1, 2]);
+  assert.deepEqual([winner.drawn, loser.drawn], [false, false]);
 });
 
 test('a team battle ranks the whole winning side first, even above a losing member who lasted longer', () => {

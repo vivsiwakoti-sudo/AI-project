@@ -11,7 +11,7 @@ import { applyTestForm } from "../engine/testForms";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import { REPLAY_SECONDS } from "../engine/replayStore";
-import { countAliveTeams, decayScreenShake, drawFighterOutlines, drawGridLines, drawTeamMarker, rankBySurvival, stepBattle } from "../engine/systems/BattleSimulation";
+import { countAliveTeams, decayScreenShake, drawFighterOutlines, drawGridLines, drawTeamMarker, settlePlacements, stepBattle } from "../engine/systems/BattleSimulation";
 
 // Names of the other members of a fighter's team, marking the eliminated ones.
 // Empty in free-for-all, where nobody has a team.
@@ -153,9 +153,8 @@ function resolveDeaths(fighters, particles) {
 //
 // Placement is LONGEST SURVIVAL = 1st, which for a fight with a single survivor
 // is the same thing as the order of elimination: the fighter knocked out first
-// takes last, the last one standing takes 1st. Elimination is a strict sequence,
-// so a battle always produces exactly one 1st, 2nd, 3rd and 4th - no ties and no
-// gaps.
+// takes last, the last one standing takes 1st. The only tie is a double knockout
+// with no survivor, which is a draw and shares 1st (see settlePlacements).
 function finishBattle(fighters) {
   const endedAt = performance.now();
   const endSeconds = (endedAt - (battleStartAt.current ?? endedAt)) / 1000;
@@ -172,13 +171,8 @@ function finishBattle(fighters) {
     if (f.survivalTime == null) f.survivalTime = f.battleDuration;
   });
 
-  // Rank by survival time, descending; same-frame double knockouts are settled
-  // by damage dealt (see rankBySurvival).
-  const standings = rankBySurvival(fighters);
-
-  standings.forEach((f, i) => {
-    f.placement = i + 1;
-  });
+  // Rank by survival time; a same-frame double knockout with no survivor is a draw.
+  settlePlacements(fighters);
 }
 
 // Builds the live fighter instances for one battle. Called from the state

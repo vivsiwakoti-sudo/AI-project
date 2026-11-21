@@ -523,7 +523,7 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
                   <li key={`${entry.timestamp ?? "entry"}-${i}`} className={`battle-history-row ${entry.aborted ? "battle-history-aborted" : ""}`}>
                     <div className="battle-history-row-head">
                       <span className="battle-history-outcome">
-                        {entry.aborted ? "NO CONTEST" : entry.winner ? `${entry.winner} WIN` : "NO RESULT"}
+                        {entry.aborted ? "NO CONTEST" : entry.drawn ? "DRAW" : entry.winner ? `${entry.winner} WIN` : "NO RESULT"}
                       </span>
                       <span className="battle-history-meta">
                         {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "Unknown time"}
@@ -614,7 +614,7 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
                   <li key={clip.id} className={`battle-history-row ${clip.aborted ? "battle-history-aborted" : ""}`}>
                     <div className="battle-history-row-head">
                       <span className="battle-history-outcome">
-                        {clip.aborted ? "NO CONTEST" : clip.winner ? `${clip.winner} WIN` : "NO RESULT"}
+                        {clip.aborted ? "NO CONTEST" : clip.drawn ? "DRAW" : clip.winner ? `${clip.winner} WIN` : "NO RESULT"}
                       </span>
                       <span className="battle-history-meta">
                         {clip.savedAt ? new Date(clip.savedAt).toLocaleString() : "Unknown time"}

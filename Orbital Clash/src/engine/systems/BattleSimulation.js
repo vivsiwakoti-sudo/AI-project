@@ -191,8 +191,8 @@ export function countAliveTeams(fighters) {
 // Results-screen order: longest survival first. In a team battle a side is ranked
 // by its longest-surviving member, so the last side standing comes first and its
 // members follow each other. Fighters knocked out in the same frame share one
-// timestamp, so that tie is broken the way a tournament draw is (see resolveDraw):
-// more damage dealt wins, then spawn order.
+// timestamp; that tie only orders the table (more damage dealt, then spawn order).
+// Whether a same-frame tie is a draw is decided by settlePlacements.
 export function rankBySurvival(fighters) {
   const sideSurvival = new Map();
   for (const f of fighters) {
@@ -208,6 +208,19 @@ export function rankBySurvival(fighters) {
     const byDamage = (b.totalDamageDealt || 0) - (a.totalDamageDealt || 0);
     if (byDamage !== 0) return byDamage;
     return fighters.indexOf(a) - fighters.indexOf(b);
+  });
+}
+
+// Stamps placement on a finished battle. When nobody is left standing, the fighters
+// removed by the final sweep fell together: they all take 1st and are flagged `drawn`
+// so no one is declared the winner (a dead fighter must never win).
+export function settlePlacements(fighters) {
+  const drawn = countAliveTeams(fighters) === 0;
+  const lastOut = fighters.reduce((latest, f) => Math.max(latest, f.survivalTime ?? 0), -Infinity);
+  rankBySurvival(fighters).forEach((f, i) => {
+    const sharedLast = drawn && (f.survivalTime ?? 0) === lastOut;
+    f.drawn = sharedLast;
+    f.placement = sharedLast ? 1 : i + 1;
   });
 }
 

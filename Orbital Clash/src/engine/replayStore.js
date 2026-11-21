@@ -67,6 +67,7 @@ export async function saveLastReplay(frames, info = {}) {
     savedAt: Date.now(),
     winner: info.winner ?? null,
     aborted: Boolean(info.aborted),
+    drawn: Boolean(info.drawn),
     fighters: info.fighters ?? [],
     frameCount: frames.length,
     seconds: Math.round(Math.max(0, frames[frames.length - 1].time - frames[0].time))

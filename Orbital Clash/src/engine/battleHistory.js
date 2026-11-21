@@ -66,6 +66,7 @@ function normalizeEntry(entry) {
     // An aborted battle is recorded as a no-contest so the log is a faithful
     // history of every battle that was played, not only the decisive ones.
     aborted: Boolean(entry.aborted),
+    drawn: Boolean(entry.drawn),
     durationSeconds: Number.isFinite(entry.durationSeconds) ? Math.max(0, entry.durationSeconds) : 0,
     participants
   };
@@ -122,7 +123,8 @@ export function recordBattle(results, { aborted = false } = {}) {
   const list = Array.isArray(results) ? results : [];
   if (list.length === 0) return loadHistory();
 
-  const winnerFighter = aborted ? null : list.find(f => f?.placement === 1) ?? list[0] ?? null;
+  const drawn = !aborted && list.some(f => f?.drawn);
+  const winnerFighter = aborted || drawn ? null : list.find(f => f?.placement === 1 && !f.drawn) ?? list[0] ?? null;
   const participants = list.map(f => ({
     name: f?.name ?? "Unknown",
     color: typeof f?.color === "string" ? f.color : "#00f2ff",
@@ -132,18 +134,14 @@ export function recordBattle(results, { aborted = false } = {}) {
     won: winnerFighter != null && f != null && onWinningSide(f, winnerFighter)
   }));
 
-  const winner = aborted
-    ? null
-    : participants.find(p => p.placement === 1)?.name
-    ?? participants[0]?.name
-    ?? null;
+  const winner = winnerFighter ? participants[list.indexOf(winnerFighter)].name : null;
 
   const durationSeconds = Math.max(
     0,
     Math.round(list.reduce((longest, f) => Math.max(longest, f?.battleDuration ?? 0), 0))
   );
 
-  const entry = { timestamp: Date.now(), winner, aborted, durationSeconds, participants };
+  const entry = { timestamp: Date.now(), winner, aborted, drawn, durationSeconds, participants };
   // Read the count before the log is written: with no stored counter yet, the
   // fallback counts logged battles, and the new entry must not be included.
   const count = loadBattleCount() + 1;

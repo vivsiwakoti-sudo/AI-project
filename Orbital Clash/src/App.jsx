@@ -207,7 +207,7 @@ function App() {
     battleIntro: <BattleIntro fighters={selectedFighters} onComplete={() => setScreen("game")} />,
     game: <Arena fighters={selectedFighters} arenaSize={arenaSize} onFinish={(res, meta) => {
       const aborted = Boolean(meta?.aborted);
-      const winner = res?.find(f => f.placement === 1)?.name ?? null;
+      const winner = res?.find(f => f.placement === 1 && !f.drawn)?.name ?? null;
       // In a team battle a guess is right when it names anyone on the winning side.
       resolveBattlePrediction({ winner, winners: winningSideNames(res), aborted });
       setBattleResults(res);
@@ -216,6 +216,7 @@ function App() {
       saveLastReplay(meta?.replayFrames, {
         aborted,
         winner,
+        drawn: !aborted && (res ?? []).some(f => f.drawn),
         fighters: (res ?? []).map(({ name, color }) => ({ name, color }))
       });
       setScreen("end");

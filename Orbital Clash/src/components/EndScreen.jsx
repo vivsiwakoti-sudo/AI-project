@@ -87,7 +87,8 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
     })
     .map(entry => entry.fighter);
 
-  const winner = aborted ? null : ordered[0] ?? null;
+  const isDraw = !aborted && ordered.some(f => f.drawn);
+  const winner = aborted || isDraw ? null : ordered[0] ?? null;
   const isTeamBattle = winner?.team != null;
   // Everyone on the winning side won; everyone else lost. Records are applied per
   // fighter, so a 3v3 win gives three wins and three losses are split the same way.
@@ -163,10 +164,22 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
 
   return (
     <main className="results-screen">
-      {aborted || !winner ? (
+      {aborted || (!winner && !isDraw) ? (
         <>
           <div className="roster-eyebrow">NO CONTEST</div>
           <h1>BATTLE ABANDONED</h1>
+          <div className="results-rule" />
+
+          <div className="results-summary">
+            <div><span>FIGHT LENGTH</span><b>{battleSeconds}s</b></div>
+            <div><span>TOTAL DAMAGE</span><b>{Math.floor(totalDamage)}</b></div>
+            <div><span>WINNER</span><b>NONE</b></div>
+          </div>
+        </>
+      ) : isDraw ? (
+        <>
+          <div className="roster-eyebrow">DRAW</div>
+          <h1>MUTUAL KNOCKOUT</h1>
           <div className="results-rule" />
 
           <div className="results-summary">
@@ -203,7 +216,7 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
             <div key={i} className={`result-row ${isWinner ? "result-row-winner" : ""}`} style={{ "--result-color": f.color }}>
               <header>
                 <span className="result-name"><b className="result-placement">{ordinal}</b> {f.name}</span>
-                <span className="result-outcome">{aborted ? "NO RESULT" : isWinner ? "VICTORY" : "DEFEAT"}</span>
+                <span className="result-outcome">{aborted ? "NO RESULT" : f.drawn ? "DRAW" : isWinner ? "VICTORY" : "DEFEAT"}</span>
               </header>
 
               <div className="result-group">

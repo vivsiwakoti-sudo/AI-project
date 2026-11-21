@@ -74,7 +74,7 @@ export function onWinningSide(fighter, winner) {
 
 // Names of everyone on the winning side.
 export function winningSideNames(results) {
-  const winner = results?.find(f => f.placement === 1);
+  const winner = results?.find(f => f.placement === 1 && !f.drawn);
   if (!winner) return [];
   return results.filter(f => onWinningSide(f, winner)).map(f => f.name);
 }
