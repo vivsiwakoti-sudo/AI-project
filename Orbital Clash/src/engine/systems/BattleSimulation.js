@@ -334,6 +334,10 @@ export function stepBattle(fighters, options = {}) {
     }
   }
 
+  // Duplicators record contacts that physics just resolved, so a fast bounce
+  // that moved apart before the Duplicator's own update still spawns a clone.
+  alive.forEach(f => { if (!f.isDead && f.health > 0) f.registerPhysicsContacts?.(); });
+
   // Victory counts top-level fighters only, so summons never decide a bout.
   return returnAlive
     ? { hardestImpact, alive: fighters.filter(f => !f.isDead && f.health > 0) }

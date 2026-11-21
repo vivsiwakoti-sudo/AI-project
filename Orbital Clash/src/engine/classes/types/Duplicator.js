@@ -25,7 +25,7 @@ export class Duplicator extends FighterBase {
         this.cloneLimit = data.cloneLimit ?? 50;
     }
 
-    checkTouchDamage(opponent) {
+    checkTouchDamage(opponent, { damage = true } = {}) {
         // Touch damage is limited to one bite per cooldown, so a swarm cannot
         // deal damage hundreds of times per second.
         //
@@ -44,12 +44,23 @@ export class Duplicator extends FighterBase {
             touching.add(victim);
             // A clone spawns on each new contact regardless of whether the touch was
             // allowed to deal damage (parried, dodged, invulnerable...).
-            const dealtDamage = this.damageCooldown <= 0
+            const dealtDamage = damage && this.damageCooldown <= 0
                 ? DamageSystem.applyDamage(this, victim, this.damage, "Body")
                 : false;
             this.onTouchOpponent(victim, dealtDamage, !this.touchingVictims.has(victim));
         }
         this.touchingVictims = touching;
+    }
+
+    // Runs after the physics pass. Physics pins touching bodies to exact contact
+    // distance, but a fighter that updates earlier can move away before this
+    // Duplicator's own update, which would hide the contact. Checking here
+    // (no damage, the physics pass already dealt it) records every contact.
+    registerPhysicsContacts() {
+        // Snapshot first: a clone spawned by this pass must not be checked in it.
+        const existing = this.clones.filter(c => !c.isDead && c.health > 0);
+        this.checkTouchDamage(null, { damage: false });
+        existing.forEach(c => c.checkTouchDamage(null, { damage: false }));
     }
 
     onTouchOpponent(opponent, dealtDamage = true, isNewTouch = true) {
@@ -198,6 +209,9 @@ export class Duplicator extends FighterBase {
             CLONE_HEALTH
         );
         clone.root = root;
+        // updateClones sets these each frame; until then a new clone has no contacts.
+        clone.touchVictims = [];
+        clone.opponent = null;
         clone.arenaSize = this.arenaSize;
         clone.particleSystem = this.particleSystem ?? root.particleSystem;
         clone.health = CLONE_HEALTH;

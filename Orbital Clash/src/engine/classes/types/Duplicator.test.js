@@ -45,6 +45,24 @@ test('each new touch spawns a clone with no cooldown, and staying in contact doe
   assert.equal(duplicator.totalClones, 2, 'a new touch spawns again immediately');
 });
 
+test('a contact that only physics sees after the Duplicator updated clones once, with no extra damage', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 300, 300);
+  const other = new FighterBase(dummyStats, 600, 300);
+  duplicator.touchVictims = [other];
+  duplicator.checkTouchDamage(other);
+  assert.equal(duplicator.totalClones, 0, 'no contact yet');
+
+  // Physics pins the fighter to contact distance after the Duplicator's own update.
+  other.x = 340;
+  const healthBefore = other.health;
+  duplicator.registerPhysicsContacts();
+  assert.equal(duplicator.totalClones, 1, 'the physics-only contact spawns a clone');
+  assert.equal(other.health, healthBefore, 'the physics pass deals no extra damage');
+
+  duplicator.registerPhysicsContacts();
+  assert.equal(duplicator.totalClones, 1, 'a contact that continues does not spawn again');
+});
+
 test('touches stop cloning once the swarm reaches 50 clones', () => {
   const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
   const victim = new FighterBase(dummyStats, 100, 100);
