@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { installTestAudio } from './audio/testAudioStub.js';
+
+installTestAudio();
+
 const { FighterFactory } = await import('./FighterFactory.js');
 const { applyTestForm, hasTestableFighter, defaultTestForm } = await import('./testForms.js');
 
@@ -68,4 +72,46 @@ test('pre-adapted Mahoraga at stage 1 does not reflect projectiles yet', () => {
   applyTestForm(mahoraga, { stage: 1 });
 
   assert.equal(mahoraga.getParryChance('Projectile', gunner), 0);
+});
+
+test('Fireball starts its first volley with the chosen amount', () => {
+  const fireball = FighterFactory.createFighter('Fireball', 100, 100);
+  const opponent = FighterFactory.createFighter('Knight', 700, 700);
+  applyTestForm(fireball, { amount: 50 });
+
+  fireball.update(1 / 60, opponent);
+
+  assert.equal(fireball.projectiles.length, 50);
+});
+
+test('Duplicator with 0 starting clones begins with no clones', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 400, 400);
+  duplicator.arenaSize = 800;
+  applyTestForm(duplicator, { clones: 0 });
+
+  assert.equal(duplicator.clones.length, 0);
+  assert.equal(duplicator.totalClones, 0);
+});
+
+test('Duplicator starting clones stop at the 75 clone cap', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 400, 400);
+  duplicator.arenaSize = 800;
+  applyTestForm(duplicator, { clones: 75 });
+
+  assert.equal(duplicator.clones.length, 75);
+  duplicator.spawnClone();
+  assert.equal(duplicator.clones.length, 75);
+});
+
+test('Duplicator clones made before the battle receive the arena particle system', () => {
+  const duplicator = FighterFactory.createFighter('Duplicator', 400, 400);
+  duplicator.arenaSize = 800;
+  applyTestForm(duplicator, { clones: 3 });
+  const particles = new Proxy({}, { get: () => () => {} });
+  duplicator.particleSystem = particles;
+
+  duplicator.update(1 / 60, FighterFactory.createFighter('Knight', 700, 700));
+
+  assert.equal(duplicator.clones.length, 3);
+  for (const clone of duplicator.clones) assert.equal(clone.particleSystem, particles);
 });

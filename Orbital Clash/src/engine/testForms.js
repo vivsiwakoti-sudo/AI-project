@@ -17,6 +17,12 @@ export const TEST_FORM_CONTROLS = {
     ],
     Mahoraga: [
         { key: "stage", label: "Pre-adapted stage", min: 1, max: 3, step: 1, value: 1, unit: "" }
+    ],
+    Fireball: [
+        { key: "amount", label: "Starting fireballs", min: 1, max: 50, step: 1, value: 1, unit: "" }
+    ],
+    Duplicator: [
+        { key: "clones", label: "Starting clones", min: 0, max: 75, step: 1, value: 0, unit: "" }
     ]
 };
 
@@ -48,6 +54,13 @@ export function applyTestForm(fighter, form) {
             break;
         case "Mahoraga":
             fighter.preAdapt(form.stage);
+            break;
+        case "Fireball":
+            // The first volley fires shotsFired + 1 fireballs, so this sets its size to `amount`.
+            fighter.shotsFired = form.amount - 1;
+            break;
+        case "Duplicator":
+            for (let i = 0; i < form.clones; i++) fighter.spawnClone();
             break;
     }
 }

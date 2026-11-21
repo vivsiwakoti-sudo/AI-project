@@ -154,6 +154,9 @@ export class Duplicator extends FighterBase {
         const touchVictims = cloneVictims.filter(v => !v.isInvulnerable);
         const clones = this.clones.filter(c => !c.isDead && c.health > 0);
         clones.forEach(clone => {
+            // The arena injects particles only into the top-level fighters, so clones
+            // made before the battle (test forms) would otherwise never get them.
+            clone.particleSystem = this.particleSystem;
             clone.victims = cloneVictims;
             clone.touchVictims = touchVictims;
             const aim = opponent && !opponent.isDead ? opponent : cloneVictims.find(v => !v.isDead) ?? null;
