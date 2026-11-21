@@ -63,13 +63,13 @@ test('a contact that only physics sees after the Duplicator updated clones once,
   assert.equal(duplicator.totalClones, 1, 'a contact that continues does not spawn again');
 });
 
-test('touches stop cloning once the swarm reaches 50 clones', () => {
+test('touches stop cloning once the swarm reaches 75 clones', () => {
   const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
   const victim = new FighterBase(dummyStats, 100, 100);
-  duplicator.totalClones = 50;
+  duplicator.totalClones = 75;
 
   frame(duplicator, victim, true);
-  assert.equal(duplicator.totalClones, 50, 'at 50 clones a touch no longer duplicates');
+  assert.equal(duplicator.totalClones, 75, 'at 75 clones a touch no longer duplicates');
 });
 
 test('clones start with 15 HP at every generation', () => {

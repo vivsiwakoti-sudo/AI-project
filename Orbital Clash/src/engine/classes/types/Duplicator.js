@@ -22,7 +22,7 @@ export class Duplicator extends FighterBase {
         this.touchedBy = new Set();       // Fighters touching this clone last frame; each new contact deals CLONE_TOUCH_DAMAGE.
         this.root = null;          // Set to the original Duplicator for every clone.
         this.totalClones = 0;      // Shared clone cap across the whole swarm.
-        this.cloneLimit = data.cloneLimit ?? 50;
+        this.cloneLimit = data.cloneLimit ?? 75;
     }
 
     checkTouchDamage(opponent, { damage = true } = {}) {
@@ -71,7 +71,7 @@ export class Duplicator extends FighterBase {
         // One clone per new touch: staying in contact does not spawn more.
         if (!isNewTouch) return;
         const root = this.root || this;
-        // The clone cap is a hard stop: at 50 clones the chance to duplicate is 0%.
+        // The clone cap is a hard stop: at 75 clones the chance to duplicate is 0%.
         if (root.totalClones >= this.cloneLimit) return;
         root.spawnClone();
     }

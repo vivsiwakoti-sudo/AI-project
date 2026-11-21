@@ -42,7 +42,7 @@ export class Mimic extends FighterBase {
         this.root = null;
         this.generation = 0;
         this.totalClones = 0;
-        this.cloneLimit = 50;
+        this.cloneLimit = 75;
     }
 
     update(dt, opponent) {
