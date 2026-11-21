@@ -399,7 +399,7 @@ export function drawBolt(ctx, px, py, vx, vy, { color = "#ffd54a", core = "#ffff
 }
 
 // Spear drawn along +x from the origin: turned shaft, leaf blade, bound collar.
-export function drawSpear(ctx, { length = 32, head = 14, glow = "#dfe8ff" } = {}) {
+export function drawSpear(ctx, { length = 32, head = 14, glow = "#dfe8ff", moss = false } = {}) {
   ctx.save();
   const wood = ctx.createLinearGradient(0, -3, 0, 3);
   wood.addColorStop(0, "#b08a5c");
@@ -407,6 +407,24 @@ export function drawSpear(ctx, { length = 32, head = 14, glow = "#dfe8ff" } = {}
   wood.addColorStop(1, "#3f2c18");
   ctx.fillStyle = wood;
   ctx.fillRect(-4, -2.5, length - head + 6, 5);
+
+  if (moss) {
+    // Fixed patch positions along the shaft (fraction of its length) so the moss
+    // stays put frame to frame.
+    const shaftStart = -4;
+    const shaftSpan = length - head + 6;
+    [[0.15, -1.2], [0.38, 1.1], [0.6, -1.3], [0.78, 1.0]].forEach(([t, side]) => {
+      const x = shaftStart + shaftSpan * t;
+      ctx.fillStyle = "#4f7a2e";
+      ctx.beginPath();
+      ctx.ellipse(x, side, 2.6, 1.7, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#8fb35a";
+      ctx.beginPath();
+      ctx.arc(x - 0.6, side - 0.4, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
 
   ctx.fillStyle = "#b8862b";
   ctx.fillRect(length - head - 1, -3.4, 3, 6.8);

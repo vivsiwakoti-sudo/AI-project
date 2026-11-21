@@ -127,11 +127,11 @@ class Spear extends Projectile {
         if (!this.isStuck) {
             // Angle the spear in direction of travel
             ctx.rotate(Math.atan2(this.vy, this.vx));
-            drawSpear(ctx, { length: shaftLength, head: 14 });
+            drawSpear(ctx, { length: shaftLength, head: 14, moss: true });
         } else {
             // Spear stuck in opponent - render perpendicular and larger
             ctx.rotate(Math.PI / 4);
-            drawSpear(ctx, { length: shaftLength + 8, head: 16, glow: "#ffffff" });
+            drawSpear(ctx, { length: shaftLength + 8, head: 16, glow: "#ffffff", moss: true });
 
             // Energy pulse around stuck spear
             const pulse = Math.sin(Date.now() / 100) * 0.5 + 0.5;
@@ -246,7 +246,7 @@ export class Spearman extends FighterBase {
         ctx.translate(mountX, 0);
 
         // Spear: turned shaft, bound collar and leaf-shaped blade.
-        drawSpear(ctx, { length: spearLength, head: 18 });
+        drawSpear(ctx, { length: spearLength, head: 18, moss: true });
 
         // Cooldown indicator glow (shows charge)
         const chargeProgress = 1 - (this.spearCooldown / 3.5);
