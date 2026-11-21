@@ -7,6 +7,7 @@ import StatsPanel from "./StatsPanel";
 import NeonBackdrop from "./NeonBackdrop";
 import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSystem";
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
+import { applyTestForm } from "../engine/testForms";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import { REPLAY_SECONDS } from "../engine/replayStore";
@@ -221,6 +222,7 @@ function createFighters(fighters, arenaSize) {
     fighter.vy = vy;
     fighter.teamIndex = i;
     fighter.arenaSize = arenaSize;
+    applyTestForm(fighter, selection.testForm);
     // Team battles tag each fighter with its side. Free-for-all leaves it unset.
     if (selection.team != null) fighter.team = selection.team;
 

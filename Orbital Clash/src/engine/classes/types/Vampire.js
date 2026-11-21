@@ -166,7 +166,7 @@ export class Vampire extends FighterBase {
         }
     }
 
-    evolve() {
+    gainEvolutionStats() {
         this.evolutionLevel++;
         this.speed = Math.min(13, this.speed + 2);
         this.damage += 2;
@@ -174,6 +174,10 @@ export class Vampire extends FighterBase {
             this.hasWings = true;
             this.dodgeChance = 0.25;
         }
+    }
+
+    evolve() {
+        this.gainEvolutionStats();
         this.evolveFlash = 0.6;
         this.emitBurst("#ff2038", 34, 460);
         if (this.particleSystem) {

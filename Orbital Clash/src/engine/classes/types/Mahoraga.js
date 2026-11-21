@@ -35,6 +35,7 @@ export class Mahoraga extends FighterBase {
         super(data, x, y);
         this.adaptation = Object.create(null); // landed hits per attack key
         this.adaptedAttacks = [];              // Contains {key, category, resistance}
+        this.preAdaptResistance = 0;           // resistance from a pre-adapted test stage, applied to every attack
         this.impactFlash = 0;
         this.impactX = 0;
         this.impactY = 0;
@@ -90,18 +91,35 @@ export class Mahoraga extends FighterBase {
         return this.adaptedAttacks.some(a => a.key === key);
     }
 
+    // Test setup: starts Mahoraga already adapted to the first `stage` steps. The
+    // resistance applies to every attack, and the wheel shows one gold layer per
+    // stage, as far as the wheel has room for.
+    preAdapt(stage) {
+        const step = ADAPTATION_STEPS[stage - 1];
+        if (!step) return;
+        this.preAdaptResistance = step.resistance;
+        this.wheelLayers = Array.from({ length: Math.min(stage, WHEEL_LAYER_SCALES.length) }, () => "Pre");
+    }
+
+    reflectUnlocked() {
+        return this.preAdaptResistance >= REFLECT_UNLOCK_RESISTANCE
+            || this.adaptedAttacks.some(a => a.resistance === REFLECT_UNLOCK_RESISTANCE);
+    }
+
     // Melee parries only unlock with the matching adaptation to that exact attack:
     // once he has adapted to a Knight's sword it is parried (25%) and stuns the
     // attacker. Projectile reflection (35%) unlocks once he reaches the 2nd
     // adaptation step on any attack, and then turns every projectile aside. Body
     // slams, beams and AOE are never parried.
     getParryChance(category, attacker) {
-        if (category === "Projectile") {
-            return this.adaptedAttacks.some(a => a.resistance === REFLECT_UNLOCK_RESISTANCE) ? 0.35 : 0;
+        if (category === "Projectile") return this.reflectUnlocked() ? 0.35 : 0;
+        if (category === "Melee") {
+            const adaptedToAll = this.preAdaptResistance > 0;
+            return adaptedToAll || this.hasAdaptedTo(attackKeyOf(attacker, category)) ? MELEE_PARRY_CHANCE : 0;
         }
-        if (category === "Melee") return this.hasAdaptedTo(attackKeyOf(attacker, category)) ? MELEE_PARRY_CHANCE : 0;
         return 0;
     }
+
 
     // A parried weapon strike does no damage and leaves the attacker stunned:
     // frozen in place with its weapon and attacks paused.
@@ -188,7 +206,7 @@ export class Mahoraga extends FighterBase {
     getDamageMultiplier(category, options, attacker) {
         const key = attackKeyOf(attacker, category);
         const adaptation = this.adaptedAttacks.findLast(a => a.key === key);
-        return adaptation ? (1 - adaptation.resistance) : 1;
+        return 1 - Math.max(adaptation?.resistance ?? 0, this.preAdaptResistance);
     }
 
     update(dt, opponent) {
@@ -265,6 +283,7 @@ export class Mahoraga extends FighterBase {
             if (category === "Melee") return "#FF8C1A";
             if (category === "Projectile") return "#00BFFF";
             if (category === "Body") return "#FF69B4";
+            if (category === "Pre") return ADAPTATION_GOLD;
             return "#FF0000";
         };
 

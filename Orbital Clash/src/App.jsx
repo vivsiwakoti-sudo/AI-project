@@ -9,6 +9,8 @@ import ChampionScreen from "./components/ChampionScreen";
 import ScreenTransition from "./components/ScreenTransition";
 import PredictionModal from "./components/PredictionModal";
 import TeamModal from "./components/TeamModal";
+import EnemyFormsModal from "./components/EnemyFormsModal";
+import { hasTestableFighter } from "./engine/testForms";
 import BattleIntro from "./components/BattleIntro";
 import { audioManager } from "./engine/audio/AudioManager";
 import { DEFAULT_ARENA_SIZE } from "./engine/config";
@@ -51,6 +53,7 @@ function App() {
   const [pendingPrediction, setPendingPrediction] = useState(null);
   // The battle format (free-for-all or teams) is asked for after the prediction.
   const [pendingTeams, setPendingTeams] = useState(null);
+  const [pendingEnemyForms, setPendingEnemyForms] = useState(null);
 
   // --- Tournament Mode -------------------------------------------------------
   // `tournament` is the live bracket driven by the engine; `tournamentRunId`
@@ -134,12 +137,18 @@ function App() {
   // so the transition wrapper can keep showing the old one for the length of its
   // exit animation. `screen` still drives it exactly as before.
   const screens = {
-    menu: <Menu intro={rosterIntro} shortcutsEnabled={screen === "menu" && !showTitle && !showSettings && !pendingPrediction && !pendingTeams} onStart={(f, size) => {
-      const startBattle = plan => {
+    menu: <Menu intro={rosterIntro} shortcutsEnabled={screen === "menu" && !showTitle && !showSettings && !pendingPrediction && !pendingEnemyForms && !pendingTeams} onStart={(f, size) => {
+      const startBattle = (plan, testForms) => {
         setPendingPrediction(null);
+        setPendingEnemyForms(null);
         setPendingTeams(null);
         // Free-for-all leaves the selection as it was; a team plan tags each fighter.
-        setSelectedFighters(plan?.teams ? f.map((fighter, i) => ({ ...fighter, team: plan.teams[i] })) : f);
+        // A fighter whose card was switched on carries its test form.
+        setSelectedFighters(f.map((fighter, i) => {
+          const tagged = plan?.teams ? { ...fighter, team: plan.teams[i] } : fighter;
+          const testForm = testForms?.[fighter.name];
+          return testForm ? { ...tagged, testForm } : tagged;
+        }));
         setArenaSize(size);
         setRosterIntro(false);
         setScreen("battleIntro");
@@ -147,13 +156,36 @@ function App() {
       // Format comes after the prediction. Cancelling it means no battle starts, so
       // the prediction just made is voided rather than left to settle a fight that
       // never happened.
-      const chooseFormat = () => {
+      const chooseFormat = testForms => {
         setPendingTeams({
           fighters: f.map(({ name, color }) => ({ name, color })),
-          onConfirm: plan => startBattle(plan),
+          onConfirm: plan => startBattle(plan, testForms),
           onCancel: () => {
             skipPrediction("battle");
             setPendingTeams(null);
+          }
+        });
+      };
+      // Enemy forms only appear when a listed fighter is in the fight. Cancelling
+      // here voids the prediction, the same as cancelling the format.
+      const chooseEnemyForms = () => {
+        if (!hasTestableFighter(f.map(fighter => fighter.name))) {
+          chooseFormat(null);
+          return;
+        }
+        setPendingEnemyForms({
+          fighters: f.map(({ name, color }) => ({ name, color })),
+          onConfirm: forms => {
+            setPendingEnemyForms(null);
+            chooseFormat(forms);
+          },
+          onSkip: () => {
+            setPendingEnemyForms(null);
+            chooseFormat(null);
+          },
+          onCancel: () => {
+            skipPrediction("battle");
+            setPendingEnemyForms(null);
           }
         });
       };
@@ -163,12 +195,12 @@ function App() {
         onConfirm: guesses => {
           addPrediction({ kind: "battle", guesses });
           setPendingPrediction(null);
-          chooseFormat();
+          chooseEnemyForms();
         },
         onSkip: () => {
           skipPrediction("battle");
           setPendingPrediction(null);
-          chooseFormat();
+          chooseEnemyForms();
         }
       });
     }} onStartTournament={startTournament} />,
@@ -265,6 +297,14 @@ function App() {
               onConfirm={guesses => pendingPrediction.onConfirm(guesses)}
               onSkip={() => pendingPrediction.onSkip()}
               onCancel={() => setPendingPrediction(null)}
+            />
+          )}
+          {pendingEnemyForms && (
+            <EnemyFormsModal
+              fighters={pendingEnemyForms.fighters}
+              onConfirm={forms => pendingEnemyForms.onConfirm(forms)}
+              onSkip={() => pendingEnemyForms.onSkip()}
+              onCancel={() => pendingEnemyForms.onCancel()}
             />
           )}
           {pendingTeams && (

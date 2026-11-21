@@ -27,26 +27,42 @@ export class Mutant extends FighterBase {
         this.radius = healthyRadius * (0.55 + healthRatio * 0.45);
     }
 
+    // Test setup: pins every mutation to these values instead of rolling them.
+    setFixedMutation({ damage, maxHealth }) {
+        this.fixedMutation = { damage, maxHealth };
+        this.damage = damage;
+        this.maxHealth = maxHealth;
+        this.health = maxHealth;
+        this.updateMutantScale();
+    }
+
+    // Randomly rolls damage (and, for a normal Mutant, max HP) within ranges.
+    // Damage is weighted: 70% 10-24, 20% 25-70, 10% 71-100.
+    rollMutation() {
+        const damageRoll = Math.random();
+        let damage;
+        if (damageRoll < 0.7) {
+            damage = 10 + Math.floor(Math.random() * 15);
+        } else if (damageRoll < 0.9) {
+            damage = 25 + Math.floor(Math.random() * 46);
+        } else {
+            damage = 71 + Math.floor(Math.random() * 30);
+        }
+        // A summoned Mutant keeps its summon HP, so it rolls no max HP.
+        const maxHealth = this.owner ? this.maxHealth : Math.floor(Math.random() * (250 - 10 + 1)) + 10;
+        return { damage, maxHealth };
+    }
+
     mutate() {
         const healthPercent = this.maxHealth > 0 ? this.health / this.maxHealth : 0;
-
-        // Randomly change damage (and, for a normal Mutant, HP/max HP) within ranges.
-        // Damage is weighted: 70% 10-24, 20% 25-70, 10% 71-100.
-        const damageRoll = Math.random();
-        if (damageRoll < 0.7) {
-            this.damage = 10 + Math.floor(Math.random() * 15);
-        } else if (damageRoll < 0.9) {
-            this.damage = 25 + Math.floor(Math.random() * 46);
-        } else {
-            this.damage = 71 + Math.floor(Math.random() * 30);
-        }
+        const { damage, maxHealth } = this.fixedMutation ?? this.rollMutation();
+        this.damage = damage;
 
         // A summoned Mutant keeps its summon HP: only its damage mutates.
         if (!this.owner) {
-            const newMaxHealth = Math.floor(Math.random() * (250 - 10 + 1)) + 10;
-            this.maxHealth = newMaxHealth;
+            this.maxHealth = maxHealth;
             // Health is preserved as a percentage, so mutating can both gain and lose HP.
-            this.health = Math.max(1, Math.ceil(newMaxHealth * healthPercent));
+            this.health = Math.max(1, Math.ceil(maxHealth * healthPercent));
         }
         this.updateMutantScale();
         this.mutationFlash = 0.6;
