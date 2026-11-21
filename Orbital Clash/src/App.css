@@ -1854,7 +1854,8 @@
 .enemy-form-control { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 12px; color: var(--text-secondary); }
 .enemy-form-control b { font-size: 12px; letter-spacing: 0.08em; color: var(--cyan); }
 .enemy-form-control input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--fighter-color); }
-.enemy-form-control select { grid-column: 1 / -1; width: 100%; padding: 6px 8px; font: inherit; color: inherit; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--fighter-color); border-radius: 6px; }
+.enemy-form-control select { grid-column: 1 / -1; width: 100%; padding: 6px 8px; font: inherit; color: #ffd54a; background: #000; border: 1px solid var(--fighter-color); border-radius: 6px; }
+.enemy-form-control select option { background: #000; color: #ffd54a; }
 
 .results-team-members { margin: 4px 0 0; font-size: 13px; letter-spacing: 0.08em; color: var(--text-secondary); }
 
