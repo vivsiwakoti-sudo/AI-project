@@ -30,6 +30,15 @@ const stepOverVictim = (snake, dt, victim) => {
   snake.update(dt, victim);
 };
 
+test('Snake trail is capped at 1000 segments, dropping the oldest', () => {
+  const snake = new Snake(stats('Snake'), 100, 100);
+  snake.trail = Array.from({ length: 1200 }, (_, i) => ({ x: i, y: 0, age: 0 }));
+  snake.updateTrail(0, null);
+  assert.equal(snake.trail.length, 1000);
+  assert.equal(snake.trail[0].x, 200);
+  assert.equal(snake.trail[999].x, 1199);
+});
+
 test('Snake trail deals 2 damage on touch, then 2 damage per second of contact', () => {
   const snake = new Snake(stats('Snake'), 100, 100);
   const victim = new FighterBase(stats('Dummy'), 100, 100);

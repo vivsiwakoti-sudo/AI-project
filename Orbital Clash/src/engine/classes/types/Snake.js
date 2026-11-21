@@ -2,11 +2,13 @@ import { FighterBase } from "../FighterBase.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 
+const MAX_TRAIL_SEGMENTS = 1000;
+
 export class Snake extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
         this.trail = []; // Array of {x, y, age}
-        this.trailLife = 15;
+        this.trailLife = 30;
         this.dropTimer = 0;
         this.trailHitCooldown = 0;
         this.dotAccumulators = new Map(); // victim -> seconds spent in venom since last hit
@@ -31,6 +33,7 @@ export class Snake extends FighterBase {
     updateTrail(dt, opponent, attacker = this) {
         this.trail.forEach(segment => { segment.age += dt; });
         this.trail = this.trail.filter(segment => segment.age < this.trailLife);
+        if (this.trail.length > MAX_TRAIL_SEGMENTS) this.trail.splice(0, this.trail.length - MAX_TRAIL_SEGMENTS);
 
         // Trail collision logic - slow 50%, deal 2 damage on first touch, then 2 damage
         // every second of continued contact. A trail is something anyone can run into,

@@ -180,7 +180,7 @@ test('copied mines persist through form changes until a victim touches them', ()
 });
 
 test('copied webs and snake trails keep their original remaining lifetimes', () => {
-  for (const [form, field, lifetime] of [['Spider', 'webs', 30], ['Snake', 'trail', 15]]) {
+  for (const [form, field, lifetime] of [['Spider', 'webs', 30], ['Snake', 'trail', 30]]) {
     const mimic = makeMimic();
     mimic.startCopiedForm(form);
     if (form === 'Spider') mimic.createWeb(400, 400);
