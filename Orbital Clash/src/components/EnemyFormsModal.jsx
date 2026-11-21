@@ -60,6 +60,24 @@ export default function EnemyFormsModal({ fighters, onConfirm, onSkip, onCancel 
                 </button>
                 {isOn && TEST_FORM_CONTROLS[fighter.name].map(control => {
                   const value = values[fighter.name][control.key];
+                  if (control.type === "choice") {
+                    return (
+                      <label key={control.key} className="enemy-form-control">
+                        <span>{control.label}</span>
+                        <select
+                          value={String(value)}
+                          onChange={event => {
+                            const picked = control.options.find(option => String(option.value) === event.target.value);
+                            setValue(fighter.name, control.key, picked.value);
+                          }}
+                        >
+                          {control.options.map(option => (
+                            <option key={String(option.value)} value={String(option.value)}>{option.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                    );
+                  }
                   return (
                     <label key={control.key} className="enemy-form-control">
                       <span>{control.label}</span>

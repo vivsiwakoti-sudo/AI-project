@@ -1,6 +1,20 @@
 // Optional setup for testing enemy forms before a battle. Each control maps to
 // one starting value on the fighter; anything not listed here keeps its normal
 // behaviour.
+// A choice control picks one of its options. "random" keeps the fighter's normal roll
+// and is the default; any other option applies to every throw, shot or hit.
+function choice(key, label, options) {
+    return {
+        key,
+        label,
+        type: "choice",
+        value: "random",
+        options: [{ value: "random", label: "Random" }, ...options]
+    };
+}
+
+const fixedChoice = value => (value === "random" ? null : value);
+
 export const TEST_FORM_CONTROLS = {
     Vampire: [
         { key: "stage", label: "Evolution stage", min: 1, max: 4, step: 1, value: 1, unit: "" }
@@ -23,6 +37,45 @@ export const TEST_FORM_CONTROLS = {
     ],
     Duplicator: [
         { key: "clones", label: "Starting clones", min: 0, max: 75, step: 1, value: 0, unit: "" }
+    ],
+    Alchemist: [
+        choice("potion", "Potion", [
+            { value: "slow", label: "Slow" },
+            { value: "poison", label: "Poison" },
+            { value: "stun", label: "Stun" },
+            { value: "percent", label: "Percent" },
+            { value: "vampire", label: "Vampire" }
+        ])
+    ],
+    Gambler: [
+        choice("face", "Die face", [
+            { value: "stun", label: "Stun" },
+            { value: "burn", label: "Burn" },
+            { value: "percent", label: "Percent" },
+            { value: "heal", label: "Heal" },
+            { value: "selfPercent", label: "Self percent" },
+            { value: "selfBurn", label: "Self burn" },
+            { value: "shield", label: "Shield" },
+            { value: "vulnerable", label: "Vulnerable" }
+        ])
+    ],
+    Gunner: [
+        choice("pattern", "Combo", [
+            { value: 0, label: "1 bullet · 15 dmg" },
+            { value: 1, label: "10 bullets · 10 dmg" },
+            { value: 2, label: "3 bullets · 7 dmg" },
+            { value: 3, label: "4 bullets · 5 dmg" }
+        ])
+    ],
+    Ninja: [
+        choice("effect", "Rope dart effect", [
+            { value: "fire", label: "Fire" },
+            { value: "electric", label: "Electric" },
+            { value: "shrink", label: "Shrink" }
+        ])
+    ],
+    Yeti: [
+        { key: "freezeChance", label: "Freeze chance", min: 0, max: 100, step: 5, value: 25, unit: "%" }
     ]
 };
 
@@ -61,6 +114,21 @@ export function applyTestForm(fighter, form) {
             break;
         case "Duplicator":
             for (let i = 0; i < form.clones; i++) fighter.spawnClone();
+            break;
+        case "Alchemist":
+            fighter.setFixedPotion(fixedChoice(form.potion));
+            break;
+        case "Gambler":
+            fighter.setFixedFace(fixedChoice(form.face));
+            break;
+        case "Gunner":
+            fighter.setFixedPattern(fixedChoice(form.pattern));
+            break;
+        case "Ninja":
+            fighter.setFixedEffect(fixedChoice(form.effect));
+            break;
+        case "Yeti":
+            fighter.freezeChance = form.freezeChance / 100;
             break;
     }
 }

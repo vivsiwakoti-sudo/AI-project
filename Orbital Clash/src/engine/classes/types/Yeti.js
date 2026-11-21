@@ -1,6 +1,6 @@
 import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
-import { EffectSystem } from "../../systems/EffectSystem.js";
+import { EffectSystem, FREEZE_CHANCE } from "../../systems/EffectSystem.js";
 import { audioManager } from "../../audio/AudioManager.js";
 
 const MIN_LEAP_INTERVAL = 5;
@@ -29,6 +29,8 @@ export class Yeti extends FighterBase {
         this.leapTime = 0;
         this.leapStartDistance = 1;
         this.leapProgress = 0;
+        // Chance (0-1) that a slam's freeze lands on each victim.
+        this.freezeChance = FREEZE_CHANCE;
     }
 
     update(dt, opponent) {
@@ -109,7 +111,7 @@ export class Yeti extends FighterBase {
             const dist = Math.hypot(victim.x - impactX, victim.y - impactY);
             if (dist > SLAM_RADIUS + victim.radius) continue;
             if (!DamageSystem.applyDamage(this, victim, SLAM_DAMAGE, "AOE", { ignoreCooldown: true })) continue;
-            if (!victim.isDead) EffectSystem.rollFreeze(victim, FREEZE_SECONDS);
+            if (!victim.isDead) EffectSystem.rollFreeze(victim, FREEZE_SECONDS, this.freezeChance);
         }
     }
 

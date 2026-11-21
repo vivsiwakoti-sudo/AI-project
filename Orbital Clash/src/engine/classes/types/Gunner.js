@@ -19,6 +19,12 @@ export class Gunner extends FighterBase {
         this.cooldownTimer = 0;
         this.lastShotTime = 0;
         this.gunBarrelAngle = 0;
+        // Index into GUNNER_PATTERNS used for every shot, or null for a random burst.
+        this.fixedPattern = null;
+    }
+
+    setFixedPattern(index) {
+        this.fixedPattern = index;
     }
 
     update(dt, opponent) {
@@ -72,7 +78,7 @@ export class Gunner extends FighterBase {
     }
 
     shoot(opponent) {
-        const pattern = GUNNER_PATTERNS[Math.floor(Math.random() * GUNNER_PATTERNS.length)];
+        const pattern = GUNNER_PATTERNS[this.fixedPattern ?? Math.floor(Math.random() * GUNNER_PATTERNS.length)];
         const { bullets, damage, cooldown, accuracy } = pattern;
 
         // AIM AT OPPONENT, THEN FIRE

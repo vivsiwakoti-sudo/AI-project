@@ -49,6 +49,12 @@ export class Gambler extends FighterBase {
         this.cooldownTimer = 0;
         this.shieldHits = 0;
         this.vulnerableHits = 0;
+        // Face id (from FACES) every landed die shows, or null for a random roll.
+        this.fixedFace = null;
+    }
+
+    setFixedFace(id) {
+        this.fixedFace = id;
     }
 
     update(dt, opponent) {
@@ -96,7 +102,7 @@ export class Gambler extends FighterBase {
         // A die that lands after being turned back only deals damage; the face roll
         // belongs to the thrower's own gamble.
         if (die.isReflected(this)) return;
-        const face = FACES[Math.floor(Math.random() * FACES.length)];
+        const face = FACES.find(f => f.id === this.fixedFace) ?? FACES[Math.floor(Math.random() * FACES.length)];
         this.particleSystem?.emit(die.x, die.y, face.good ? "#f2c94c" : "#8a8f98", 16, { speed: 300, size: 3 });
         this.applyFace(face.id, struck);
     }

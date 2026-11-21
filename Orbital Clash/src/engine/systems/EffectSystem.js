@@ -1,5 +1,5 @@
 const SLOW_MULTIPLIERS = { slow: 0.5, "web-slow": 0.4, "trail-slow": 0.5 };
-const FREEZE_CHANCE = 0.25;
+export const FREEZE_CHANCE = 0.25;
 // Permanent slows that multiply on top of the strongest timed slow instead of competing with it.
 const COMPOUNDING_SLOWS = new Set(["web-weave"]);
 
@@ -63,8 +63,8 @@ export class EffectSystem {
   }
 
   // Chance that a landed freeze hit actually freezes its victim.
-  static rollFreeze(fighter, seconds) {
-    if (Math.random() >= FREEZE_CHANCE) return false;
+  static rollFreeze(fighter, seconds, chance = FREEZE_CHANCE) {
+    if (Math.random() >= chance) return false;
     EffectSystem.freeze(fighter, seconds);
     return true;
   }

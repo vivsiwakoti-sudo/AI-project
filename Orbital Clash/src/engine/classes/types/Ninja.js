@@ -3,6 +3,13 @@ import { DamageSystem } from "../../systems/DamageSystem.js";
 import { EffectSystem } from "../../systems/EffectSystem.js";
 import { audioManager } from "../../audio/AudioManager.js";
 
+function rollNinjaEffect() {
+    const roll = Math.random();
+    if (roll < 0.33) return "fire";
+    if (roll < 0.66) return "electric";
+    return "shrink";
+}
+
 export class Ninja extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -13,6 +20,12 @@ export class Ninja extends FighterBase {
         this.ropeSwing = 0;
         // Px/frame. The dart flies straight once launched and never re-aims.
         this.ropeDartSpeed = 14;
+        // Effect (from NINJA_EFFECTS) applied to every dart hit, or null for the 33% random roll.
+        this.fixedEffect = null;
+    }
+
+    setFixedEffect(id) {
+        this.fixedEffect = id;
     }
 
     update(dt, opponent) {
@@ -100,38 +113,36 @@ export class Ninja extends FighterBase {
                     dart.savedVy = struck.vy;
                     if (struck.particleSystem) struck.particleSystem.emitImpact(struck.x, struck.y, "#d9d9d9", 18);
 
-                    if (Math.random() < 0.33) {
-                        const effectRoll = Math.random();
-                        if (effectRoll < 0.33) {
-                            EffectSystem.addEffect(struck, {
-                                name: "fire",
-                                duration: 5,
-                                tickTimer: 0,
-                                onUpdate: (fighter, effect, elapsed) => {
-                                    effect.tickTimer += elapsed;
-                                    if (effect.tickTimer >= 1) {
-                                        effect.tickTimer = 0;
-                                        // A burn tick is a lingering effect, not the
-                                        // Ninja's attack: passing no attacker keeps it
-                                        // from arming the per-attacker damage
-                                        // cooldown and blocking the next rope dart
-                                        // for 0.5s out of every second.
-                                        DamageSystem.applyDamage(null, fighter, 1, "Body", { ignoreCooldown: true });
-                                    }
+                    const hitEffect = this.fixedEffect ?? (Math.random() < 0.33 ? rollNinjaEffect() : null);
+                    if (hitEffect === "fire") {
+                        EffectSystem.addEffect(struck, {
+                            name: "fire",
+                            duration: 5,
+                            tickTimer: 0,
+                            onUpdate: (fighter, effect, elapsed) => {
+                                effect.tickTimer += elapsed;
+                                if (effect.tickTimer >= 1) {
+                                    effect.tickTimer = 0;
+                                    // A burn tick is a lingering effect, not the
+                                    // Ninja's attack: passing no attacker keeps it
+                                    // from arming the per-attacker damage
+                                    // cooldown and blocking the next rope dart
+                                    // for 0.5s out of every second.
+                                    DamageSystem.applyDamage(null, fighter, 1, "Body", { ignoreCooldown: true });
                                 }
-                            });
-                        } else if (effectRoll < 0.66) {
-                            EffectSystem.addEffect(struck, {
-                                name: "electric",
-                                duration: 2.5,
-                                onEnd: (fighter) => { fighter.jitter = 0; }
-                            });
-                            DamageSystem.applyDamage(this, struck, 3, "Melee", { ignoreCooldown: true });
-                        } else {
-                            const reducedMax = Math.max(1, struck.maxHealth * 0.8);
-                            struck.maxHealth = reducedMax;
-                            struck.health = Math.min(struck.health, struck.maxHealth);
-                        }
+                            }
+                        });
+                    } else if (hitEffect === "electric") {
+                        EffectSystem.addEffect(struck, {
+                            name: "electric",
+                            duration: 2.5,
+                            onEnd: (fighter) => { fighter.jitter = 0; }
+                        });
+                        DamageSystem.applyDamage(this, struck, 3, "Melee", { ignoreCooldown: true });
+                    } else if (hitEffect === "shrink") {
+                        const reducedMax = Math.max(1, struck.maxHealth * 0.8);
+                        struck.maxHealth = reducedMax;
+                        struck.health = Math.min(struck.health, struck.maxHealth);
                     }
                 }
             }

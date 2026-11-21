@@ -23,6 +23,14 @@ class Potion extends Projectile {
     }
 }
 
+const POTIONS = [
+    { type: "slow", damage: 5, duration: 3 },
+    { type: "poison", damage: 10 },
+    { type: "stun", damage: 7, duration: 3 },
+    { type: "percent", damage: 0 }, // Handled specially
+    { type: "vampire", damage: 10, heal: 7 }
+];
+
 export class Alchemist extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -32,6 +40,12 @@ export class Alchemist extends FighterBase {
         this.throwAnimation = 0;
         this.throwAngle = 0;
         this.impactEffects = [];
+        // Potion type (from POTIONS) every flask uses, or null for a random pick.
+        this.fixedPotion = null;
+    }
+
+    setFixedPotion(type) {
+        this.fixedPotion = type;
     }
 
     update(dt, opponent) {
@@ -67,14 +81,8 @@ export class Alchemist extends FighterBase {
     }
 
     throwPotion(opponent) {
-        const effects = [
-            { type: "slow", damage: 5, duration: 3 },
-            { type: "poison", damage: 10 },
-            { type: "stun", damage: 7, duration: 3 },
-            { type: "percent", damage: 0 }, // Handled specially
-            { type: "vampire", damage: 10, heal: 7 }
-        ];
-        const effect = effects[Math.floor(Math.random() * effects.length)];
+        const effect = POTIONS.find(potion => potion.type === this.fixedPotion)
+            ?? POTIONS[Math.floor(Math.random() * POTIONS.length)];
 
         const angle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
         const p = new Potion(this.x, this.y, Math.cos(angle) * FLASK_SPEED, Math.sin(angle) * FLASK_SPEED, this, effect);

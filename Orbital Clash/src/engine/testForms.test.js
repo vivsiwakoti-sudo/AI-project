@@ -6,10 +6,22 @@ import { installTestAudio } from './audio/testAudioStub.js';
 installTestAudio();
 
 const { FighterFactory } = await import('./FighterFactory.js');
+const { FighterBase } = await import('./classes/FighterBase.js');
 const { applyTestForm, hasTestableFighter, defaultTestForm } = await import('./testForms.js');
 
+const dummy = (x, y) => new FighterBase({
+  name: 'Dummy', color: '#fff', health: 500, damage: 10, speed: 0, bodySize: 32,
+  attackType: 'Melee', cooldown: 0, description: 'Dummy'
+}, x, y);
+
+const withRandom = (value, fn) => {
+  const original = Math.random;
+  Math.random = () => value;
+  try { return fn(); } finally { Math.random = original; }
+};
+
 test('enemy forms are only offered when a listed fighter is in the fight', () => {
-  assert.equal(hasTestableFighter(['Gunner', 'Knight']), false);
+  assert.equal(hasTestableFighter(['Knight', 'Ice Sword']), false);
   assert.equal(hasTestableFighter(['Gunner', 'Mutant']), true);
   assert.equal(hasTestableFighter(['Mahoraga']), true);
 });
@@ -114,4 +126,63 @@ test('Duplicator clones made before the battle receive the arena particle system
 
   assert.equal(duplicator.clones.length, 3);
   for (const clone of duplicator.clones) assert.equal(clone.particleSystem, particles);
+});
+
+test('Alchemist throws the chosen potion on every throw', () => {
+  const alchemist = FighterFactory.createFighter('Alchemist', 100, 100);
+  applyTestForm(alchemist, { potion: 'stun' });
+  const opponent = dummy(700, 700);
+
+  for (let i = 0; i < 5; i++) {
+    alchemist.cooldownTimer = 0;
+    alchemist.throwPotion(opponent);
+  }
+
+  assert.equal(alchemist.projectiles.length, 5);
+  assert.ok(alchemist.projectiles.every(potion => potion.effect.type === 'stun'));
+});
+
+test('Gunner fires the chosen combo on every shot', () => {
+  const gunner = FighterFactory.createFighter('Gunner', 100, 100);
+  applyTestForm(gunner, { pattern: 1 });
+  const opponent = dummy(700, 700);
+
+  for (let shot = 1; shot <= 3; shot++) {
+    gunner.cooldownTimer = 0;
+    gunner.shoot(opponent);
+    assert.equal(gunner.projectiles.length, shot * 10);
+    assert.equal(gunner.cooldownTimer, 6);
+  }
+  assert.ok(gunner.projectiles.every(bullet => bullet.damage === 10));
+});
+
+test('Ninja applies the chosen rope dart effect on every hit, regardless of the random roll', () => {
+  const ninja = FighterFactory.createFighter('Ninja', 100, 100);
+  applyTestForm(ninja, { effect: 'shrink' });
+  const target = dummy(360, 100);
+  const before = target.maxHealth;
+
+  // A roll of 0.99 would skip the usual 33% effect chance.
+  const landed = withRandom(0.99, () => {
+    ninja.cooldownTimer = 0;
+    for (let i = 0; i < 120 && !ninja.ropeDart?.hit; i++) ninja.update(1 / 60, target);
+    return ninja.ropeDart?.hit;
+  });
+
+  assert.ok(landed, 'the dart should connect');
+  assert.equal(target.maxHealth, before * 0.8);
+});
+
+test('Yeti freeze chance decides whether a slam freezes each victim', () => {
+  const yeti = FighterFactory.createFighter('Yeti', 100, 100);
+
+  applyTestForm(yeti, { freezeChance: 100 });
+  const certain = dummy(130, 100);
+  withRandom(0.999999, () => yeti.slam(certain));
+  assert.equal(certain.isFrozen, true);
+
+  applyTestForm(yeti, { freezeChance: 0 });
+  const never = dummy(130, 100);
+  withRandom(0, () => yeti.slam(never));
+  assert.ok(!never.isFrozen);
 });
