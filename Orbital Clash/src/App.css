@@ -1321,10 +1321,10 @@
   gap: 24px;
 }
 
-/* Map size picker shown in the dock before every match. Pushed right, including when the dock wraps. */
+/* Map size picker shown in the dock before every match. Auto margins center it in the free space, including when the dock wraps. */
 .map-size-picker {
   --btn-accent: var(--sky);
-  margin-left: auto;
+  margin-inline: auto;
   display: flex;
   align-items: center;
   gap: 6px;
