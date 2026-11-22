@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FighterFactory } from "../engine/FighterFactory";
 import { ParticleSystem } from "../engine/systems/ParticleSystem";
 import { createFighterAssembly } from "../engine/systems/FighterAssembly";
 import { audioManager } from "../engine/audio/AudioManager";
 import StatsPanel from "./StatsPanel";
 import NeonBackdrop from "./NeonBackdrop";
+import LiveFeed, { LIVE_FEED_MAX_LINES } from "./LiveFeed";
+import { createLiveFeed, observeLiveFeed } from "../engine/liveFeed";
 import { spawnPositionFor, launchDirectionFor } from "../engine/systems/SpawnSystem";
 import { MAX_FIGHTERS, MIN_FIGHTERS } from "../engine/config";
 import { applyTestForm } from "../engine/testForms";
@@ -257,6 +259,9 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
   const pausedRef = useRef(false);
   const [timer, setTimer] = useState(300); // 5 minutes
   const [setupError, setSetupError] = useState(null);
+  // Recent battle events for the live feed overlay. Each line removes itself after a while.
+  const [feed, setFeed] = useState([]);
+  const removeFeedLine = useCallback(id => setFeed(current => current.filter(entry => entry.id !== id)), []);
 
   // fighterState holds the live instances. `fighters` never changes for the
   // lifetime of a battle, so this is initialised once on mount; the initializer
@@ -281,6 +286,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
     lastTime: performance.now(),
     suddenDeath: false,
     resolved: false,
+    liveFeed: createLiveFeed(),
     // Seconds of "afterglow" left after the battle is decided. The fight is over
     // the instant the last blow lands, but the simulation keeps ticking for this
     // long so the final kill's explosion (particles, expanding rings, body drift)
@@ -512,6 +518,11 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
         // Deaths are always settled before the victory check, so the battle can
         // never end on a stale alive-count.
         resolveDeaths(gameState.current.fighters, gameState.current.particles);
+
+        // Announce deaths and milestones from this frame's state, after the death sweep
+        // so a fighter's destruction is reported in the same frame it happens.
+        const feedEvents = observeLiveFeed(gameState.current.liveFeed, gameState.current.fighters);
+        if (feedEvents.length) setFeed(current => [...current, ...feedEvents].slice(-LIVE_FEED_MAX_LINES));
 
         // Hard fighter-vs-fighter bounces jolt the camera; both applyDeflection
         // calls already spawned sparks via the particle system.
@@ -768,6 +779,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
                     <span className="countdown-number pause-label">PAUSED</span>
                   </div>
                 )}
+                <LiveFeed entries={feed} onExpire={removeFeedLine} />
             </div>
           <div className={`arena-stats arena-stats-right ${sidePlan.rightSkinny ? "arena-stats-skinny" : ""}`}>
             {sidePlan.right.map(i => (

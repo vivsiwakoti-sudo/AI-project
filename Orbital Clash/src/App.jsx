@@ -8,7 +8,7 @@ import TournamentScreen from "./components/TournamentScreen";
 import ChampionScreen from "./components/ChampionScreen";
 import ScreenTransition from "./components/ScreenTransition";
 import PredictionModal from "./components/PredictionModal";
-import TeamModal from "./components/TeamModal";
+
 import EnemyFormsModal from "./components/EnemyFormsModal";
 import { hasTestableFighter } from "./engine/testForms";
 import BattleIntro from "./components/BattleIntro";
@@ -51,8 +51,7 @@ function App() {
   // A prediction is asked for before a battle starts or a new bracket is built.
   // `onConfirm` receives the guesses and carries on with the start it was waiting on.
   const [pendingPrediction, setPendingPrediction] = useState(null);
-  // The battle format (free-for-all or teams) is asked for after the prediction.
-  const [pendingTeams, setPendingTeams] = useState(null);
+
   const [pendingEnemyForms, setPendingEnemyForms] = useState(null);
 
   // --- Tournament Mode -------------------------------------------------------
@@ -137,11 +136,12 @@ function App() {
   // so the transition wrapper can keep showing the old one for the length of its
   // exit animation. `screen` still drives it exactly as before.
   const screens = {
-    menu: <Menu intro={rosterIntro} shortcutsEnabled={screen === "menu" && !showTitle && !showSettings && !pendingPrediction && !pendingEnemyForms && !pendingTeams} onStart={(f, size) => {
+    menu: <Menu intro={rosterIntro} shortcutsEnabled={screen === "menu" && !showTitle && !showSettings && !pendingPrediction && !pendingEnemyForms} onStart={(f, size, teamPlan) => {
+      // The battle format is chosen in the roster dock now, so the plan arrives
+      // with the selection instead of being asked for in a modal after the prediction.
       const startBattle = (plan, testForms) => {
         setPendingPrediction(null);
         setPendingEnemyForms(null);
-        setPendingTeams(null);
         // Free-for-all leaves the selection as it was; a team plan tags each fighter.
         // A fighter whose card was switched on carries its test form.
         setSelectedFighters(f.map((fighter, i) => {
@@ -153,35 +153,22 @@ function App() {
         setRosterIntro(false);
         setScreen("battleIntro");
       };
-      // Format comes after the prediction. Cancelling it means no battle starts, so
-      // the prediction just made is voided rather than left to settle a fight that
-      // never happened.
-      const chooseFormat = testForms => {
-        setPendingTeams({
-          fighters: f.map(({ name, color }) => ({ name, color })),
-          onConfirm: plan => startBattle(plan, testForms),
-          onCancel: () => {
-            skipPrediction("battle");
-            setPendingTeams(null);
-          }
-        });
-      };
       // Enemy forms only appear when a listed fighter is in the fight. Cancelling
-      // here voids the prediction, the same as cancelling the format.
+      // here voids the prediction, since no battle starts.
       const chooseEnemyForms = () => {
         if (!hasTestableFighter(f.map(fighter => fighter.name))) {
-          chooseFormat(null);
+          startBattle(teamPlan, null);
           return;
         }
         setPendingEnemyForms({
           fighters: f.map(({ name, color }) => ({ name, color })),
           onConfirm: forms => {
             setPendingEnemyForms(null);
-            chooseFormat(forms);
+            startBattle(teamPlan, forms);
           },
           onSkip: () => {
             setPendingEnemyForms(null);
-            chooseFormat(null);
+            startBattle(teamPlan, null);
           },
           onCancel: () => {
             skipPrediction("battle");
@@ -308,13 +295,7 @@ function App() {
               onCancel={() => pendingEnemyForms.onCancel()}
             />
           )}
-          {pendingTeams && (
-            <TeamModal
-              fighters={pendingTeams.fighters}
-              onConfirm={plan => pendingTeams.onConfirm(plan)}
-              onCancel={() => pendingTeams.onCancel()}
-            />
-          )}
+
         </>
       )}
     </div>

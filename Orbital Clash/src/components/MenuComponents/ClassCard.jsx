@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { renderMotif } from "../../engine/MotifSystem";
 import { loadLastReplayFrames } from "../../engine/replayStore";
 import { BattleReplay } from "../ReplayPlayer";
+import { STREAK_GLOW_MIN } from "../../engine/winstreak";
 
 // A standalone motif canvas. ClassCard renders its own inline canvas, but the
 // tournament screens (bracket, live arena, champion screen) need the same motif
@@ -67,6 +68,8 @@ export default function ClassCard({ fighter, isSelected, isChampion = false, onC
     "--class-accent": fighter.color,
     color: fighter.color
   };
+  const streak = stats?.streak || 0;
+  const onStreak = streak >= STREAK_GLOW_MIN;
 
   return (
     <div
@@ -74,9 +77,10 @@ export default function ClassCard({ fighter, isSelected, isChampion = false, onC
       onClick={onClick}
       onContextMenu={onContextMenu}
       title="Right-click for details"
-      className={`fighter-card ${isSelected ? "fighter-card-selected" : ""} ${isChampion ? "fighter-card-champion" : ""}`}
+      className={`fighter-card ${isSelected ? "fighter-card-selected" : ""} ${isChampion ? "fighter-card-champion" : ""} ${onStreak ? "fighter-card-streak" : ""}`}
     >
       {isChampion && <span className="champion-badge" title="Winner of the last tournament">👑 CHAMPION</span>}
+      {onStreak && <span className="streak-badge" title={`${streak} wins in a row`}>🔥 {streak}</span>}
       {isSelected && lastClip && <LastFightClip />}
       <canvas ref={canvasRef} width={50} height={50} />
       <div className="fighter-card-copy"><h3>{fighter.name}</h3><strong>{fighter.attackType}</strong></div>

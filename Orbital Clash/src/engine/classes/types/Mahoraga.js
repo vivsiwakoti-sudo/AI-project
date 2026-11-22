@@ -4,7 +4,7 @@ import { EffectSystem } from "../../systems/EffectSystem.js";
 const MELEE_PARRY_CHANCE = 0.25;
 const MELEE_PARRY_STUN_SECONDS = 1;
 
-const ADAPTATION_STEPS = [
+export const ADAPTATION_STEPS = [
     { hits: 3, resistance: 0.3 },
     { hits: 5, resistance: 0.5 },
     { hits: 7, resistance: 0.7 }

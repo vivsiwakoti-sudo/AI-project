@@ -5,6 +5,7 @@ import { ARENA_SIZE_OPTIONS, DEFAULT_ARENA_SIZE, MAX_FIGHTERS, MIN_FIGHTERS } fr
 import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHistory";
 import { clearPredictions, loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
 import { bestExactPlacement, clearTournamentStats, hasResumableTournament, loadTournamentHistory, loadTournamentStats } from "../engine/tournament";
+import { TEAM_MODES, TEAM_MODE_IDS, planTeams } from "../engine/teamModes";
 import { favoriteLastReplay, listFavoriteReplays, loadLastReplayMeta, removeFavoriteReplay, MAX_FAVORITE_REPLAYS } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
@@ -75,6 +76,7 @@ function statsFromRecords(records, name) {
     losses,
     // Career eliminations, accumulated by the end screen after each battle.
     kills: record.kills || 0,
+    streak: record.streak || 0,
     appearances,
     orientation: wins / Math.max(1, losses),
     winRate: appearances ? wins / appearances : 0
@@ -107,6 +109,10 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
   const [activeFavoriteId, setActiveFavoriteId] = useState(null);
   const [favoriteNotice, setFavoriteNotice] = useState("");
   const [arenaSize, setArenaSize] = useState(DEFAULT_ARENA_SIZE);
+  // Battle format chosen in the dock beside START: free-for-all or a team preset.
+  // It is picked BEFORE the fight (the format modal no longer interrupts the
+  // start flow), and is turned back into a team plan when the battle is started.
+  const [teamMode, setTeamMode] = useState("ffa");
   // Read once on mount: the menu only needs to know whether a partial bracket is
   // waiting, and nothing on this screen can create or finish one.
   const [canResumeTournament, setCanResumeTournament] = useState(hasResumableTournament);
@@ -306,9 +312,14 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
     };
   };
 
+  // TRANSLATED to a team plan from the CURRENT selection: a format picked at 4
+  // fighters stays 2v2 when the roster drops to 3 (2 + 1), so the choice is a
+  // format, not a fixed set of sides. An invalid plan cannot happen for presets,
+  // but if it ever does the battle starts as free-for-all rather than not at all.
   const handleStartBattle = () => {
     audioManager.playUiClick();
-    onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize);
+    const plan = planTeams(teamMode, selected.length);
+    onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize, plan.error ? null : plan);
   };
 
   // R and Enter only act while the roster itself is in front. App switches them
@@ -704,7 +715,7 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
         </div>
       )}
 
-      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length} FIGHTERS — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={handleStartBattle} title="Start the battle (Enter)">START BATTLE</button></footer>    </main>
+      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length} FIGHTERS — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><div className="team-mode-picker" role="radiogroup" aria-label="Battle format"><span>TEAMS</span>{TEAM_MODE_IDS.filter(id => id !== "custom").map(id => (<button key={id} type="button" role="radio" aria-checked={teamMode === id} className={teamMode === id ? "team-mode-active" : ""} onClick={() => { audioManager.playUiClick(); setTeamMode(id); }} title={id === "ffa" ? "Everyone fights for themselves" : `Fight in teams of ${TEAM_MODES[id].perTeam}`}>{TEAM_MODES[id].label}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={handleStartBattle} title="Start the battle (Enter)">START BATTLE</button></footer>    </main>
     </>
   );
 }

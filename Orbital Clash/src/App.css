@@ -1127,6 +1127,38 @@
   .fighter-info-panel.fighter-info-panel-champion { animation: none; }
 }
 
+/* A fighter on a winning streak gets an orange glow on its roster card and a
+   streak badge at the top-left (the champion badge sits top-right). */
+.fighter-card-streak {
+  position: relative;
+  border-color: #ff8a1f !important;
+  box-shadow: 0 0 0 1px rgba(255, 138, 31, 0.55), 0 0 20px rgba(255, 138, 31, 0.55), 0 0 40px rgba(255, 110, 0, 0.28) !important;
+  animation: streak-glow-pulse 1.8s ease-in-out infinite;
+}
+
+.streak-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  padding: 3px 8px;
+  border-radius: var(--radius) 0 var(--radius) 0;
+  background: linear-gradient(135deg, #ffb347, #ff6a00);
+  color: #2b1200;
+  font: 800 0.6rem var(--font-data);
+  letter-spacing: 0.06em;
+  box-shadow: 0 0 12px rgba(255, 138, 31, 0.8);
+}
+
+@keyframes streak-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 138, 31, 0)); }
+  50% { filter: drop-shadow(0 0 8px rgba(255, 138, 31, 0.6)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fighter-card-streak { animation: none; }
+}
+
 .fighter-card canvas {
   width: 42px;
   height: 42px;
@@ -1308,6 +1340,40 @@
 
 .map-size-picker button:hover,
 .map-size-picker .map-size-active {
+  color: var(--btn-accent);
+  border-color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 16%, var(--surface));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--btn-accent) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--btn-accent) 14%, transparent);
+}
+
+/* Battle format picker shown in the dock next to START, so teams are chosen
+   before the fight instead of in a modal after the prediction. */
+.team-mode-picker {
+  --btn-accent: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font: 0.58rem var(--font-data);
+  letter-spacing: 0.14em;
+}
+
+.team-mode-picker button {
+  min-height: 28px;
+  padding: 0 10px;
+  cursor: pointer;
+  color: var(--btn-accent);
+  background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--btn-accent) 45%, var(--border));
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--btn-accent) 18%, transparent);
+  font: 600 0.6rem var(--font-data);
+  letter-spacing: 0.1em;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+
+.team-mode-picker button:hover,
+.team-mode-picker .team-mode-active {
   color: var(--btn-accent);
   border-color: var(--btn-accent);
   background: color-mix(in srgb, var(--btn-accent) 16%, var(--surface));
@@ -2356,6 +2422,7 @@
   .fighter-grid { grid-template-columns: 1fr; }
   .selection-dock { align-items: stretch; flex-direction: column; padding: 10px 16px; }
   .start-battle-button { width: 100%; }
+  .team-mode-picker { flex-wrap: wrap; justify-content: center; }
   .selection-slots { justify-content: center; }
 }
 

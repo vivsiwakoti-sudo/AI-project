@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { recordBattle } from "../engine/battleHistory";
 import { onWinningSide } from "../engine/teamModes";
+import { nextStreak } from "../engine/winstreak";
 
 const RECORDS_KEY = "arena-battles-records";
 
@@ -125,6 +126,8 @@ export default function EndScreen({ results: rawResults, aborted = false, onRetu
       const next = {
         wins: current.wins + (didWin ? 1 : 0),
         losses: current.losses + (didWin ? 0 : 1),
+        // Consecutive wins: a win extends it, a loss resets it.
+        streak: nextStreak(current.streak, didWin),
         // Kills accumulate across every battle this class has fought, the same way
         // wins do. The current count is clamped to 0 because a corrupted or
         // hand-edited localStorage entry must not poison the running total with NaN.
