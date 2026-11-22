@@ -5,9 +5,9 @@ import { TEAM_MODES, TEAM_MODE_IDS, describeSizes, planTeams } from "../engine/t
 // The step after the prediction: how the selected fighters fight. Presets confirm
 // with one click and preview the sides they produce for this roster. Custom opens
 // a per-fighter picker; team numbers are only labels, so the engine re-indexes them.
-export default function TeamModal({ fighters, onConfirm, onCancel }) {
+export default function TeamModal({ fighters, onConfirm, onCancel, startInCustom = false }) {
   const count = fighters.length;
-  const [customMode, setCustomMode] = useState(false);
+  const [customMode, setCustomMode] = useState(startInCustom);
   const [customTeams, setCustomTeams] = useState(() => fighters.map((_, i) => (i % 2) + 1));
   const [error, setError] = useState(null);
 

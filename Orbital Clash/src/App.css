@@ -1286,9 +1286,10 @@
   min-height: 66px;
   box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
+  gap: 12px 24px;
+  padding: 8px 40px;
   border-top: 1px solid var(--border-soft);
   background: linear-gradient(180deg, rgba(8, 12, 22, 0.92), rgba(4, 6, 13, 0.98));
   backdrop-filter: blur(12px);
@@ -1313,9 +1314,17 @@
 
 .selection-slots small { color: var(--text-muted); font: 0.58rem var(--font-data); letter-spacing: 0.14em; }
 
-/* Map size picker shown in the dock before every match. */
+/* TEAMS and START BATTLE stay together beside the fighter slots. */
+.dock-battle {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* Map size picker shown in the dock before every match. Pushed right, including when the dock wraps. */
 .map-size-picker {
   --btn-accent: var(--sky);
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1361,6 +1370,7 @@
 .team-mode-picker button {
   min-height: 28px;
   padding: 0 10px;
+  white-space: nowrap;
   cursor: pointer;
   color: var(--btn-accent);
   background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
@@ -2420,8 +2430,12 @@
 @media (max-width: 540px) {
   .app-topbar { padding: 0 16px; }
   .fighter-grid { grid-template-columns: 1fr; }
-  .selection-dock { align-items: stretch; flex-direction: column; padding: 10px 16px; }
-  .start-battle-button { width: 100%; }
+  .selection-dock { align-items: stretch; flex-direction: column; gap: 10px; padding: 10px 16px; }
+  .dock-battle { display: contents; }
+  .selection-slots { order: -1; }
+  .map-size-picker { order: 0; }
+  .team-mode-picker { order: 1; }
+  .start-battle-button { width: 100%; order: 2; }
   .team-mode-picker { flex-wrap: wrap; justify-content: center; }
   .selection-slots { justify-content: center; }
 }

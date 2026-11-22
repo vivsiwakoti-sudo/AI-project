@@ -6,6 +6,7 @@ import { loadHistory, clearHistory, loadBattleCount } from "../engine/battleHist
 import { clearPredictions, loadPredictions, tallyPredictions, PREDICTION_KINDS } from "../engine/predictions";
 import { bestExactPlacement, clearTournamentStats, hasResumableTournament, loadTournamentHistory, loadTournamentStats } from "../engine/tournament";
 import { TEAM_MODES, TEAM_MODE_IDS, planTeams } from "../engine/teamModes";
+import TeamModal from "./TeamModal";
 import { favoriteLastReplay, listFavoriteReplays, loadLastReplayMeta, removeFavoriteReplay, MAX_FAVORITE_REPLAYS } from "../engine/replayStore";
 import ReplayPlayer from "./ReplayPlayer";
 import NeonBackdrop from "./NeonBackdrop";
@@ -51,6 +52,13 @@ function clearRecords() {
 // 1 -> "1st", 2 -> "2nd", ... Used by the battle-history log to rank the
 // participants of each saved fight.
 const PREDICTION_STATUS_LABEL = { pending: "PENDING", resolved: "SETTLED", void: "VOID" };
+
+const TEAM_MODE_TITLES = {
+  ffa: "Everyone fights for themselves",
+  "2v2": "Fight in teams of 2",
+  "3v3": "Fight in teams of 3",
+  custom: "Pick each fighter's team"
+};
 
 function ordinal(n) {
   const value = Math.floor(Number(n));
@@ -113,6 +121,7 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
   // It is picked BEFORE the fight (the format modal no longer interrupts the
   // start flow), and is turned back into a team plan when the battle is started.
   const [teamMode, setTeamMode] = useState("ffa");
+  const [showCustomTeams, setShowCustomTeams] = useState(false);
   // Read once on mount: the menu only needs to know whether a partial bracket is
   // waiting, and nothing on this screen can create or finish one.
   const [canResumeTournament, setCanResumeTournament] = useState(hasResumableTournament);
@@ -316,16 +325,30 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
   // fighters stays 2v2 when the roster drops to 3 (2 + 1), so the choice is a
   // format, not a fixed set of sides. An invalid plan cannot happen for presets,
   // but if it ever does the battle starts as free-for-all rather than not at all.
+  const launchBattle = (plan) => {
+    onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize, plan);
+  };
+
+  // TRANSLATED to a team plan from the CURRENT selection: a format picked at 4
+  // fighters stays 2v2 when the roster drops to 3 (2 + 1), so the choice is a
+  // format, not a fixed set of sides. An invalid plan cannot happen for presets,
+  // but if it ever does the battle starts as free-for-all rather than not at all.
+  // Custom teams need a per-fighter assignment, so they open the battle-format
+  // popup instead of starting straight away.
   const handleStartBattle = () => {
     audioManager.playUiClick();
+    if (teamMode === "custom") {
+      setShowCustomTeams(true);
+      return;
+    }
     const plan = planTeams(teamMode, selected.length);
-    onStart(selected.map((n) => ({ ...FIGHTER_CLASSES[n], ...statFor(n) })), arenaSize, plan.error ? null : plan);
+    launchBattle(plan.error ? null : plan);
   };
 
   // R and Enter only act while the roster itself is in front. App switches them
   // off behind the title, settings and modals; the overlays below switch them off
   // while open. Enter is consumed so a focused button does not also fire its click.
-  const overlayOpen = showHistory || showPredictions || showReplay || showFavorites || showTutorial || Boolean(info);
+  const overlayOpen = showHistory || showPredictions || showReplay || showFavorites || showTutorial || showCustomTeams || Boolean(info);
   const shortcutsActive = shortcutsEnabled && !overlayOpen;
   useEffect(() => {
     if (!shortcutsActive) return;
@@ -514,6 +537,14 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
       )}
 
       {showTutorial && <TutorialPanel onClose={() => setShowTutorial(false)} />}
+      {showCustomTeams && (
+        <TeamModal
+          fighters={selected.map((n) => FIGHTER_CLASSES[n])}
+          startInCustom
+          onConfirm={(plan) => { setShowCustomTeams(false); launchBattle(plan); }}
+          onCancel={() => setShowCustomTeams(false)}
+        />
+      )}
 
       {showHistory && (
         <div className="fighter-info-overlay" role="dialog" aria-label="Battle history">
@@ -715,7 +746,7 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
         </div>
       )}
 
-      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length} FIGHTERS — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div><div className="team-mode-picker" role="radiogroup" aria-label="Battle format"><span>TEAMS</span>{TEAM_MODE_IDS.filter(id => id !== "custom").map(id => (<button key={id} type="button" role="radio" aria-checked={teamMode === id} className={teamMode === id ? "team-mode-active" : ""} onClick={() => { audioManager.playUiClick(); setTeamMode(id); }} title={id === "ffa" ? "Everyone fights for themselves" : `Fight in teams of ${TEAM_MODES[id].perTeam}`}>{TEAM_MODES[id].label}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={handleStartBattle} title="Start the battle (Enter)">START BATTLE</button></footer>    </main>
+      <footer className="selection-dock"><div className="selection-slots">{Array.from({ length: MAX_FIGHTERS }, (_, i) => (<span key={i} className={selected[i] ? "slot-filled" : ""}>{selected[i] || `— FIGHTER ${i + 1} —`}</span>))}<small>{canStart ? `${selected.length} FIGHTERS — READY` : `SELECT ${MIN_FIGHTERS} TO ${MAX_FIGHTERS} FIGHTERS`}</small></div><div className="dock-battle"><div className="team-mode-picker" role="radiogroup" aria-label="Battle format"><span>TEAMS</span>{TEAM_MODE_IDS.map(id => (<button key={id} type="button" role="radio" aria-checked={teamMode === id} className={teamMode === id ? "team-mode-active" : ""} onClick={() => { audioManager.playUiClick(); setTeamMode(id); }} title={TEAM_MODE_TITLES[id]}>{TEAM_MODES[id].label}</button>))}</div><button disabled={!canStart} className="start-battle-button" onClick={handleStartBattle} title="Start the battle (Enter)">START BATTLE</button></div><div className="map-size-picker" role="radiogroup" aria-label="Map size"><span>MAP</span>{ARENA_SIZE_OPTIONS.map((size) => (<button key={size} type="button" role="radio" aria-checked={arenaSize === size} className={arenaSize === size ? "map-size-active" : ""} onClick={() => { audioManager.playUiClick(); setArenaSize(size); }}>{size}x{size}</button>))}</div></footer>    </main>
     </>
   );
 }
