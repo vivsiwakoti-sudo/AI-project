@@ -1336,6 +1336,7 @@
 .map-size-picker button {
   min-height: 28px;
   padding: 0 10px;
+  white-space: nowrap;
   cursor: pointer;
   color: var(--btn-accent);
   background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
@@ -1367,11 +1368,11 @@
   letter-spacing: 0.14em;
 }
 
-.team-mode-picker button {
+.team-mode-picker select {
   min-height: 28px;
-  padding: 0 10px;
-  white-space: nowrap;
+  padding: 0 28px 0 12px;
   cursor: pointer;
+  white-space: nowrap;
   color: var(--btn-accent);
   background: color-mix(in srgb, var(--btn-accent) 7%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--btn-accent) 45%, var(--border));
@@ -1382,9 +1383,8 @@
   transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
-.team-mode-picker button:hover,
-.team-mode-picker .team-mode-active {
-  color: var(--btn-accent);
+.team-mode-picker select:hover,
+.team-mode-picker select:focus-visible {
   border-color: var(--btn-accent);
   background: color-mix(in srgb, var(--btn-accent) 16%, var(--surface));
   box-shadow: 0 0 14px color-mix(in srgb, var(--btn-accent) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--btn-accent) 14%, transparent);
