@@ -1314,14 +1314,15 @@
 
 .selection-slots small { color: var(--text-muted); font: 0.58rem var(--font-data); letter-spacing: 0.14em; }
 
-/* TEAMS and START BATTLE stay together beside the fighter slots. */
+/* TEAMS, MAP and START BATTLE share one row beside the fighter slots; the group only wraps when the dock is too narrow for it. */
 .dock-battle {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 24px;
+  gap: 12px 24px;
 }
 
-/* Map size picker shown in the dock before every match. Auto margins center it in the free space, including when the dock wraps. */
+/* Map size picker. In the dock it sits in the battle row; the tournament overview uses it too, where auto margins center it. */
 .map-size-picker {
   --btn-accent: var(--sky);
   margin-inline: auto;
@@ -1332,6 +1333,8 @@
   font: 0.58rem var(--font-data);
   letter-spacing: 0.14em;
 }
+
+.dock-battle .map-size-picker { margin-inline: 0; }
 
 .map-size-picker button {
   min-height: 28px;
@@ -1368,7 +1371,8 @@
   letter-spacing: 0.14em;
 }
 
-.team-mode-picker select {
+.team-mode-picker select,
+.dock-battle .map-size-picker select {
   min-height: 28px;
   padding: 0 28px 0 12px;
   cursor: pointer;
@@ -1384,7 +1388,9 @@
 }
 
 .team-mode-picker select:hover,
-.team-mode-picker select:focus-visible {
+.team-mode-picker select:focus-visible,
+.dock-battle .map-size-picker select:hover,
+.dock-battle .map-size-picker select:focus-visible {
   border-color: var(--btn-accent);
   background: color-mix(in srgb, var(--btn-accent) 16%, var(--surface));
   box-shadow: 0 0 14px color-mix(in srgb, var(--btn-accent) 45%, transparent), inset 0 0 12px color-mix(in srgb, var(--btn-accent) 14%, transparent);
