@@ -5,9 +5,9 @@ const MELEE_PARRY_CHANCE = 0.25;
 const MELEE_PARRY_STUN_SECONDS = 1;
 
 export const ADAPTATION_STEPS = [
-    { hits: 3, resistance: 0.3 },
-    { hits: 5, resistance: 0.5 },
-    { hits: 7, resistance: 0.7 }
+    { hits: 4, resistance: 0.3 },
+    { hits: 6, resistance: 0.5 },
+    { hits: 8, resistance: 0.7 }
 ];
 
 // Projectile reflection unlocks with the 2nd adaptation step, earned on any attack.

@@ -85,10 +85,11 @@ export class Grappler extends FighterBase {
                     hooked.vx *= RELEASE_SPEED_MULTIPLIER;
                     hooked.vy *= RELEASE_SPEED_MULTIPLIER;
 
-                    // Add MomentumBoost
+                    // Add MomentumBoost; its wall-bounce damage is credited to this Grappler.
                     EffectSystem.addEffect(hooked, {
                         name: "MomentumBoost",
                         duration: 4,
+                        source: this,
                         onEnd: (fighter) => {
                             if (fighter.vx) fighter.vx /= RELEASE_SPEED_MULTIPLIER;
                             if (fighter.vy) fighter.vy /= RELEASE_SPEED_MULTIPLIER;

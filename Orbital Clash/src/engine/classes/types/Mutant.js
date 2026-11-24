@@ -1,9 +1,11 @@
 import { FighterBase } from "../FighterBase.js";
 
+const MUTATION_SECONDS = 10;
+
 export class Mutant extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
-        this.mutationTimer = 5;
+        this.mutationTimer = MUTATION_SECONDS;
         this.updateMutantScale();
     }
 
@@ -12,10 +14,10 @@ export class Mutant extends FighterBase {
         super.update(dt, opponent);
         this.mutationTimer -= dt;
         this.isCharging = this.mutationTimer <= 1.5;
-        this.chargeProgress = Math.max(0, Math.min(1, 1 - this.mutationTimer / 5));
+        this.chargeProgress = Math.max(0, Math.min(1, 1 - this.mutationTimer / MUTATION_SECONDS));
         if (this.mutationTimer <= 0) {
             this.mutate();
-            this.mutationTimer = 5;
+            this.mutationTimer = MUTATION_SECONDS;
         }
         this.mutationFlash = Math.max(0, (this.mutationFlash || 0) - dt);
     }

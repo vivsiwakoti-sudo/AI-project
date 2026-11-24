@@ -2,7 +2,7 @@ import { FighterBase } from "../FighterBase.js";
 import { DamageSystem } from "../../systems/DamageSystem.js";
 import { CollisionSystem } from "../../systems/CollisionSystem.js";
 
-const CLONE_HEALTH = 15;
+const CLONE_HEALTH = 20;
 // Damage a clone takes from each new contact with any fighter.
 const CLONE_TOUCH_DAMAGE = 3;
 

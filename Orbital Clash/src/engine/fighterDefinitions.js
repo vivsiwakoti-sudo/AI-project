@@ -123,7 +123,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 3,
     description: "Fires increasing numbers of fireballs.",
-    description2: "Every attack fires one more fireball than the last. Each fireball deals no impact damage, but applies an independent burn dealing 1 damage each second for 5 ticks. Each fireball that hits adds its own burn stack, up to 5 stacks on the same opponent.",
+    description2: "Every attack fires one more fireball than the last. Each fireball deals no impact damage, but applies an independent burn dealing 1 damage each second for 5 ticks. Each fireball that hits adds its own burn stack, up to 8 stacks on the same opponent.",
     keywords: ["fire", "volley", "burn", "dot", "stacking"],
   },
   "Duplicator": {
@@ -137,7 +137,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 0,
     description: "Creates clones on touch.",
-    description2: "Touching the opponent deals 2 damage and spawns a clone with 15 HP, one clone per new touch. Any fighter that touches a clone deals it 3 damage. Clones fight on their own and can split again, up to 75 clones; at 75, touches no longer clone. Killing the original destroys every clone at once.",
+    description2: "Touching the opponent deals 2 damage and spawns a clone with 20 HP, one clone per new touch. Any fighter that touches a clone deals it 3 damage. Clones fight on their own and can split again, up to 75 clones; at 75, touches no longer clone. Killing the original destroys every clone at once.",
     keywords: ["clones", "body", "swarm", "split"],
   },
   "Ghost": {
@@ -203,7 +203,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 7,
     description: "Randomly mutates and fluctuates stats.",
-    description2: "Mutates into a random stat line every 5 seconds: health 10-250, damage 10-100 (70% chance of 10-24, 20% of 25-70, 10% of 71-100), always 5 px/frame. Health is preserved as a percentage, and its arms and body visibly grow or shrink with the roll.",
+    description2: "Mutates into a random stat line every 10 seconds: health 10-250, damage 10-100 (70% chance of 10-24, 20% of 25-70, 10% of 71-100), always 5 px/frame. Health is preserved as a percentage, and its arms and body visibly grow or shrink with the roll.",
     keywords: ["mutate", "random", "scaling", "body"],
   },
   "Knight": {
@@ -364,7 +364,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 0,
     description: "Adapts to enemy attacks.",
-    description2: "Adapts separately to every attack, meaning each attacking class and damage type on its own (a Knight's sword and a Samurai's sword are different attacks, and a Mimic must be re-adapted after it switches form). After 3, 5 and 7 landed hits from that attack it gains 30%, 50% and 70% resistance. A melee adaptation unlocks a 25% parry that stuns for 1 second; a projectile adaptation unlocks a 35% parry. The wheel spins and glows gold each time he adapts.",
+    description2: "Adapts separately to every attack, meaning each attacking class and damage type on its own (a Knight's sword and a Samurai's sword are different attacks, and a Mimic must be re-adapted after it switches form). After 4, 6 and 8 landed hits from that attack it gains 30%, 50% and 70% resistance. A melee adaptation unlocks a 25% parry that stuns for 1 second; a projectile adaptation unlocks a 35% parry. The wheel spins and glows gold each time he adapts.",
     keywords: ["adapt", "resist", "parry", "wheel", "tank"],
   },
   "Summoner": {
@@ -392,7 +392,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 7.5,
     description: "Leaps onto enemies for 10 AoE damage.",
-    description2: "Every 5-10 seconds the Yeti leaps toward its opponent's position at launch, then slams the ground for 10 damage within a 175 px radius. It does not track the opponent during the leap. Each enemy struck has a 25% chance to be frozen in a block of ice for 2 seconds. Frozen fighters cannot move or attack, and a frozen Yeti cancels its leap.",
+    description2: "Every 5-10 seconds the Yeti leaps toward its opponent's position at launch, then slams the ground for 10 damage within a 175 px radius. It does not track the opponent during the leap. Each fighter struck has a 25% chance to be frozen in a block of ice for 2 seconds. Frozen fighters cannot move or attack, and a frozen Yeti cancels its leap. A landed freeze also cuts the Yeti's leap cooldown in half.",
     keywords: ["leap", "aoe", "freeze", "ice", "slam"],
   },
   "Dragon": {
@@ -406,7 +406,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Area",
     cooldown: 6,
     description: "Hurls fireballs that burst into a 100 px circle of fire.",
-    description2: "Every 6 seconds the Dragon hurls a fireball in the direction it faces. A fighter it strikes takes 10 fire damage. The fireball then bursts into a 100 px radius circle of fire where it lands, whether it hit a fighter or the wall. Anyone inside the fire takes 5 damage 0.75 seconds after entering, then 5 more every second for 5 seconds. The fire burns out after 5 seconds. Each HP the Dragon loses slows it by 1% of its base speed, up to 80%.",
+    description2: "Every 6 seconds the Dragon hurls a fireball in the direction it faces. A fighter it strikes takes 10 fire damage. The fireball then bursts into a 100 px radius circle of fire where it lands, whether it hit a fighter or the wall. Anyone inside the fire takes 5 damage 0.75 seconds after entering, then 5 more every second for 5 seconds. The fire burns out after 5 seconds. Each HP the Dragon loses slows it by 0.5% of its base speed, up to 80%.",
     keywords: ["fire", "breath", "square", "burn", "wings"],
   },
   "Striker": {
@@ -432,9 +432,9 @@ export const FIGHTER_CLASSES = {
     bodySize: 40,
     shape: "laser",
     attackType: "Trail",
-    cooldown: 5,
+    cooldown: 7,
     description: "Drags a laser along its own path until it bounces off a wall four times, then the laser lingers.",
-    description2: "The Laser Beam leaves a laser line along its path as it moves. The laser stops on the Laser Beam's fourth wall bounce, and the 5 second cooldown starts at that moment. The stopped laser stays for 5 seconds. Each fighter it touches takes 3 damage each time it touches the line, and anyone still touching the stopped laser takes 3 damage every 0.5 seconds.",
+    description2: "The Laser Beam leaves a laser line along its path as it moves. The laser stops on the Laser Beam's fourth wall bounce, and the 7 second cooldown starts at that moment. The stopped laser stays for 5 seconds. Each fighter it touches takes 3 damage each time it touches the line, and anyone still touching the stopped laser takes 3 damage every 0.5 seconds.",
     keywords: ["laser", "beam", "trail", "wall", "burn"],
   },
   "Gambler": {
@@ -448,7 +448,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Projectile",
     cooldown: 5,
     description: "Throws a die that rolls a random face when it lands.",
-    description2: "Every 5 seconds the Gambler throws a 44 px die at its target. The die deals 15 damage when it lands, then rolls one of eight faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), deal 15% of the target's max HP, or shield itself, blocking the next 3 hits. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, set itself on fire (5 burn damage over 5 seconds), or leave itself open, taking 2x damage from the next 3 hits. Sudden death ignores the shield and the 2x penalty. A parried or dodged die does not roll. A die that misses the arena does not roll.",
+    description2: "Every 5 seconds the Gambler throws a 44 px die at its target. The die deals 15 damage when it lands, then rolls one of eight faces with equal chance. Good faces: stun the target for 2 seconds, set the target on fire (5 burn damage over 5 seconds), deal 15% of the target's max HP, or shield itself, blocking the next 3 hits. Bad faces: heal the target 15 HP, deal 15% of the Gambler's max HP to itself, set itself on fire (3 burn damage per second for 5 seconds, 15 total), or leave itself open, taking 2x damage from the next 3 hits. Sudden death ignores the shield and the 2x penalty. A parried or dodged die does not roll. A die that misses the arena does not roll.",
     keywords: ["dice", "gamble", "luck", "stun", "burn", "projectile"],
   },
   "Mimic": {

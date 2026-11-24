@@ -111,7 +111,9 @@ export class Yeti extends FighterBase {
             const dist = Math.hypot(victim.x - impactX, victim.y - impactY);
             if (dist > SLAM_RADIUS + victim.radius) continue;
             if (!DamageSystem.applyDamage(this, victim, SLAM_DAMAGE, "AOE", { ignoreCooldown: true })) continue;
-            if (!victim.isDead) EffectSystem.rollFreeze(victim, FREEZE_SECONDS, this.freezeChance);
+            if (!victim.isDead && EffectSystem.rollFreeze(victim, FREEZE_SECONDS, this.freezeChance)) {
+                this.cooldownTimer = this.cooldown / 2;
+            }
         }
     }
 

@@ -118,7 +118,7 @@ test('Dragon fire only hits fighters that overlap its 100 px radius circle', () 
   assert.equal(damageFromFireAt(121), 0, 'a victim just past the rim is missed');
 });
 
-test('Dragon speed drops 1% of base per HP lost, capped at an 80% reduction', () => {
+test('Dragon speed drops 0.5% of base per HP lost, capped at an 80% reduction', () => {
   const dragon = new Dragon(dragonStats, 400, 400);
   const victim = new FighterBase(victimStats, 700, 700);
   const speedAtHealth = (health) => {
@@ -130,9 +130,12 @@ test('Dragon speed drops 1% of base per HP lost, capped at an 80% reduction', ()
     assert.ok(Math.abs(actual - expected) < 1e-9, `expected speed ${expected}, got ${actual}`);
 
   assertSpeed(speedAtHealth(110), 8);
-  assertSpeed(speedAtHealth(106), 7.68);
-  assertSpeed(speedAtHealth(70), 4.8);
-  assertSpeed(speedAtHealth(30), 1.6);
+  assertSpeed(speedAtHealth(106), 7.84);
+  assertSpeed(speedAtHealth(70), 6.4);
+  assertSpeed(speedAtHealth(30), 4.8);
+  assertSpeed(speedAtHealth(20), 4.4);
+
+  dragon.maxHealth = 300;
   assertSpeed(speedAtHealth(20), 1.6);
 });
 

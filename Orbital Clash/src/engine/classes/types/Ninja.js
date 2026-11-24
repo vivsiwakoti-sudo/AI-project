@@ -45,9 +45,7 @@ export class Ninja extends FighterBase {
             // The rope dart reaches 300px (spec), not the whole arena.
             if (dist <= 300) {
                 this.ropeActive = true;
-                // Long enough for the slower dart to cover its full 300px range
-                // (300 / ropeDartSpeed frames) plus a moment to drag the target in.
-                this.ropeTimer = Math.max(0.65, 300 / this.ropeDartSpeed / 60);
+                this.ropeTimer = 1.2;
                 this.ropeSwing = 0;
                 this.lastAngle = finalAngle;
                 this.useAbility();
@@ -89,6 +87,7 @@ export class Ninja extends FighterBase {
                     hooked.x += (pullX / pullDistance) * Math.min(pullSpeed, pullDistance);
                     hooked.y += (pullY / pullDistance) * Math.min(pullSpeed, pullDistance);
                 }
+                dart.arrived = Math.hypot(this.x - hooked.x, this.y - hooked.y) <= this.radius + hooked.radius;
                 hooked.vx = 0;
                 hooked.vy = 0;
                 dart.x = hooked.x;
@@ -147,7 +146,10 @@ export class Ninja extends FighterBase {
                 }
             }
 
-            if (dart.traveled >= dart.maxDistance || this.ropeTimer <= 0) {
+            // The punch lands once the pull has brought the victim into reach. A dart
+            // that misses ends at its full range; the timer is only a safety net.
+            const pullDone = dart.hit ? (dart.arrived || !dart.target || dart.target.isDead) : dart.traveled >= dart.maxDistance;
+            if (pullDone || this.ropeTimer <= 0) {
                 const punched = dart.target;
                 if (dart.hit && punched && !punched.isDead) {
                     // The punch that follows the pull.

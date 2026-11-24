@@ -130,7 +130,7 @@ export class CollisionSystem {
       const hitIndex = momentum.wallHits ?? 0;
       momentum.wallHits = hitIndex + 1;
       const scale = 1 + hitIndex * 0.5;
-      DamageSystem.applyDamage(null, fighter, 2 * scale, "Body", { ignoreCooldown: true });
+      DamageSystem.applyDamage(momentum.source ?? null, fighter, 1 * scale, "Body", { ignoreCooldown: true });
       const particles = fighter.particleSystem;
       if (particles) particles.emitImpact(fighter.x, fighter.y, "#ffd7a1", 12 * scale);
     }

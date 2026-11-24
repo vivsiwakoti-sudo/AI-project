@@ -7,7 +7,7 @@ import { audioManager } from "../../audio/AudioManager.js";
 const BURN_DURATION = 5;
 const BURN_TICK_INTERVAL = 1;
 const BURN_TICK_DAMAGE = 1;
-const MAX_BURNS = 5;
+const MAX_BURNS = 8;
 // Shared across every Fireball so burns from different fighters never collide by name.
 let burnSerial = 0;
 

@@ -72,13 +72,13 @@ test('touches stop cloning once the swarm reaches 75 clones', () => {
   assert.equal(duplicator.totalClones, 75, 'at 75 clones a touch no longer duplicates');
 });
 
-test('clones start with 15 HP at every generation', () => {
+test('clones start with 20 HP at every generation', () => {
   const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
   duplicator.spawnClone();
   duplicator.clones[0].spawnClone();
 
-  assert.deepEqual(duplicator.clones.map(c => c.health), [15, 15]);
-  assert.deepEqual(duplicator.clones.map(c => c.maxHealth), [15, 15]);
+  assert.deepEqual(duplicator.clones.map(c => c.health), [20, 20]);
+  assert.deepEqual(duplicator.clones.map(c => c.maxHealth), [20, 20]);
 });
 
 test('a fighter touching a clone deals 3 damage even when it is not the aim', () => {
@@ -93,7 +93,7 @@ test('a fighter touching a clone deals 3 damage even when it is not the aim', ()
 
   duplicator.updateClones(1 / 60, aim);
 
-  assert.equal(clone.health, 12, 'the touch lands on the clone for 3');
+  assert.equal(clone.health, 17, 'the touch lands on the clone for 3');
 });
 
 test('a body fighter adds its normal contact damage to the clone contact damage', () => {
@@ -105,7 +105,7 @@ test('a body fighter adds its normal contact damage to the clone contact damage'
   clone.y = bodyFighter.y;
   duplicator.applyCloneContact(clone, [bodyFighter]);
 
-  assert.equal(clone.health, 5, '3 clone contact damage plus 7 body damage equals 10');
+  assert.equal(clone.health, 10, '3 clone contact damage plus 7 body damage equals 10');
 });
 
 test('a clone deals its 2 touch damage to any fighter it touches, not only the aim', () => {
@@ -136,10 +136,10 @@ test('a fighter resting against a clone deals its 3 damage once, not every frame
 
   for (let i = 0; i < 30; i++) duplicator.updateClones(1 / 60, other);
 
-  assert.equal(clone.health, 12, 'staying in contact does not keep dealing damage');
+  assert.equal(clone.health, 17, 'staying in contact does not keep dealing damage');
 });
 
-test('five separate fighter contacts kill a clone and trigger its death effect', () => {
+test('seven separate fighter contacts kill a clone and trigger its death effect', () => {
   const duplicator = FighterFactory.createFighter('Duplicator', 100, 100);
   const particles = {
     emit() {},
@@ -157,7 +157,7 @@ test('five separate fighter contacts kill a clone and trigger its death effect',
   audioManager.playDeathSfx = () => { deathSounds++; };
 
   try {
-    for (let contact = 0; contact < 5; contact++) {
+    for (let contact = 0; contact < 7; contact++) {
       clone.x = other.x;
       clone.y = other.y;
       clone.touchedBy.clear();
@@ -165,8 +165,8 @@ test('five separate fighter contacts kill a clone and trigger its death effect',
       clone.x += clone.radius + other.radius + 1;
     }
 
-    assert.equal(clone.health, 0, 'five 3-damage contacts consume all 15 HP');
-    assert.equal(clone.isDead, true, 'the clone is eliminated after the fifth contact');
+    assert.ok(clone.health <= 0, 'seven 3-damage contacts consume all 20 HP');
+    assert.equal(clone.isDead, true, 'the clone is eliminated after the seventh contact');
     assert.equal(deathSounds, 1, 'the clone runs the normal death sound effect once');
     assert.equal(clone.particleSystem, particles, 'the clone receives the parent particle system');
   } finally {
@@ -186,7 +186,7 @@ test('ordinary projectiles can hit a Duplicator clone through the shared victim 
 
   stepBattle([duplicator, gunner], { dt: 0, arenaSize: 800 });
 
-  assert.equal(clone.health, 8, 'the clone takes the normal 7 projectile damage');
+  assert.equal(clone.health, 13, 'the clone takes the normal 7 projectile damage');
   assert.equal(gunner.projectiles.length, 0, 'the projectile is consumed on the clone');
 });
 
@@ -202,7 +202,7 @@ test('mines explode normally when a Duplicator clone triggers them', () => {
 
   stepBattle([duplicator, mineLayer], { dt: 0, arenaSize: 800 });
 
-  assert.equal(clone.health, 5, 'the clone takes the mine damage');
+  assert.equal(clone.health, 10, 'the clone takes the mine damage');
   assert.equal(mineLayer.mines.length, 0, 'the triggered mine is consumed');
 });
 
@@ -218,7 +218,7 @@ test('Snake trail damage and slow effects apply to Duplicator clones', () => {
 
   stepBattle([duplicator, snake], { dt: 0, arenaSize: 800 });
 
-  assert.equal(clone.health, 13, 'the clone takes the trail contact damage');
+  assert.equal(clone.health, 18, 'the clone takes the trail contact damage');
   assert.ok(clone.statusEffects.some(effect => effect.name === 'trail-slow'));
 });
 

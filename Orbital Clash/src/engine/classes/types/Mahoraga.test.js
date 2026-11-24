@@ -95,7 +95,7 @@ test('Mahoraga runs its timers without any swing state machine', () => {
   assert.equal(mahoraga.attackActive, undefined);
 });
 
-test('every damage category adapts independently at 3, 5 and 7 landed hits', () => {
+test('every damage category adapts independently at 4, 6 and 8 landed hits', () => {
   const mahoraga = makeMahoraga();
   mahoraga.health = mahoraga.maxHealth = 1e9;
   const attacker = makeVictim();
@@ -103,9 +103,9 @@ test('every damage category adapts independently at 3, 5 and 7 landed hits', () 
     for (let hit = 1; hit <= 9; hit++) {
       const before = mahoraga.health;
       withRandom(0.99, () => DamageSystem.applyDamage(attacker, mahoraga, 10, category, { ignoreCooldown: true }));
-      const previousMultiplier = hit <= 3 ? 1 : hit <= 5 ? 0.7 : hit <= 7 ? 0.5 : 0.3;
+      const previousMultiplier = hit <= 4 ? 1 : hit <= 6 ? 0.7 : hit <= 8 ? 0.5 : 0.3;
       assert.ok(Math.abs(before - mahoraga.health - 10 * previousMultiplier) < 1e-6, `${category} hit ${hit}`);
-      const multiplier = hit < 3 ? 1 : hit < 5 ? 0.7 : hit < 7 ? 0.5 : 0.3;
+      const multiplier = hit < 4 ? 1 : hit < 6 ? 0.7 : hit < 8 ? 0.5 : 0.3;
       assert.ok(Math.abs(mahoraga.getDamageMultiplier(category, {}, attacker) - multiplier) < 1e-9, `${category} after hit ${hit}`);
     }
   }
@@ -116,7 +116,7 @@ test('drawing a revealed adaptation on the wheel leaves the canvas stack balance
   const mahoraga = makeMahoraga();
   mahoraga.health = mahoraga.maxHealth = 1e9;
   const attacker = makeVictim();
-  for (let hit = 0; hit < 3; hit++) {
+  for (let hit = 0; hit < 4; hit++) {
     withRandom(0.99, () => DamageSystem.applyDamage(attacker, mahoraga, 10, 'Melee', { ignoreCooldown: true }));
   }
   assert.ok(mahoraga.wheelLayers.includes('Melee'), 'the adaptation must be on the wheel');
@@ -136,7 +136,7 @@ test('each revealed adaptation nests one more wheel, capped at three in total', 
     for (let t = 0; t < seconds; t += 1 / 60) mahoraga.update(1 / 60, victim);
   };
   for (const category of ['Melee', 'Projectile', 'Body']) {
-    for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, category);
+    for (let i = 0; i < 4; i++) mahoraga.onDamaged(8, category);
   }
   assert.deepEqual(mahoraga.wheelLayers, ['Melee'], 'the first reveal adds a wheel straight away');
 
@@ -156,7 +156,7 @@ test('each revealed adaptation nests one more wheel, capped at three in total', 
 test('zero-impact projectiles still count as landed attacks', () => {
   const mahoraga = makeMahoraga();
   const attacker = makeVictim();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     assert.equal(DamageSystem.applyDamage(attacker, mahoraga, 0, 'Projectile', { ignoreCooldown: true }), true);
   }
   assert.equal(mahoraga.getDamageMultiplier('Projectile', {}, attacker), 0.7);
@@ -168,7 +168,7 @@ test('Mahoraga keeps attacking (bodily) against an opponent adapted to melee', (
 
   // Adapt him to melee first, the way a real fight would. A melee adaptation
   // must not stop the body slam: contact damage is a different category.
-  for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, 'Melee', { attacker: opponent });
+  for (let i = 0; i < 4; i++) mahoraga.onDamaged(8, 'Melee', { attacker: opponent });
   assert.equal(mahoraga.getDamageMultiplier('Melee', {}, opponent), 0.7, 'melee adaptation is earned');
 
   const startHealth = opponent.health;
@@ -188,7 +188,7 @@ const adaptedMahoraga = (...categories) => {
   const mahoraga = makeMahoraga();
   mahoraga.health = mahoraga.maxHealth = 1e9;
   for (const category of categories) {
-    for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, category, { attacker: KNIGHT });
+    for (let i = 0; i < 4; i++) mahoraga.onDamaged(8, category, { attacker: KNIGHT });
   }
   return mahoraga;
 };
@@ -237,7 +237,7 @@ test('Mahoraga only gains a melee parry once it has adapted to melee', () => {
 test('projectile reflection unlocks at the 2nd adaptation step, on any attack', () => {
   const mahoraga = makeMahoraga();
   mahoraga.health = mahoraga.maxHealth = 1e9;
-  for (let i = 0; i < 5; i++) mahoraga.onDamaged(8, 'Melee', { attacker: KNIGHT });
+  for (let i = 0; i < 6; i++) mahoraga.onDamaged(8, 'Melee', { attacker: KNIGHT });
   assert.equal(mahoraga.getParryChance('Projectile', makeAttacker()), 0.35);
 });
 
@@ -282,8 +282,8 @@ test('an unparried melee strike takes 30% less damage and is not stunned', () =>
 test('a second adaptation waits 3 seconds on the wheel before it is shown', () => {
   const mahoraga = makeMahoraga();
   const victim = makeVictim();
-  for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, 'Melee');
-  for (let i = 0; i < 3; i++) mahoraga.onDamaged(8, 'Projectile');
+  for (let i = 0; i < 4; i++) mahoraga.onDamaged(8, 'Melee');
+  for (let i = 0; i < 4; i++) mahoraga.onDamaged(8, 'Projectile');
   assert.deepEqual(mahoraga.wheelLayers, ['Melee'], 'the first adaptation shows at once');
   assert.equal(mahoraga.getDamageMultiplier('Projectile'), 0.7, 'the queued adaptation still applies immediately');
 
@@ -332,7 +332,7 @@ test('a Mimic must adapt again after switching to another form', () => {
   const mimic = makeAttacker('Mimic');
   const hitWith = (form) => {
     mimic.mimicForm = form;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       withRandom(0.99, () => DamageSystem.applyDamage(mimic, mahoraga, 10, 'Melee', { ignoreCooldown: true }));
     }
   };
@@ -344,7 +344,7 @@ test('a Mimic must adapt again after switching to another form', () => {
   assert.equal(mahoraga.getDamageMultiplier('Melee', {}, mimic), 1, 'a new form is a new attack');
 
   hitWith('Samurai');
-  assert.equal(mahoraga.getDamageMultiplier('Melee', {}, mimic), 0.7, 'the Samurai form is adapted after three hits');
+  assert.equal(mahoraga.getDamageMultiplier('Melee', {}, mimic), 0.7, 'the Samurai form is adapted after four hits');
   mimic.mimicForm = 'Knight';
   assert.equal(mahoraga.getDamageMultiplier('Melee', {}, mimic), 0.7, 'the Knight adaptation is kept');
 });
@@ -353,7 +353,7 @@ test('each adaptation spins the wheel and glows gold until the glow fades', () =
   const mahoraga = makeMahoraga();
   mahoraga.health = mahoraga.maxHealth = 1e9;
   const attacker = makeAttacker();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     withRandom(0.99, () => DamageSystem.applyDamage(attacker, mahoraga, 10, 'Melee', { ignoreCooldown: true }));
   }
   assert.ok(mahoraga.wheelBurst > 0, 'the wheel is kicked into a fast spin');

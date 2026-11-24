@@ -76,17 +76,17 @@ test('burns from separate Fireball fighters do not share a name', () => {
   assert.equal(burnsOn(victim).length, 2);
 });
 
-test('burn stacks on one opponent cap at five', () => {
+test('burn stacks on one opponent cap at eight', () => {
   const fireball = new Fireball(stats('Fireball'), 100, 400);
   const victim = new FighterBase(stats('Dummy'), 300, 400);
   fireball.attackTimer = 99;
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 10; i++) {
     fireball.projectiles.push(new Projectile(290, 400, 1, 0, 0, fireball));
   }
 
   fireball.update(1 / 60, victim);
 
-  assert.equal(burnsOn(victim).length, 5);
+  assert.equal(burnsOn(victim).length, 8);
 });
 
 test('a parried fireball is turned back and hits the fighter that fired it', () => {

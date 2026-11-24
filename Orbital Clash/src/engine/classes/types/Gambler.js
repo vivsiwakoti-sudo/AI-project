@@ -14,6 +14,7 @@ const STUN_DURATION = 2;
 const BURN_DURATION = 5;
 const BURN_TICK_INTERVAL = 1;
 const BURN_TICK_DAMAGE = 1;
+const SELF_BURN_TICK_DAMAGE = 3;
 const MAX_BURNS = 5;
 const PERCENT_DAMAGE = 0.15;
 const HEAL_AMOUNT = 15;
@@ -134,7 +135,7 @@ export class Gambler extends FighterBase {
                 }
                 break;
             case "selfBurn":
-                this.applyBurn(this, null);
+                this.applyBurn(this, null, SELF_BURN_TICK_DAMAGE);
                 break;
             case "shield":
                 this.shieldHits = SHIELD_HITS;
@@ -171,9 +172,10 @@ export class Gambler extends FighterBase {
         this.cooldownTimer = Math.min(this.cooldownTimer, this.cooldown / 2);
     }
 
-    // Same burn as the Fireball: 1 damage every second for 5 seconds, capped at 5 stacks.
+    // Same burn as the Fireball: a damage tick every second for 5 seconds, capped at 5 stacks.
     // `source` is the attacker for the ticks, or null for self-burn (a self-hit needs no attacker).
-    applyBurn(victim, source) {
+    // `tickDamage` lets self-burn hit harder than the good burn face.
+    applyBurn(victim, source, tickDamage = BURN_TICK_DAMAGE) {
         const burns = victim.statusEffects.filter(e => e.name.startsWith("burn-"));
         const name = burns.length >= MAX_BURNS ? burns[0].name : `burn-${burnSerial++}`;
         EffectSystem.addEffect(victim, {
@@ -183,7 +185,7 @@ export class Gambler extends FighterBase {
             onUpdate: (fighter, effect, elapsed) => {
                 effect.tickTimer += elapsed;
                 if (effect.tickTimer >= BURN_TICK_INTERVAL) {
-                    DamageSystem.applyDamage(source, fighter, BURN_TICK_DAMAGE, "AOE", { ignoreCooldown: true });
+                    DamageSystem.applyDamage(source, fighter, tickDamage, "AOE", { ignoreCooldown: true });
                     effect.tickTimer = 0;
                 }
             }
