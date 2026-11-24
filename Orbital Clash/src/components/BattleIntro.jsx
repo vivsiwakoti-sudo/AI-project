@@ -116,6 +116,16 @@ export default function BattleIntro({ fighters, onComplete }) {
     return () => window.clearTimeout(timer);
   }, [fighter, fighters.length, index, finish]);
 
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key !== "s" && event.key !== "S") return;
+      finish();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [finish]);
+
   if (!fighter) return null;
 
   return (
@@ -162,7 +172,7 @@ export default function BattleIntro({ fighters, onComplete }) {
           ))}
         </div>
         <div className="battle-intro-actions">
-          <button type="button" className="battle-intro-skip" onClick={finish}>SKIP INTRO</button>
+          <button type="button" className="battle-intro-skip" onClick={finish}>SKIP INTRO (S)</button>
           <button type="button" className="battle-intro-next" onClick={advance}>
             {index === fighters.length - 1 ? "ENTER ARENA" : "NEXT FIGHTER"} <span>→</span>
           </button>
