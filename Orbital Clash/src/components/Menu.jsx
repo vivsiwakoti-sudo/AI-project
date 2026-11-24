@@ -302,6 +302,12 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
     setFavorites(await listFavoriteReplays());
   };
 
+  const handleClearSelection = () => {
+    if (selected.length === 0) return;
+    audioManager.playUiClick();
+    setSelected([]);
+  };
+
   const handleRandomSelection = () => {
     audioManager.playUiClick();
     const names = Object.keys(FIGHTER_CLASSES);
@@ -345,7 +351,7 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
     launchBattle(plan.error ? null : plan);
   };
 
-  // R and Enter only act while the roster itself is in front. App switches them
+  // R, D and Enter only act while the roster itself is in front. App switches them
   // off behind the title, settings and modals; the overlays below switch them off
   // while open. Enter is consumed so a focused button does not also fire its click.
   const overlayOpen = showHistory || showPredictions || showReplay || showFavorites || showTutorial || showCustomTeams || Boolean(info);
@@ -358,6 +364,9 @@ export default function Menu({ onStart, onStartTournament, intro = false, shortc
       if (event.key === "r" || event.key === "R") {
         event.preventDefault();
         handleRandomSelection();
+      } else if (event.key === "d" || event.key === "D") {
+        event.preventDefault();
+        handleClearSelection();
       } else if (event.key === "Enter" && canStart) {
         event.preventDefault();
         handleStartBattle();

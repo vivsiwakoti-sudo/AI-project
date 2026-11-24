@@ -28,7 +28,7 @@ const STEPS = [
   },
   {
     title: "BEFORE YOU FIGHT",
-    body: "Predict the winner before each battle to build your record. Press R for a random roster and Enter to start a battle once it is ready. Tournament mode runs every class through a single-elimination bracket.",
+    body: "Predict the winner before each battle to build your record. Press R for a random roster, D to clear the roster, and Enter to start a battle once it is ready. Tournament mode runs every class through a single-elimination bracket.",
   },
 ];
 
