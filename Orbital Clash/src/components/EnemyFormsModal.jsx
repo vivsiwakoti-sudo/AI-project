@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { audioManager } from "../engine/audio/AudioManager";
 import { TEST_FORM_CONTROLS, defaultTestForm, TEST_FORM_FIGHTERS } from "../engine/testForms";
 
 // Optional step after the prediction: lets the player start a listed fighter in
-// a non-standard form. A card left switched off plays normally, and SKIP starts
-// the battle with no forms at all. onConfirm receives only the switched-on cards,
-// keyed by fighter name.
+// a non-standard form. A card left switched off plays normally, and SKIP (or S)
+// starts the battle with no forms at all. onConfirm receives only the switched-on
+// cards, keyed by fighter name.
 export default function EnemyFormsModal({ fighters, onConfirm, onSkip, onCancel }) {
   const testable = fighters.filter((fighter, i) => (
     TEST_FORM_FIGHTERS.includes(fighter.name) && fighters.findIndex(f => f.name === fighter.name) === i
@@ -31,10 +31,20 @@ export default function EnemyFormsModal({ fighters, onConfirm, onSkip, onCancel 
     onConfirm(forms);
   };
 
-  const skip = () => {
+  const skip = useCallback(() => {
     audioManager.playUiClick();
     onSkip();
-  };
+  }, [onSkip]);
+
+  useEffect(() => {
+    const onKey = event => {
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key !== "s" && event.key !== "S") return;
+      skip();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [skip]);
 
   return (
     <div className="fighter-info-overlay prediction-overlay" role="dialog" aria-label="Enemy forms">
@@ -99,7 +109,7 @@ export default function EnemyFormsModal({ fighters, onConfirm, onSkip, onCancel 
         </div>
 
         <div className="prediction-footer">
-          <button type="button" className="prediction-skip-button" onClick={skip}>SKIP</button>
+          <button type="button" className="prediction-skip-button" onClick={skip}>SKIP (S)</button>
           <button type="button" className="prediction-skip-button" onClick={confirm}>USE THESE FORMS</button>
         </div>
         <div className="prediction-footer">
