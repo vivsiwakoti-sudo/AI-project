@@ -982,7 +982,7 @@
 /* Opens the saved battle log. */
 .roster-filters .battle-history-button { --btn-accent: var(--teal); }
 .roster-filters .prediction-button { --btn-accent: var(--warning); }
-.roster-filters .tutorial-menu-button { --btn-accent: var(--lavender); }
+.roster-filters .tutorial-menu-button { --btn-accent: color-mix(in srgb, var(--lavender) 60%, white); }
 .roster-filters .replay-menu-button { --btn-accent: var(--sky); }
 .roster-filters .replay-menu-button:disabled {
   cursor: not-allowed;
