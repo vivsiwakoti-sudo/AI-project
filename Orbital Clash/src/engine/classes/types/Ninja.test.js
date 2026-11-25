@@ -89,3 +89,32 @@ test('Victim is freed (rope released) so it can move again', () => {
   assert.equal(ninja.ropeDart, null, 'dart should be cleared after release');
   assert.ok(Math.hypot(target.vx, target.vy) > 0.9, 'victim velocity should be restored, not zeroed');
 });
+
+test('Electric shock chains to a nearby fighter but not a distant one', () => {
+  const ninja = makeNinja();
+  ninja.setFixedEffect('electric');
+  const target = makeDummy(360, 100);
+  const near = makeDummy(460, 100);
+  const far = makeDummy(900, 100);
+  ninja.victims = [target, near, far];
+
+  assert.ok(landDart(ninja, target));
+  assert.equal(near.health, 500 - 3, 'the nearby fighter should take chain damage');
+  assert.equal(far.health, 500, 'a fighter outside chain range should be untouched');
+});
+
+test('Electric chain stops after two jumps', () => {
+  const ninja = makeNinja();
+  ninja.setFixedEffect('electric');
+  const target = makeDummy(360, 100);
+  const first = makeDummy(460, 100);
+  const second = makeDummy(560, 100);
+  const third = makeDummy(660, 100);
+  ninja.victims = [target, first, second, third];
+
+  assert.ok(landDart(ninja, target));
+  assert.equal(first.health, 500 - 3, 'first jump should hit');
+  assert.equal(second.health, 500 - 3, 'second jump should hit');
+  assert.equal(third.health, 500, 'a third jump should not happen');
+});
+

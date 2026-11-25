@@ -10,6 +10,34 @@ function rollNinjaEffect() {
     return "shrink";
 }
 
+const ELECTRIC_CHAIN_RANGE = 150;
+const ELECTRIC_CHAIN_JUMPS = 2;
+const ELECTRIC_CHAIN_DAMAGE = 3;
+
+// Arcs the shock from `first` to the nearest unhit candidate in range, up to ELECTRIC_CHAIN_JUMPS links.
+// A link that is dodged, parried or blocked ends the chain.
+function chainElectricity(ninja, first, candidates) {
+    const shocked = new Set([first]);
+    let from = first;
+    for (let jump = 0; jump < ELECTRIC_CHAIN_JUMPS; jump++) {
+        let next = null;
+        let nextDist = Infinity;
+        for (const f of candidates) {
+            if (shocked.has(f) || f.isDead) continue;
+            const dist = Math.hypot(f.x - from.x, f.y - from.y);
+            if (dist <= ELECTRIC_CHAIN_RANGE && dist < nextDist) {
+                next = f;
+                nextDist = dist;
+            }
+        }
+        if (!next) return;
+        if (!DamageSystem.applyDamage(ninja, next, ELECTRIC_CHAIN_DAMAGE, "Melee", { ignoreCooldown: true })) return;
+        shocked.add(next);
+        if (next.particleSystem) next.particleSystem.emitImpact(next.x, next.y, "#ffe84a", 12);
+        from = next;
+    }
+}
+
 export class Ninja extends FighterBase {
     constructor(data, x, y) {
         super(data, x, y);
@@ -137,7 +165,9 @@ export class Ninja extends FighterBase {
                             duration: 2.5,
                             onEnd: (fighter) => { fighter.jitter = 0; }
                         });
-                        DamageSystem.applyDamage(this, struck, 3, "Melee", { ignoreCooldown: true });
+                        if (DamageSystem.applyDamage(this, struck, ELECTRIC_CHAIN_DAMAGE, "Melee", { ignoreCooldown: true })) {
+                            chainElectricity(this, struck, pool);
+                        }
                     } else if (hitEffect === "shrink") {
                         const reducedMax = Math.max(1, struck.maxHealth * 0.8);
                         struck.maxHealth = reducedMax;

@@ -38,7 +38,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Rope-dart",
     cooldown: 6,
     description: "Uses rope dart to pull and punch.",
-    description2: "Fires a slow, dodgeable rope dart up to 300px. A hit deals 11 damage, reels the target in, then punches them away for 4 more without robbing them of their speed. On impact there is a 33% chance of a random status: burn, electric shock or 20% maximum-health reduction.",
+    description2: "Fires a slow, dodgeable rope dart up to 300px. A hit deals 11 damage, reels the target in, then punches them away for 4 more without robbing them of their speed. On impact there is a 33% chance of a random status: burn, electric shock or 20% maximum-health reduction. Electric shock also chains to up to 2 nearby fighters within 150px for 3 damage each.",
     keywords: ["dart", "pull", "chain", "random", "crit"],
   },
   "Spearman": {
