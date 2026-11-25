@@ -5,6 +5,10 @@ import { audioManager } from "../../audio/AudioManager.js";
 import { drawSpear } from "../../systems/Weapons.js";
 import { CollisionSystem } from "../../systems/CollisionSystem.js";
 
+// Spears are drawn 15% thicker and the thrown spear 50% longer than their base art.
+const SPEAR_WIDTH_SCALE = 1.15;
+const SPEAR_LAUNCH_LENGTH_SCALE = 1.5;
+
 class Spear extends Projectile {
     constructor(x, y, vx, vy, owner) {
         super(x, y, vx, vy, 8, owner);
@@ -127,7 +131,8 @@ class Spear extends Projectile {
         if (!this.isStuck) {
             // Angle the spear in direction of travel
             ctx.rotate(Math.atan2(this.vy, this.vx));
-            drawSpear(ctx, { length: shaftLength, head: 14, moss: true });
+            ctx.scale(1, SPEAR_WIDTH_SCALE);
+            drawSpear(ctx, { length: shaftLength * SPEAR_LAUNCH_LENGTH_SCALE, head: 14, moss: true });
         } else {
             // Spear stuck in opponent - render perpendicular and larger
             ctx.rotate(Math.PI / 4);
@@ -244,6 +249,7 @@ export class Spearman extends FighterBase {
         const mountX = attachedOffset;
 
         ctx.translate(mountX, 0);
+        ctx.scale(1, SPEAR_WIDTH_SCALE);
 
         // Spear: turned shaft, bound collar and leaf-shaped blade.
         drawSpear(ctx, { length: spearLength, head: 18, moss: true });

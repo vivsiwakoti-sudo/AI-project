@@ -159,7 +159,7 @@ export const FIGHTER_CLASSES = {
     attackType: "Body",
     cooldown: 5,
     description: "Activates Ghost Mode for invulnerability.",
-    description2: "Fades into Ghost Mode for 2 seconds: untouchable and accelerated to 20 px/frame. Contact during Ghost Mode deals 15 damage instead of 5.",
+    description2: "Fades into Ghost Mode for 4 seconds: untouchable and accelerated to 20 px/frame. Contact during Ghost Mode deals 15 damage instead of 5.",
     keywords: ["ghost", "invulnerable", "phase", "fast"],
   },
   "Alchemist": {

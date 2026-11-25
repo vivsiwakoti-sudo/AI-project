@@ -271,6 +271,32 @@ export class Ninja extends FighterBase {
             ctx.lineWidth = 1;
             ctx.stroke();
 
+            // Swirls riding the cord toward the dart, so the line reads as a twisting rope.
+            const cordAngle = Math.atan2(dy, dx);
+            const swirlCount = 4;
+            const swirlFlow = (this.ropeSwing * 0.04) % 1;
+            for (let s = 0; s < swirlCount; s++) {
+                const t = (s / swirlCount + swirlFlow) % 1;
+                if (t < 0.08 || t > 0.97) continue;
+                const sway = Math.sin((t * Math.PI * 2) + this.ropeSwing + 1.5) * 1.4;
+                const cx = startX + dx * t + Math.cos(cordAngle + Math.PI / 2) * sway;
+                const cy = startY + dy * t + Math.sin(cordAngle + Math.PI / 2) * sway;
+                const fade = Math.min(1, (t - 0.08) / 0.1, (0.97 - t) / 0.1);
+                ctx.beginPath();
+                for (let k = 0; k <= 16; k++) {
+                    const u = k / 16;
+                    const a = u * Math.PI * 4 + s;
+                    const r = 5 * (1 - u) + 0.6;
+                    const px = cx + Math.cos(a) * r;
+                    const py = cy + Math.sin(a) * r;
+                    if (k === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.strokeStyle = `rgba(210, 235, 255, ${0.85 * fade})`;
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+            }
+
             // Metal tip
             const tipAngle = Math.atan2(dy, dx);
             const tipX = endX;

@@ -11,7 +11,7 @@ export class Ghost extends FighterBase {
         this.baseDamage = data.damage;
         this.ghostDamage = 15;
         this.ghostSpeed = 20;
-        this.ghostPhaseDuration = 2;
+        this.ghostPhaseDuration = 4;
     }
 
     update(dt, opponent) {
