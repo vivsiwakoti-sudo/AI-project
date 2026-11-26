@@ -13,7 +13,8 @@ import { applyTestForm } from "../engine/testForms";
 import { getSettings } from "../engine/settings";
 import { applyGlowScale, graphicsProfile } from "../engine/graphics";
 import { REPLAY_SECONDS } from "../engine/replayStore";
-import { countAliveTeams, decayScreenShake, drawFighterOutlines, drawGridLines, drawTeamMarker, settlePlacements, stepBattle } from "../engine/systems/BattleSimulation";
+import { countAliveTeams, decayScreenShake, drawFighterOutlines, drawTeamMarker, settlePlacements, stepBattle } from "../engine/systems/BattleSimulation";
+import { getArenaStage } from "../engine/systems/ArenaStage";
 
 // Names of the other members of a fighter's team, marking the eliminated ones.
 // Empty in free-for-all, where nobody has a team.
@@ -605,7 +606,7 @@ export default function Arena({ fighters, arenaSize = 800, onFinish }) {
       ctx.beginPath();
       ctx.rect(20, 20, ARENA_SIZE - 40, ARENA_SIZE - 40);
       ctx.clip();
-      drawGridLines(ctx, ARENA_SIZE);
+      getArenaStage(ARENA_SIZE).draw(ctx, renderTime, { glowScale: profile.glowScale });
 
       if (gameState.current.suddenDeath) {
         const pulse = 0.10 + 0.06 * Math.sin(renderTime * 6);

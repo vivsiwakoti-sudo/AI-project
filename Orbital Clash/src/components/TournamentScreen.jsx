@@ -314,7 +314,8 @@ function TournamentScreenView({
     // Music starts with the fight and must not outlive it.
     audioManager.playBattleMusic();
     const ctx = canvasRef.current?.getContext("2d") || null;
-    if (ctx) applyGlowScale(ctx, graphicsProfile(getSettings().graphicsQuality).glowScale);
+    const glowScale = graphicsProfile(getSettings().graphicsQuality).glowScale;
+    if (ctx) applyGlowScale(ctx, glowScale);
     let frameId = 0;
     // `lastTime` starts null and is seeded from the FIRST animation-frame
     // timestamp. Seeding it from performance.now() compares two clocks with
@@ -355,6 +356,7 @@ function TournamentScreenView({
           // Simulated time is also what makes playback speed honest: at 2x the
           // effects play twice as fast with the fight.
           time: bout.elapsedSeconds,
+          glowScale,
           suddenDeath: bout.suddenDeath,
           onFighterError: (fighter, error) => console.error(`Draw failed for ${fighter.name}`, error)
         });
@@ -397,7 +399,8 @@ function TournamentScreenView({
     const ctx = canvasRef.current?.getContext("2d") || null;
     if (!pending || !ctx) return undefined;
     const { bout, assembly } = pending;
-    applyGlowScale(ctx, graphicsProfile(getSettings().graphicsQuality).glowScale);
+    const glowScale = graphicsProfile(getSettings().graphicsQuality).glowScale;
+    applyGlowScale(ctx, glowScale);
     const borderColor = ROUND_COLORS[activeMatch?.round];
     let frameId = 0;
     let lastTime = null;
@@ -415,6 +418,7 @@ function TournamentScreenView({
         arenaSize: bout.arenaSize,
         borderColor,
         time: 0,
+        glowScale,
         onFighterError: (fighter, error) => console.error(`Draw failed for ${fighter.name}`, error)
       });
       assembly.draw(ctx);

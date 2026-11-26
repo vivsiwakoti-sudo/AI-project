@@ -81,6 +81,7 @@ export default function BackgroundBattles() {
             particles: bout.particles,
             arenaSize: bout.arenaSize,
             time: bout.elapsedSeconds,
+            glowScale: profile.glowScale,
             suddenDeath: bout.suddenDeath
           });
         }

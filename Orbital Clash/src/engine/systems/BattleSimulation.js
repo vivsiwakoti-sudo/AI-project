@@ -16,6 +16,7 @@ import { outlineColorFor, OUTLINE_WIDTH } from "../classes/FighterBase.js";
 import { squashTransform } from "./Fx.js";
 import { traceShape } from "./Shapes.js";
 import { teamColor, teamOf, isTeammate } from "./teams.js";
+import { getArenaStage } from "./ArenaStage.js";
 
 // --- Targeting helpers (moved verbatim from Arena.jsx) -----------------------
 
@@ -373,8 +374,6 @@ export function decayScreenShake(fighters, dt) {
 //
 // A fighter whose draw() throws is reported once and skipped, so one broken
 // class cannot blank the whole stage.
-const GRID_CELL = 40;
-const GRID_STROKE = "rgba(0, 242, 255, 0.12)";
 
 // The final fighter pass is shared by live battles and tournaments. It is drawn
 // AFTER class-specific weapons and auras, because those may otherwise cover the
@@ -450,24 +449,6 @@ export function drawTeamMarker(ctx, fighter) {
 }
 
 
-// Caller must clip to the playable area first.
-export function drawGridLines(ctx, arenaSize) {
-  const inner = 20;
-  const end = arenaSize - inner;
-  ctx.save();
-  ctx.strokeStyle = GRID_STROKE;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let p = inner; p <= end; p += GRID_CELL) {
-    ctx.moveTo(p + 0.5, inner);
-    ctx.lineTo(p + 0.5, end);
-    ctx.moveTo(inner, p + 0.5);
-    ctx.lineTo(end, p + 0.5);
-  }
-  ctx.stroke();
-  ctx.restore();
-}
-
 export function drawBattleFrame(ctx, {
   fighters,
   particles,
@@ -476,7 +457,8 @@ export function drawBattleFrame(ctx, {
   suddenDeath = false,
   borderColor = "rgba(0, 242, 255, 0.4)",
   deadBodyFade = null,
-  onFighterError = null
+  onFighterError = null,
+  glowScale = 1
 }) {
   const inner = 20;
   const innerSize = arenaSize - inner * 2;
@@ -500,7 +482,7 @@ export function drawBattleFrame(ctx, {
   ctx.beginPath();
   ctx.rect(inner, inner, innerSize, innerSize);
   ctx.clip();
-  drawGridLines(ctx, arenaSize);
+  getArenaStage(arenaSize).draw(ctx, time, { glowScale });
 
   if (suddenDeath) {
     const pulse = 0.10 + 0.06 * Math.sin(time * 6);
