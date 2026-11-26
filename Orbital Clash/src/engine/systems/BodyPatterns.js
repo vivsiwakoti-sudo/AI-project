@@ -123,35 +123,6 @@ const flame = (ctx, bx, by, direction, length, width, color) => {
     ctx.restore();
 };
 
-// A kite-shaped shard with a sharp tip ahead of (x, y) and a short tail behind it.
-const shardPoints = (x, y, angle, length, width) => {
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-    const px = -dy * width;
-    const py = dx * width;
-    return [
-        [x + dx * length, y + dy * length],
-        [x + px, y + py],
-        [x - dx * length * 0.4, y - dy * length * 0.4],
-        [x - px, y - py]
-    ];
-};
-
-// Filled crescent whose horns point along the local y axis before rotation.
-const crescent = (ctx, x, y, size, angle, color, edge) => {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.beginPath();
-    ctx.moveTo(0, -size);
-    ctx.quadraticCurveTo(size * 0.9, 0, 0, size);
-    ctx.quadraticCurveTo(size * 0.25, 0, 0, -size);
-    ctx.closePath();
-    fillPath(ctx, color);
-    if (edge) strokePath(ctx, edge, 0.03);
-    ctx.restore();
-};
-
 const arcBand = (ctx, cx, cy, r0, r1, a0, a1, color) => {
     ctx.beginPath();
     ctx.arc(cx, cy, r1, a0, a1);
@@ -176,28 +147,25 @@ const jagged = (x0, y0, x1, y1, steps, amp, seed) => {
 
 const PAINTERS = {
     "Ice Sword": ctx => {
-        tint(ctx, "rgba(170, 230, 255, 0.26)");
-        [
-            [-0.45, -0.3, 0.5, 1.05, 0.3, "rgba(200, 240, 255, 0.55)"],
-            [0.3, -0.4, -0.9, 1.0, 0.3, "rgba(150, 220, 255, 0.5)"],
-            [0.1, 0.3, 2.3, 1.05, 0.3, "rgba(230, 250, 255, 0.5)"],
-            [-0.5, 0.5, -0.3, 0.95, 0.28, "rgba(150, 220, 255, 0.5)"],
-            [0.6, 0.4, 1.6, 0.95, 0.28, "rgba(230, 250, 255, 0.5)"],
-            [-0.1, -0.75, 0.9, 0.85, 0.26, "rgba(160, 230, 255, 0.5)"],
-            [0.75, -0.2, 2.9, 0.9, 0.24, "rgba(200, 240, 255, 0.5)"]
-        ].forEach(([x, y, angle, length, width, color]) => {
-            trace(ctx, shardPoints(x, y, angle, length, width));
-            fillPath(ctx, color);
-            strokePath(ctx, "rgba(255, 255, 255, 0.85)", 0.03);
+        tint(ctx, "rgba(170, 230, 255, 0.3)");
+        const nodes = [];
+        staggeredGrid(3, 3, 0.55, 0.48, (x, y) => nodes.push([x, y]));
+        nodes.forEach(([x, y]) => {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.3, 0, TAU);
+            fillPath(ctx, "rgba(215, 245, 255, 0.45)");
+            strokePath(ctx, "rgba(255, 255, 255, 0.85)", 0.04);
         });
-        [
-            [[-1.1, -0.7], [-0.6, -0.45], [-0.4, -0.25], [-0.05, -0.05], [0.25, -0.35], [0.6, -0.7], [1.1, -0.5]],
-            [[0.1, 0.25], [-0.2, 0.05], [-0.45, 0.45], [-0.8, 0.2], [-1.1, 0.5]],
-            [[0.25, -0.35], [0.55, 0.45], [0.9, 0.9]]
-        ].forEach(points => {
-            trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 255, 255, 0.9)", 0.025);
+        ctx.beginPath();
+        nodes.forEach(([ax, ay], i) => {
+            nodes.slice(i + 1).forEach(([bx, by]) => {
+                if (Math.hypot(bx - ax, by - ay) < 0.65) {
+                    ctx.moveTo(ax, ay);
+                    ctx.lineTo(bx, by);
+                }
+            });
         });
+        strokePath(ctx, "rgba(255, 255, 255, 0.9)", 0.03);
     },
 
     Fireball: ctx => {
@@ -277,14 +245,12 @@ const PAINTERS = {
         shade.addColorStop(1, "rgba(0, 0, 0, 0.85)");
         ctx.fillStyle = shade;
         ctx.fillRect(-1.2, -1.2, 2.4, 2.4);
-        for (let i = -3; i <= 3; i++) {
-            trace(ctx, shardPoints(i * 0.32, i * 0.1, Math.PI / 4, 1.5, 0.07));
-            fillPath(ctx, "rgba(235, 240, 255, 0.6)");
-        }
-        for (let i = -2; i <= 2; i++) {
-            trace(ctx, shardPoints(i * 0.42, -i * 0.1, -Math.PI / 4, 1.4, 0.05));
-            fillPath(ctx, "rgba(200, 210, 255, 0.4)");
-        }
+        staggeredGrid(3, 3, 0.6, 0.52, (x, y) => {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.32, 0, TAU);
+            fillPath(ctx, "rgba(200, 210, 255, 0.12)");
+            strokePath(ctx, "rgba(235, 240, 255, 0.65)", 0.05);
+        });
     },
 
     Mutant: ctx => {
@@ -379,20 +345,16 @@ const PAINTERS = {
 
     Tunneler: ctx => {
         tint(ctx, "rgba(110, 70, 40, 0.3)");
-        [
-            [0, 0, 0.18, 0.0, 2.2, "rgba(255, 200, 120, 0.75)"],
-            [0.04, -0.03, 0.37, 1.2, 2.4, "rgba(200, 150, 90, 0.7)"],
-            [-0.03, 0.05, 0.56, 2.9, 2.2, "rgba(255, 225, 160, 0.7)"],
-            [0.05, -0.02, 0.75, 0.6, 2.5, "rgba(200, 150, 90, 0.7)"],
-            [-0.02, 0.0, 0.95, 2.0, 2.3, "rgba(255, 225, 160, 0.65)"]
-        ].forEach(([cx, cy, r, start, sweep, color]) => {
-            [[start, start + sweep], [start + sweep + 0.35, start + sweep * 2 + 0.35]].forEach(([a0, a1]) => {
-                ctx.beginPath();
-                ctx.arc(cx, cy, r, a0, a1);
-                strokePath(ctx, color, 0.14);
-            });
+        staggeredGrid(3, 3, 0.6, 0.52, (x, y, parity) => {
+            const color = parity % 2 ? "rgba(255, 225, 160, 0.8)" : "rgba(200, 150, 90, 0.8)";
+            ctx.beginPath();
+            ctx.arc(x, y, 0.34, 0.35, TAU - 0.35);
+            strokePath(ctx, color, 0.08);
+            ctx.beginPath();
+            ctx.arc(x, y, 0.19, Math.PI * 0.6, Math.PI * 0.6 + TAU * 0.75);
+            strokePath(ctx, color, 0.07);
+            dot(ctx, x, y, 0.05, "rgba(20, 12, 6, 0.6)");
         });
-        dot(ctx, 0, 0, 0.1, "rgba(20, 12, 6, 0.6)");
     },
 
     Tornado: ctx => {
@@ -475,13 +437,13 @@ const PAINTERS = {
     },
 
     Reaper: ctx => {
-        tint(ctx, "rgba(35, 35, 40, 0.4)");
-        crescent(ctx, -0.35, -0.25, 1.05, 0.3, "rgba(95, 12, 30, 0.7)", "rgba(255, 40, 60, 0.7)");
-        crescent(ctx, 0.3, 0.1, 1.1, -0.6, "rgba(45, 45, 50, 0.7)", "rgba(255, 40, 60, 0.5)");
-        crescent(ctx, -0.1, 0.5, 0.85, 2.0, "rgba(95, 12, 30, 0.7)", "rgba(255, 40, 60, 0.7)");
-        crescent(ctx, 0.45, -0.5, 0.8, 0.8, "rgba(45, 45, 50, 0.7)", "rgba(255, 40, 60, 0.5)");
-        crescent(ctx, -0.55, 0.35, 0.8, -1.4, "rgba(30, 30, 34, 0.7)", "rgba(255, 40, 60, 0.6)");
-        crescent(ctx, 0.0, -0.1, 0.7, Math.PI, "rgba(110, 20, 40, 0.6)", null);
+        tint(ctx, "rgba(35, 35, 40, 0.45)");
+        staggeredGrid(3, 3, 0.6, 0.52, (x, y, parity) => {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.33, 0, TAU);
+            fillPath(ctx, parity % 2 ? "rgba(95, 12, 30, 0.75)" : "rgba(45, 45, 50, 0.75)");
+            strokePath(ctx, "rgba(255, 40, 60, 0.75)", 0.04);
+        });
     },
 
     Vampire: ctx => {
@@ -519,37 +481,35 @@ const PAINTERS = {
 
     Snake: ctx => {
         tint(ctx, "rgba(10, 60, 30, 0.35)");
-        staggeredGrid(3, 3, 0.4, 0.34, (x, y, parity) => {
+        staggeredGrid(3, 3, 0.42, 0.36, (x, y, parity) => {
             ctx.beginPath();
-            ctx.arc(x, y, 0.22, 0, TAU);
-            fillPath(ctx, parity % 2 ? "rgba(70, 210, 100, 0.7)" : "rgba(25, 130, 60, 0.75)");
-            strokePath(ctx, "rgba(5, 40, 20, 0.6)", 0.03);
+            ctx.arc(x, y, 0.3, 0, TAU);
+            fillPath(ctx, parity % 2 ? "rgba(70, 210, 100, 0.75)" : "rgba(25, 130, 60, 0.8)");
+            strokePath(ctx, "rgba(5, 40, 20, 0.65)", 0.04);
         });
     },
 
     "Laser Beam": ctx => {
         tint(ctx, "rgba(0, 120, 150, 0.3)");
-        const lines = [
-            [[-1.2, -0.7], [-0.4, -0.7], [0.0, -0.25], [0.5, -0.25], [1.2, -0.8]],
-            [[-1.2, 0.05], [-0.7, 0.05], [-0.35, 0.45], [0.2, 0.45], [0.6, 0.05], [1.2, 0.05]],
-            [[-0.4, -1.2], [-0.4, -0.7], [-0.1, 0.05], [-0.1, 0.45], [-0.25, 1.2]],
-            [[0.3, -1.2], [0.3, -0.25], [0.75, 0.45], [0.75, 1.2]],
-            [[-1.2, 0.8], [-0.7, 0.05]],
-            [[0.5, -0.25], [0.9, 0.05], [1.2, -0.1]],
-            [[-0.1, 0.45], [0.3, -0.25], [0.6, -1.2]],
-            [[-0.95, -1.0], [-0.4, -0.7], [-0.9, -0.1]]
-        ];
-        lines.forEach(points => {
-            trace(ctx, points, false);
-            strokePath(ctx, "rgba(0, 240, 255, 0.45)", 0.09);
-            trace(ctx, points, false);
-            strokePath(ctx, "rgba(200, 255, 255, 0.9)", 0.025);
-        });
-        [[-0.4, -0.7], [0.0, -0.25], [0.5, -0.25], [-0.7, 0.05], [-0.35, 0.45], [0.2, 0.45], [0.6, 0.05], [-0.1, 0.05], [-0.1, 0.45], [0.3, -0.25], [0.75, 0.45]]
-            .forEach(([x, y]) => {
-                glow(ctx, x, y, 0.16, "rgba(180, 250, 255, 0.9)", "rgba(0, 240, 255, 0)");
-                dot(ctx, x, y, 0.04, "rgba(255, 255, 255, 0.95)");
+        const nodes = [];
+        staggeredGrid(3, 3, 0.6, 0.52, (x, y) => nodes.push([x, y]));
+        ctx.beginPath();
+        nodes.forEach(([ax, ay], i) => {
+            nodes.slice(i + 1).forEach(([bx, by]) => {
+                if (Math.hypot(bx - ax, by - ay) < 0.7) {
+                    ctx.moveTo(ax, ay);
+                    ctx.lineTo(bx, by);
+                }
             });
+        });
+        strokePath(ctx, "rgba(0, 240, 255, 0.6)", 0.05);
+        nodes.forEach(([x, y]) => {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.2, 0, TAU);
+            strokePath(ctx, "rgba(0, 240, 255, 0.85)", 0.05);
+            glow(ctx, x, y, 0.2, "rgba(180, 250, 255, 0.9)", "rgba(0, 240, 255, 0)");
+            dot(ctx, x, y, 0.05, "rgba(255, 255, 255, 0.95)");
+        });
     },
 
     Ninja: ctx => {
@@ -567,20 +527,16 @@ const PAINTERS = {
     },
 
     Spearman: ctx => {
-        tint(ctx, "rgba(150, 190, 220, 0.2)");
-        const cells = [];
-        staggeredGrid(3, 3, 0.26, 0.32, (x, y) => cells.push([x, y]));
-        cells.forEach(([x, y]) => {
-            trace(ctx, diamondPoints(x, y, 0.13, 0.44));
-            fillPath(ctx, "rgba(225, 242, 255, 0.42)");
-            strokePath(ctx, "rgba(255, 255, 255, 0.5)", 0.03);
+        tint(ctx, "rgba(150, 190, 220, 0.25)");
+        staggeredGrid(3, 3, 0.5, 0.45, (x, y) => {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.3, 0, TAU);
+            fillPath(ctx, "rgba(225, 242, 255, 0.35)");
+            strokePath(ctx, "rgba(255, 255, 255, 0.85)", 0.05);
+            ctx.beginPath();
+            ctx.arc(x, y, 0.13, 0, TAU);
+            strokePath(ctx, "rgba(255, 255, 255, 0.7)", 0.04);
         });
-        ctx.beginPath();
-        cells.forEach(([x, y]) => {
-            ctx.moveTo(x, y - 0.44);
-            ctx.lineTo(x, y + 0.44);
-        });
-        strokePath(ctx, "rgba(255, 255, 255, 0.8)", 0.03);
     },
 
     Gunner: ctx => {
@@ -607,22 +563,13 @@ const PAINTERS = {
     },
 
     Samurai: ctx => {
-        ctx.save();
-        ctx.rotate(Math.PI / 4);
-        for (let i = -4; i <= 4; i++) {
-            ctx.fillStyle = i % 2 ? "rgba(240, 240, 250, 0.55)" : "rgba(15, 15, 25, 0.6)";
-            ctx.fillRect(-1.5, i * 0.24 - 0.12, 3, 0.24);
-        }
-        ctx.restore();
-        ctx.save();
-        ctx.rotate(-Math.PI / 4);
-        for (let i = -4; i <= 4; i++) {
-            for (let j = -3; j < 3; j++) {
-                ctx.fillStyle = (i + j) % 2 ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.4)";
-                ctx.fillRect(j * 0.5, i * 0.24 - 0.12, 0.5, 0.24);
-            }
-        }
-        ctx.restore();
+        tint(ctx, "rgba(20, 20, 30, 0.3)");
+        staggeredGrid(3, 3, 0.6, 0.52, (x, y, parity) => {
+            ctx.beginPath();
+            ctx.arc(x, y, 0.34, 0, TAU);
+            fillPath(ctx, parity % 2 ? "rgba(240, 240, 250, 0.6)" : "rgba(15, 15, 25, 0.65)");
+            strokePath(ctx, "rgba(255, 255, 255, 0.35)", 0.04);
+        });
     },
 
     Grappler: ctx => {
