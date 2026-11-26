@@ -17,8 +17,6 @@ export class Fireball extends FighterBase {
         this.projectiles = [];
         this.attackTimer = 0;
         this.shotsFired = 0;
-        // Every fireball fired so far, across all volleys (volley k fires k of them).
-        this.fireballsFired = 0;
     }
 
     update(dt, opponent) {
@@ -28,7 +26,6 @@ export class Fireball extends FighterBase {
         if (this.attackPauseTimer <= 0) this.attackTimer -= dt;
         if (this.attackTimer <= 0 && opponent) {
             this.shotsFired++;
-            this.fireballsFired += this.shotsFired;
             const baseAngle = Math.atan2(opponent.y - this.y, opponent.x - this.x);
             // Fire increasing number of fireballs in a spread towards opponent
             for (let i = 0; i < this.shotsFired; i++) {

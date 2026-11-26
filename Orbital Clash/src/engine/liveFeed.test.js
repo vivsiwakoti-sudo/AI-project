@@ -6,17 +6,19 @@ const texts = events => events.map(event => event.text);
 
 test("starting values are a baseline, and each fireball or berserker step is announced once", () => {
   const feed = createLiveFeed();
-  const fireball = { name: "Fireball", fireballsFired: 0, color: "#f80" };
+  const fireball = { name: "Fireball", shotsFired: 0, color: "#f80" };
   const berserker = { name: "Berserker", rotationSpeed: 1, color: "#f00" };
   const fighters = [fireball, berserker];
 
   assert.deepEqual(texts(observeLiveFeed(feed, fighters)), []);
 
-  fireball.fireballsFired = 9;
+  fireball.shotsFired = 4;
   assert.deepEqual(texts(observeLiveFeed(feed, fighters)), []);
-  fireball.fireballsFired = 10;
+  fireball.shotsFired = 5;
+  assert.deepEqual(texts(observeLiveFeed(feed, fighters)), ["Fireball is shooting 5 fireballs"]);
+  assert.deepEqual(texts(observeLiveFeed(feed, fighters)), []);
+  fireball.shotsFired = 10;
   assert.deepEqual(texts(observeLiveFeed(feed, fighters)), ["Fireball is shooting 10 fireballs"]);
-  assert.deepEqual(texts(observeLiveFeed(feed, fighters)), []);
 
   berserker.rotationSpeed = 2.1;
   assert.deepEqual(texts(observeLiveFeed(feed, fighters)), ["Berserker reached 200% speed"]);

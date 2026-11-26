@@ -2,7 +2,7 @@ import { ADAPTATION_STEPS } from "./classes/types/Mahoraga.js";
 
 // Milestone steps. A fighter is announced once per step it crosses, so the feed
 // stays quiet between thresholds no matter how often the underlying value moves.
-export const FIREBALL_VOLLEY_STEP = 10;
+export const FIREBALL_VOLLEY_STEP = 5;
 export const REAPER_DAMAGE_STEP = 10;
 export const BERSERKER_SPEED_STEP = 100;
 
@@ -31,7 +31,8 @@ const MILESTONES = [
     text: level => `Mahoraga reached stage ${level}`
   },
   {
-    read: f => (f.name === "Fireball" ? f.fireballsFired ?? 0 : null),
+    // shotsFired is the size of the latest volley, growing by one each volley, so it hits every multiple of the step.
+    read: f => (f.name === "Fireball" ? f.shotsFired ?? 0 : null),
     level: value => Math.floor(value / FIREBALL_VOLLEY_STEP),
     text: level => `Fireball is shooting ${level * FIREBALL_VOLLEY_STEP} fireballs`
   },
