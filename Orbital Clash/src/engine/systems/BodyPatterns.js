@@ -90,6 +90,33 @@ const staggeredGrid = (rows, cols, cellX, cellY, draw) => {
     }
 };
 
+// Parallel lines at `angle`; with a spacing below the line width they cover the body.
+const hatch = (ctx, angle, spacing, color, width) => {
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.beginPath();
+    for (let i = -6; i <= 6; i++) {
+        ctx.moveTo(-2, i * spacing);
+        ctx.lineTo(2, i * spacing);
+    }
+    strokePath(ctx, color, width);
+    ctx.restore();
+};
+
+// Flat-topped honeycomb centred on the origin. (i - j) mod 3 never matches across an edge.
+const hexGrid = (radius, draw) => {
+    const ax = 1.5 * radius;
+    const ay = (Math.sqrt(3) * radius) / 2;
+    const by = Math.sqrt(3) * radius;
+    for (let j = -6; j <= 6; j++) {
+        for (let i = -6; i <= 6; i++) {
+            const x = i * ax;
+            const y = i * ay + j * by;
+            if (Math.hypot(x, y) <= 1.6) draw(x, y, (((i - j) % 3) + 3) % 3);
+        }
+    }
+};
+
 const smoothTrace = (ctx, points) => {
     const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
     const n = points.length;
@@ -147,25 +174,20 @@ const jagged = (x0, y0, x1, y1, steps, amp, seed) => {
 
 const PAINTERS = {
     "Ice Sword": ctx => {
-        tint(ctx, "rgba(150, 215, 245, 0.92)");
-        const nodes = [];
-        staggeredGrid(3, 3, 0.55, 0.48, (x, y) => nodes.push([x, y]));
-        nodes.forEach(([x, y]) => {
+        tint(ctx, "rgba(40, 110, 170, 0.92)");
+        const shades = ["rgba(225, 248, 255, 0.85)", "rgba(120, 200, 240, 0.85)", "rgba(190, 235, 255, 0.85)"];
+        hexGrid(0.36, (x, y, shade) => {
+            trace(ctx, hexPoints(x, y, 0.36));
+            fillPath(ctx, shades[shade]);
+            strokePath(ctx, "rgba(255, 255, 255, 0.9)", 0.035);
             ctx.beginPath();
-            ctx.arc(x, y, 0.34, 0, TAU);
-            fillPath(ctx, "rgba(215, 245, 255, 0.45)");
-            strokePath(ctx, "rgba(255, 255, 255, 0.85)", 0.04);
+            for (let k = shade % 2; k < 6; k += 2) {
+                const a = (k * Math.PI) / 3;
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + Math.cos(a) * 0.36, y + Math.sin(a) * 0.36);
+            }
+            strokePath(ctx, "rgba(255, 255, 255, 0.7)", 0.03);
         });
-        ctx.beginPath();
-        nodes.forEach(([ax, ay], i) => {
-            nodes.slice(i + 1).forEach(([bx, by]) => {
-                if (Math.hypot(bx - ax, by - ay) < 0.65) {
-                    ctx.moveTo(ax, ay);
-                    ctx.lineTo(bx, by);
-                }
-            });
-        });
-        strokePath(ctx, "rgba(255, 255, 255, 0.9)", 0.03);
     },
 
     Fireball: ctx => {
@@ -195,13 +217,14 @@ const PAINTERS = {
     },
 
     Duplicator: ctx => {
-        tint(ctx, "rgba(255, 255, 255, 0.22)");
-        [-0.55, 0, 0.55].forEach((rowY, row) => {
-            for (let i = 0; i < 5; i++) {
+        tint(ctx, "rgba(120, 120, 150, 0.92)");
+        const fills = ["rgba(245, 245, 255, 0.6)", "rgba(200, 205, 240, 0.75)", "rgba(255, 255, 255, 0.8)", "rgba(160, 165, 220, 0.85)"];
+        staggeredGrid(2, 2, 0.5, 0.45, (x, y) => {
+            for (let i = 0; i < 4; i++) {
                 ctx.beginPath();
-                ctx.arc(i * 0.26 - 0.52 + (row % 2) * 0.13, rowY, 0.62 - i * 0.1, 0, TAU);
-                fillPath(ctx, "rgba(255, 255, 255, 0.16)");
-                strokePath(ctx, `rgba(255, 255, 255, ${0.85 - i * 0.12})`, 0.05);
+                ctx.arc(x, y, 0.5 - i * 0.11, 0, TAU);
+                fillPath(ctx, fills[i]);
+                strokePath(ctx, "rgba(255, 255, 255, 0.8)", 0.03);
             }
         });
     },
@@ -223,46 +246,48 @@ const PAINTERS = {
     },
 
     Alchemist: ctx => {
-        tint(ctx, "rgba(90, 40, 120, 0.22)");
+        tint(ctx, "rgba(70, 30, 100, 0.92)");
         [
-            [0.18, 0.0, 4.6, "rgba(120, 255, 170, 0.65)"],
-            [0.36, 1.4, 4.8, "rgba(255, 110, 220, 0.65)"],
-            [0.54, 2.6, 4.7, "rgba(255, 210, 90, 0.65)"],
-            [0.72, 3.9, 4.9, "rgba(90, 200, 255, 0.65)"],
-            [0.9, 5.2, 4.6, "rgba(255, 140, 80, 0.6)"]
-        ].forEach(([r, start, sweep, color]) => {
+            "rgba(120, 255, 170, 0.85)",
+            "rgba(255, 110, 220, 0.85)",
+            "rgba(255, 210, 90, 0.85)",
+            "rgba(90, 200, 255, 0.85)",
+            "rgba(255, 140, 80, 0.85)",
+            "rgba(170, 120, 255, 0.85)"
+        ].forEach((color, k) => arcBand(ctx, 0, 0, k * 0.2, (k + 1) * 0.2 + 0.03, 0, TAU, color));
+        for (let k = 0; k < 3; k++) {
             ctx.beginPath();
-            ctx.arc(0, 0, r, start, start + sweep);
-            strokePath(ctx, color, 0.16);
-        });
+            ctx.arc(0, 0, 0.3 + k * 0.3, k * 2.1, k * 2.1 + 3.2);
+            strokePath(ctx, "rgba(255, 255, 255, 0.45)", 0.05);
+        }
         [[-0.6, 0.55], [0.55, -0.5], [0.7, 0.45], [-0.2, -0.75], [0.1, 0.3], [-0.7, -0.1], [0.2, -0.2], [-0.35, 0.8]]
             .forEach(([x, y]) => dot(ctx, x, y, 0.07, "rgba(255, 255, 255, 0.85)"));
     },
 
     Assassin: ctx => {
         const shade = ctx.createLinearGradient(0, -1.2, 0, 1.2);
-        shade.addColorStop(0, "rgba(0, 0, 0, 0.75)");
-        shade.addColorStop(1, "rgba(0, 0, 0, 0.92)");
+        shade.addColorStop(0, "rgba(10, 10, 20, 0.9)");
+        shade.addColorStop(1, "rgba(0, 0, 0, 0.95)");
         ctx.fillStyle = shade;
         ctx.fillRect(-1.2, -1.2, 2.4, 2.4);
-        staggeredGrid(3, 3, 0.6, 0.52, (x, y) => {
-            ctx.beginPath();
-            ctx.arc(x, y, 0.37, 0, TAU);
-            fillPath(ctx, "rgba(200, 210, 255, 0.12)");
-            strokePath(ctx, "rgba(235, 240, 255, 0.65)", 0.05);
-        });
+        hatch(ctx, Math.PI / 4, 0.26, "rgba(200, 210, 255, 0.75)", 0.2);
+        hatch(ctx, -Math.PI / 4 + 0.35, 0.26, "rgba(120, 130, 200, 0.6)", 0.2);
     },
 
     Mutant: ctx => {
-        tint(ctx, "rgba(60, 170, 90, 0.25)");
+        tint(ctx, "rgba(25, 75, 55, 0.92)");
         [
-            [-0.55, -0.45, 0.42, 0.4, "rgba(130, 255, 150, 0.55)"],
-            [0.1, -0.5, 0.36, 1.5, "rgba(60, 210, 170, 0.55)"],
-            [0.6, -0.1, 0.4, 2.6, "rgba(200, 255, 90, 0.5)"],
-            [-0.3, 0.1, 0.5, 0.7, "rgba(40, 140, 70, 0.55)"],
-            [0.35, 0.55, 0.34, 4.0, "rgba(160, 240, 120, 0.55)"],
-            [-0.7, 0.5, 0.26, 2.0, "rgba(30, 110, 90, 0.55)"],
-            [0.0, 0.0, 0.2, 5.0, "rgba(220, 255, 140, 0.5)"]
+            [-0.55, -0.45, 0.46, 0.4, "rgba(130, 255, 150, 0.75)"],
+            [0.1, -0.5, 0.42, 1.5, "rgba(60, 210, 170, 0.75)"],
+            [0.6, -0.1, 0.46, 2.6, "rgba(200, 255, 90, 0.7)"],
+            [-0.3, 0.1, 0.52, 0.7, "rgba(40, 140, 70, 0.8)"],
+            [0.35, 0.55, 0.42, 4.0, "rgba(160, 240, 120, 0.75)"],
+            [-0.7, 0.5, 0.36, 2.0, "rgba(30, 110, 90, 0.8)"],
+            [0.0, 0.0, 0.3, 5.0, "rgba(220, 255, 140, 0.7)"],
+            [-0.95, -0.05, 0.34, 3.1, "rgba(100, 230, 130, 0.75)"],
+            [0.95, 0.2, 0.36, 0.4, "rgba(90, 220, 120, 0.75)"],
+            [0.0, -1.0, 0.3, 1.9, "rgba(150, 255, 190, 0.75)"],
+            [0.5, 0.95, 0.34, 5.2, "rgba(70, 190, 130, 0.75)"]
         ].forEach(([x, y, r, phase, color]) => {
             smoothTrace(ctx, blobPoints(x, y, r, phase));
             fillPath(ctx, color);
@@ -299,21 +324,20 @@ const PAINTERS = {
     },
 
     Berserker: ctx => {
-        tint(ctx, "rgba(120, 10, 20, 0.35)");
+        tint(ctx, "rgba(90, 8, 16, 0.92)");
         [
-            [[-1.1, -0.7], [1.1, 0.5]],
-            [[-1.1, 0.2], [1.0, -0.8]],
-            [[-0.4, -1.1], [0.5, 1.1]],
-            [[0.9, -1.0], [-0.6, 1.0]],
-            [[-1.0, 0.9], [1.1, 0.1]],
-            [[0.2, -1.1], [-1.0, -0.2]],
-            [[-0.2, 1.1], [1.0, 0.7]]
+            [[-1.3, -0.75], [1.3, 0.55]],
+            [[-1.3, 0.25], [1.3, -0.85]],
+            [[-0.5, -1.3], [0.6, 1.3]],
+            [[1.0, -1.3], [-0.7, 1.3]],
+            [[-1.3, 0.95], [1.3, 0.15]],
+            [[0.3, -1.3], [-1.3, -0.25]]
         ].forEach(([[x0, y0], [x1, y1]], k) => {
-            const points = jagged(x0, y0, x1, y1, 6, 0.12, k);
+            const points = jagged(x0, y0, x1, y1, 7, 0.14, k);
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 50, 60, 0.75)", 0.09);
+            strokePath(ctx, k % 2 ? "rgba(255, 40, 55, 0.9)" : "rgba(190, 20, 35, 0.9)", 0.4);
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 180, 160, 0.6)", 0.03);
+            strokePath(ctx, "rgba(255, 170, 150, 0.7)", 0.07);
         });
     },
 
@@ -361,25 +385,25 @@ const PAINTERS = {
     },
 
     Tornado: ctx => {
-        tint(ctx, "rgba(120, 190, 230, 0.22)");
-        const band = (offset, sweep, color) => {
-            const samples = 14;
+        tint(ctx, "rgba(40, 90, 130, 0.92)");
+        const sweep = 8.2;
+        const pitch = 0.143;
+        const colors = ["rgba(230, 248, 255, 0.9)", "rgba(120, 200, 240, 0.9)", "rgba(70, 150, 220, 0.9)"];
+        colors.forEach((color, arm) => {
+            const samples = 60;
             const outer = [];
             const inner = [];
             for (let i = 0; i <= samples; i++) {
                 const t = i / samples;
-                const a = offset + t * sweep;
-                const r = 1.05 - 0.85 * t;
-                const w = 0.03 + 0.24 * (1 - t);
+                const a = arm * (TAU / 3) + t * sweep;
+                const r = 1.25 - pitch * t * sweep;
+                const w = 0.09 + 0.14 * (1 - t);
                 outer.push([Math.cos(a) * (r + w), Math.sin(a) * (r + w)]);
                 inner.push([Math.cos(a) * (r - w), Math.sin(a) * (r - w)]);
             }
             trace(ctx, [...outer, ...inner.reverse()]);
             fillPath(ctx, color);
-        };
-        for (let k = 0; k < 4; k++) {
-            band(k * Math.PI / 2, 3.4, k % 2 ? "rgba(120, 200, 240, 0.6)" : "rgba(225, 248, 255, 0.6)");
-        }
+        });
     },
 
     Meteor: ctx => {
@@ -431,35 +455,45 @@ const PAINTERS = {
     },
 
     Striker: ctx => {
-        tint(ctx, "rgba(30, 50, 90, 0.3)");
-        for (let i = -3; i <= 3; i++) {
-            const y = i * 0.32;
-            trace(ctx, [[-1.2, y + 0.45], [0, y], [1.2, y + 0.45]], false);
-            strokePath(ctx, i % 2 ? "rgba(235, 242, 255, 0.65)" : "rgba(20, 40, 80, 0.65)", 0.2);
+        tint(ctx, "rgba(110, 120, 140, 0.92)");
+        for (let i = -4; i <= 4; i++) {
+            const y = i * 0.3;
+            trace(ctx, [[-1.3, y + 0.45], [0, y], [1.3, y + 0.45]], false);
+            strokePath(ctx, i % 2 ? "rgba(235, 242, 255, 0.9)" : "rgba(20, 40, 80, 0.9)", 0.3);
         }
     },
 
     Reaper: ctx => {
-        tint(ctx, "rgba(35, 35, 40, 0.92)");
+        tint(ctx, "rgba(60, 15, 25, 0.92)");
         staggeredGrid(3, 3, 0.6, 0.52, (x, y, parity) => {
             ctx.beginPath();
             ctx.arc(x, y, 0.37, 0, TAU);
-            fillPath(ctx, parity % 2 ? "rgba(95, 12, 30, 0.75)" : "rgba(45, 45, 50, 0.75)");
+            fillPath(ctx, parity % 2 ? "rgba(150, 20, 40, 0.85)" : "rgba(95, 95, 105, 0.85)");
             strokePath(ctx, "rgba(255, 40, 60, 0.75)", 0.04);
         });
     },
 
     Vampire: ctx => {
-        tint(ctx, "rgba(70, 0, 20, 0.35)");
-        for (let row = -2; row <= 2; row++) {
-            const yOffset = row * 0.32;
+        tint(ctx, "rgba(60, 0, 15, 0.92)");
+        for (let row = -4; row <= 4; row++) {
+            const yOffset = row * 0.27;
             const points = [];
             for (let i = 0; i <= 24; i++) {
-                const x = -1.2 + i * 0.1;
-                points.push([x, yOffset + Math.sin(x * Math.PI * 1.4 + row * 1.1) * 0.22]);
+                const x = -1.3 + i * 0.1083;
+                points.push([x, yOffset + Math.sin(x * Math.PI * 1.4 + row * 1.1) * 0.2]);
             }
             trace(ctx, points, false);
-            strokePath(ctx, row % 2 ? "rgba(90, 0, 25, 0.85)" : "rgba(220, 30, 60, 0.75)", 0.14);
+            strokePath(ctx, row % 2 ? "rgba(110, 0, 30, 0.95)" : "rgba(220, 30, 60, 0.9)", 0.34);
+        }
+        for (let row = -3; row <= 3; row++) {
+            const yOffset = (row + 0.5) * 0.27;
+            const points = [];
+            for (let i = 0; i <= 24; i++) {
+                const x = -1.3 + i * 0.1083;
+                points.push([x, yOffset + Math.cos(x * Math.PI * 1.4 - row) * 0.2]);
+            }
+            trace(ctx, points, false);
+            strokePath(ctx, "rgba(255, 130, 140, 0.55)", 0.04);
         }
     },
 
@@ -521,16 +555,18 @@ const PAINTERS = {
     },
 
     Ninja: ctx => {
-        tint(ctx, "rgba(10, 10, 16, 0.35)");
+        tint(ctx, "rgba(70, 70, 85, 0.92)");
+        staggeredGrid(4, 3, 0.6, 0.3, (x, y, parity) => {
+            trace(ctx, diamondPoints(x, y, 0.3, 0.3));
+            fillPath(ctx, parity % 2 ? "rgba(25, 25, 35, 0.92)" : "rgba(5, 5, 10, 0.92)");
+            strokePath(ctx, "rgba(255, 50, 60, 0.55)", 0.03);
+        });
         [
-            [[-1.2, -0.4], [0.2, -1.2], [-0.2, 0.3]],
-            [[-0.6, 1.2], [0.5, 0.0], [1.2, 1.0]],
-            [[0.4, -0.9], [1.2, -0.2], [0.8, 0.5]],
-            [[-1.2, 0.6], [-0.3, -0.1], [-0.5, 0.9]]
+            [[-1.3, -0.7], [-0.1, 0.1], [1.3, -0.5]],
+            [[-1.3, 0.8], [0.2, -0.2], [1.2, 0.9]]
         ].forEach(points => {
-            trace(ctx, points);
-            fillPath(ctx, "rgba(0, 0, 0, 0.55)");
-            strokePath(ctx, "rgba(255, 50, 60, 0.6)", 0.03);
+            trace(ctx, points, false);
+            strokePath(ctx, "rgba(255, 40, 55, 0.85)", 0.05);
         });
     },
 
@@ -571,22 +607,25 @@ const PAINTERS = {
     },
 
     Samurai: ctx => {
-        tint(ctx, "rgba(20, 20, 30, 0.92)");
+        tint(ctx, "rgba(110, 110, 125, 0.92)");
         staggeredGrid(3, 3, 0.6, 0.52, (x, y, parity) => {
             ctx.beginPath();
             ctx.arc(x, y, 0.37, 0, TAU);
-            fillPath(ctx, parity % 2 ? "rgba(240, 240, 250, 0.6)" : "rgba(15, 15, 25, 0.65)");
-            strokePath(ctx, "rgba(255, 255, 255, 0.35)", 0.04);
+            fillPath(ctx, parity % 2 ? "rgba(245, 245, 250, 0.85)" : "rgba(15, 15, 25, 0.9)");
+            strokePath(ctx, "rgba(255, 255, 255, 0.4)", 0.04);
         });
     },
 
     Grappler: ctx => {
-        tint(ctx, "rgba(120, 50, 20, 0.25)");
-        staggeredGrid(2, 2, 0.5, 0.42, (x, y, parity) => {
+        tint(ctx, "rgba(90, 35, 15, 0.92)");
+        staggeredGrid(3, 3, 0.5, 0.44, (x, y, parity) => {
             ctx.beginPath();
-            if (parity % 2) ctx.arc(x, y, 0.3, 0, Math.PI);
-            else ctx.arc(x, y, 0.3, Math.PI, TAU);
-            strokePath(ctx, parity % 2 ? "rgba(255, 120, 60, 0.75)" : "rgba(255, 190, 90, 0.75)", 0.16);
+            ctx.arc(x, y, 0.36, 0, TAU);
+            fillPath(ctx, parity % 2 ? "rgba(255, 120, 60, 0.85)" : "rgba(200, 80, 35, 0.85)");
+            ctx.beginPath();
+            if (parity % 2) ctx.arc(x, y, 0.27, 0, Math.PI);
+            else ctx.arc(x, y, 0.27, Math.PI, TAU);
+            strokePath(ctx, "rgba(255, 220, 150, 0.9)", 0.08);
         });
     },
 
@@ -599,25 +638,30 @@ const PAINTERS = {
     },
 
     Gambler: ctx => {
-        tint(ctx, "rgba(20, 110, 60, 0.35)");
-        [[-0.35, -0.3, 0.55, 0.8], [0.35, 0.2, 0.55, 0.8], [-0.35, 0.5, 0.4, 0.55], [0.5, -0.5, 0.4, 0.55]].forEach(([x, y, hw, hh]) => {
-            trace(ctx, diamondPoints(x, y, hw, hh));
-            fillPath(ctx, "rgba(255, 215, 90, 0.28)");
-            strokePath(ctx, "rgba(255, 215, 90, 0.75)", 0.04);
+        tint(ctx, "rgba(20, 110, 60, 0.92)");
+        const suitInk = "rgba(20, 20, 25, 0.95)";
+        const gold = "rgba(255, 215, 90, 0.95)";
+        staggeredGrid(4, 3, 0.64, 0.32, (x, y, parity) => {
+            trace(ctx, diamondPoints(x, y, 0.32, 0.32));
+            fillPath(ctx, parity % 2 ? "rgba(250, 240, 220, 0.9)" : "rgba(200, 40, 60, 0.9)");
+            strokePath(ctx, "rgba(255, 215, 90, 0.85)", 0.03);
         });
-        heart(ctx, 0.55, -0.6, 0.22);
-        fillPath(ctx, "rgba(255, 90, 110, 0.85)");
-        trace(ctx, diamondPoints(-0.6, 0.55, 0.14, 0.2));
-        fillPath(ctx, "rgba(255, 90, 110, 0.85)");
+        heart(ctx, -0.45, -0.5, 0.26);
+        fillPath(ctx, suitInk);
+        strokePath(ctx, gold, 0.03);
         ctx.save();
-        ctx.translate(-0.55, -0.1);
+        ctx.translate(0.45, 0.45);
         ctx.scale(1, -1);
-        heart(ctx, 0, 0, 0.22);
+        heart(ctx, 0, 0, 0.26);
         ctx.restore();
-        fillPath(ctx, "rgba(255, 255, 255, 0.8)");
-        [[0.05, 0.75], [-0.05, 0.6], [0.15, 0.6]].forEach(([x, y]) => dot(ctx, x, y, 0.09, "rgba(255, 255, 255, 0.8)"));
+        fillPath(ctx, suitInk);
+        strokePath(ctx, gold, 0.03);
+        trace(ctx, diamondPoints(0.45, -0.45, 0.14, 0.2));
+        fillPath(ctx, suitInk);
+        strokePath(ctx, gold, 0.03);
+        [[-0.45, 0.35], [-0.6, 0.5], [-0.3, 0.5]].forEach(([x, y]) => dot(ctx, x, y, 0.11, suitInk));
         [[-0.7, -0.6], [0.8, 0.2], [-0.1, -0.9], [-0.9, 0.3]].forEach(([x, y]) => {
-            dot(ctx, x, y, 0.06, "rgba(255, 215, 90, 0.9)");
+            dot(ctx, x, y, 0.06, gold);
         });
     },
 
@@ -640,12 +684,15 @@ const PAINTERS = {
     },
 
     Mimic: ctx => {
-        tint(ctx, "rgba(200, 160, 255, 0.35)");
+        tint(ctx, "rgba(120, 90, 170, 0.92)");
         [
-            [-0.3, -0.2, 0.6, 0.4, "rgba(255, 80, 200, 0.5)"],
-            [0.35, 0.1, 0.55, 0.35, "rgba(80, 200, 255, 0.5)"],
-            [-0.1, 0.5, 0.5, 0.3, "rgba(255, 220, 80, 0.5)"],
-            [0.45, -0.55, 0.4, 0.3, "rgba(120, 255, 160, 0.5)"]
+            [-0.45, -0.4, 0.5, 0, "rgba(255, 80, 200, 0.8)"],
+            [0.45, -0.35, 0.5, 1.2, "rgba(80, 200, 255, 0.8)"],
+            [0, 0.1, 0.55, 2.4, "rgba(255, 220, 80, 0.8)"],
+            [-0.5, 0.55, 0.5, 3.6, "rgba(120, 255, 160, 0.8)"],
+            [0.55, 0.6, 0.5, 4.8, "rgba(255, 150, 90, 0.8)"],
+            [0, -0.95, 0.4, 5.9, "rgba(170, 120, 255, 0.85)"],
+            [0, 1.0, 0.4, 0.7, "rgba(255, 110, 150, 0.8)"]
         ].forEach(([x, y, r, phase, color], k) => {
             ctx.save();
             smoothTrace(ctx, blobPoints(x, y, r, phase));
@@ -663,19 +710,19 @@ const PAINTERS = {
     },
 
     Yeti: ctx => {
-        tint(ctx, "rgba(150, 210, 255, 0.3)");
-        trace(ctx, [[-1.2, -0.3], [-0.7, -0.6], [-0.4, -0.2], [0.0, -0.7], [0.4, -0.3], [0.8, -0.9], [1.2, -0.5], [1.2, 0.1], [0.7, 0.2], [0.2, 0.5], [-0.4, 0.2], [-1.2, 0.4]]);
-        fillPath(ctx, "rgba(120, 190, 255, 0.5)");
-        trace(ctx, [[-1.2, 0.6], [-0.6, 0.5], [-0.2, 0.9], [0.3, 0.6], [0.8, 1.0], [1.2, 0.7], [1.2, 1.2], [-1.2, 1.2]]);
-        fillPath(ctx, "rgba(90, 160, 240, 0.5)");
+        tint(ctx, "rgba(60, 110, 180, 0.92)");
+        staggeredGrid(3, 3, 0.6, 0.52, (x, y, parity) => {
+            smoothTrace(ctx, blobPoints(x, y, 0.5, x * 3 + y * 2));
+            fillPath(ctx, parity % 2 ? "rgba(170, 225, 255, 0.85)" : "rgba(110, 175, 240, 0.85)");
+        });
         [
-            jagged(-1.1, -0.6, 0.1, -0.85, 6, 0.1, 1),
-            jagged(0.2, -0.1, 1.1, -0.55, 6, 0.1, 2),
-            jagged(-0.9, 0.55, 0.3, 0.45, 6, 0.08, 3),
-            jagged(0.1, 0.8, 1.0, 0.95, 6, 0.08, 4)
+            jagged(-1.3, -0.6, 0.1, -0.85, 6, 0.1, 1),
+            jagged(0.2, -0.1, 1.3, -0.55, 6, 0.1, 2),
+            jagged(-1.3, 0.55, 0.3, 0.45, 6, 0.08, 3),
+            jagged(0.1, 0.8, 1.3, 0.95, 6, 0.08, 4)
         ].forEach(points => {
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 255, 255, 0.85)", 0.07);
+            strokePath(ctx, "rgba(255, 255, 255, 0.9)", 0.1);
         });
     },
 
