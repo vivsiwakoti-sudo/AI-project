@@ -693,7 +693,9 @@ export class FighterBase {
         // The colourful gradient core is shared, and the aimable shapes lean
         // toward whichever way the fighter is facing.
         const aimAngle = this.lastAngle - Math.PI / 2;
-        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true });
+        // Body fill covers the whole hitbox circle plus the silhouette, so the
+        // shape reaches the hitbox edge instead of leaving an empty ring.
+        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true, hitCircle: true });
         if (this.slowVisual) {
             ctx.fillStyle = "rgba(80, 180, 255, 0.8)";
         } else {
@@ -705,9 +707,9 @@ export class FighterBase {
         }
         ctx.fill();
 
-        // Internal class pattern, clipped to the same silhouette so it never spills past the body.
+        // Internal class pattern, clipped to the same region as the body fill.
         ctx.save();
-        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true });
+        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true, hitCircle: true });
         ctx.clip();
         drawBodyPattern(ctx, this.name, this.radius);
         ctx.restore();

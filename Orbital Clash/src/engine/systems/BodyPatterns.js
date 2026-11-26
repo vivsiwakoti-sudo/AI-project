@@ -335,9 +335,9 @@ const PAINTERS = {
         ].forEach(([[x0, y0], [x1, y1]], k) => {
             const points = jagged(x0, y0, x1, y1, 7, 0.14, k);
             trace(ctx, points, false);
-            strokePath(ctx, k % 2 ? "rgba(255, 40, 55, 0.9)" : "rgba(190, 20, 35, 0.9)", 0.4);
+            strokePath(ctx, k % 2 ? "rgba(255, 40, 55, 0.9)" : "rgba(190, 20, 35, 0.9)", 0.5);
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 170, 150, 0.7)", 0.07);
+            strokePath(ctx, "rgba(255, 170, 150, 0.7)", 0.08);
         });
     },
 
@@ -433,25 +433,29 @@ const PAINTERS = {
         tint(ctx, "rgba(40, 10, 70, 0.4)");
         const cx = 0.22;
         const cy = 0.15;
-        [0.55, 0.75, 0.95].forEach(r => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, 1.3, 0, TAU);
+        ctx.fillStyle = "rgba(60, 20, 110, 0.85)";
+        ctx.fill();
+        [0.55, 0.75, 0.95, 1.15].forEach(r => {
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, TAU);
-            strokePath(ctx, "rgba(190, 130, 255, 0.5)", 0.05);
+            strokePath(ctx, "rgba(190, 130, 255, 0.6)", 0.09);
         });
         for (let j = 0; j < 3; j++) {
             ctx.beginPath();
             for (let i = 0; i <= 40; i++) {
                 const t = i / 40;
                 const a = j * (TAU / 3) + t * TAU * 1.5;
-                const r = (1.15 - t * 0.95) * (1 + 0.1 * Math.sin(3 * a + j));
+                const r = (1.35 - t * 1.1) * (1 + 0.1 * Math.sin(3 * a + j));
                 const x = cx + Math.cos(a) * r;
                 const y = cy + Math.sin(a) * r;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
-            strokePath(ctx, j % 2 ? "rgba(140, 60, 220, 0.8)" : "rgba(90, 30, 160, 0.75)", 0.16);
+            strokePath(ctx, j % 2 ? "rgba(140, 60, 220, 0.8)" : "rgba(90, 30, 160, 0.75)", 0.26);
         }
-        glow(ctx, cx, cy, 0.38, "rgba(3, 0, 10, 1)", "rgba(40, 10, 80, 0)");
+        glow(ctx, cx, cy, 0.5, "rgba(3, 0, 10, 1)", "rgba(40, 10, 80, 0)");
     },
 
     Striker: ctx => {

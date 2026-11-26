@@ -195,7 +195,20 @@ const SHAPES = {
     }
 };
 
-export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0, outlineOnly = false } = {}) {
+// Adds the unit hitbox circle as a sub-path wound the same way as `loop`, so
+// the nonzero fill rule covers the union of circle and silhouette.
+function addHitCircle(ctx, loop) {
+    let area = 0;
+    loop.forEach(([x0, y0], i) => {
+        const [x1, y1] = loop[(i + 1) % loop.length];
+        area += x0 * y1 - x1 * y0;
+    });
+    ctx.moveTo(1, 0);
+    ctx.arc(0, 0, 1, 0, TAU, area < 0);
+    ctx.closePath();
+}
+
+export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0, outlineOnly = false, hitCircle = false } = {}) {
     const def = SHAPES[shape] || SHAPES.round;
     ctx.save();
     ctx.scale(radius, radius);
@@ -214,6 +227,7 @@ export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0, outli
     const allLoops = def.path ? def.path : [def.points];
     const loops = outlineOnly ? allLoops.slice(0, 1) : allLoops;
     ctx.beginPath();
+    if (hitCircle) addHitCircle(ctx, loops[0]);
     for (const loop of loops) {
         loop.forEach(([px, py], i) => {
             if (i === 0) ctx.moveTo(px, py);
