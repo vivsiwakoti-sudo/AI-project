@@ -27,6 +27,12 @@ const trace = (ctx, points, closed = true) => {
     if (closed) ctx.closePath();
 };
 
+// Base wash over the whole body so the design covers the full silhouette.
+const tint = (ctx, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(-1.2, -1.2, 2.4, 2.4);
+};
+
 const dot = (ctx, x, y, r, color) => {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, TAU);
@@ -54,6 +60,17 @@ const diamondPoints = (cx, cy, halfWidth, halfHeight) => [
     [cx, cy + halfHeight],
     [cx - halfWidth, cy]
 ];
+
+const chamferPlate = (ctx, x, y, halfW, halfH, cut) => trace(ctx, [
+    [x - halfW + cut, y - halfH],
+    [x + halfW - cut, y - halfH],
+    [x + halfW, y - halfH + cut],
+    [x + halfW, y + halfH - cut],
+    [x + halfW - cut, y + halfH],
+    [x - halfW + cut, y + halfH],
+    [x - halfW, y + halfH - cut],
+    [x - halfW, y - halfH + cut]
+]);
 
 const heart = (ctx, x, y, size) => {
     ctx.beginPath();
@@ -106,6 +123,7 @@ const flame = (ctx, bx, by, direction, length, width, color) => {
     ctx.restore();
 };
 
+// A kite-shaped shard with a sharp tip ahead of (x, y) and a short tail behind it.
 const shardPoints = (x, y, angle, length, width) => {
     const dx = Math.cos(angle);
     const dy = Math.sin(angle);
@@ -130,181 +148,264 @@ const crescent = (ctx, x, y, size, angle, color, edge) => {
     ctx.quadraticCurveTo(size * 0.25, 0, 0, -size);
     ctx.closePath();
     fillPath(ctx, color);
-    if (edge) strokePath(ctx, edge, 0.02);
+    if (edge) strokePath(ctx, edge, 0.03);
     ctx.restore();
+};
+
+const arcBand = (ctx, cx, cy, r0, r1, a0, a1, color) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r1, a0, a1);
+    ctx.arc(cx, cy, r0, a1, a0, true);
+    ctx.closePath();
+    fillPath(ctx, color);
+};
+
+// A zigzag line from (x0, y0) to (x1, y1) whose interior points wobble sideways.
+const jagged = (x0, y0, x1, y1, steps, amp, seed) => {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const len = Math.hypot(dx, dy);
+    const nx = -dy / len;
+    const ny = dx / len;
+    return Array.from({ length: steps + 1 }, (_, i) => {
+        const t = i / steps;
+        const side = i === 0 || i === steps ? 0 : Math.sin(seed * 7.3 + i * 2.9) * amp;
+        return [x0 + dx * t + nx * side, y0 + dy * t + ny * side];
+    });
 };
 
 const PAINTERS = {
     "Ice Sword": ctx => {
+        tint(ctx, "rgba(170, 230, 255, 0.26)");
         [
-            [-0.4, -0.25, 0.5, 0.75, 0.2, "rgba(200, 240, 255, 0.32)"],
-            [0.25, -0.35, -0.9, 0.7, 0.18, "rgba(160, 225, 255, 0.3)"],
-            [0.1, 0.25, 2.3, 0.8, 0.2, "rgba(230, 250, 255, 0.28)"],
-            [-0.45, 0.45, -0.3, 0.6, 0.16, "rgba(160, 225, 255, 0.3)"],
-            [0.55, 0.45, 1.6, 0.5, 0.14, "rgba(230, 250, 255, 0.28)"]
+            [-0.45, -0.3, 0.5, 1.05, 0.3, "rgba(200, 240, 255, 0.55)"],
+            [0.3, -0.4, -0.9, 1.0, 0.3, "rgba(150, 220, 255, 0.5)"],
+            [0.1, 0.3, 2.3, 1.05, 0.3, "rgba(230, 250, 255, 0.5)"],
+            [-0.5, 0.5, -0.3, 0.95, 0.28, "rgba(150, 220, 255, 0.5)"],
+            [0.6, 0.4, 1.6, 0.95, 0.28, "rgba(230, 250, 255, 0.5)"],
+            [-0.1, -0.75, 0.9, 0.85, 0.26, "rgba(160, 230, 255, 0.5)"],
+            [0.75, -0.2, 2.9, 0.9, 0.24, "rgba(200, 240, 255, 0.5)"]
         ].forEach(([x, y, angle, length, width, color]) => {
             trace(ctx, shardPoints(x, y, angle, length, width));
             fillPath(ctx, color);
-            strokePath(ctx, "rgba(255, 255, 255, 0.55)", 0.025);
+            strokePath(ctx, "rgba(255, 255, 255, 0.85)", 0.03);
         });
         [
-            [[-0.9, -0.6], [-0.6, -0.45], [-0.4, -0.25], [-0.05, -0.05], [0.25, -0.35], [0.6, -0.7]],
-            [[0.1, 0.25], [-0.2, 0.05], [-0.45, 0.45], [-0.8, 0.2]],
-            [[0.25, -0.35], [0.55, 0.45]]
+            [[-1.1, -0.7], [-0.6, -0.45], [-0.4, -0.25], [-0.05, -0.05], [0.25, -0.35], [0.6, -0.7], [1.1, -0.5]],
+            [[0.1, 0.25], [-0.2, 0.05], [-0.45, 0.45], [-0.8, 0.2], [-1.1, 0.5]],
+            [[0.25, -0.35], [0.55, 0.45], [0.9, 0.9]]
         ].forEach(points => {
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 255, 255, 0.8)", 0.018);
+            strokePath(ctx, "rgba(255, 255, 255, 0.9)", 0.025);
         });
     },
 
     Fireball: ctx => {
+        glow(ctx, 0, 0, 1.1, "rgba(255, 240, 170, 0.8)", "rgba(255, 90, 20, 0.45)");
         [
-            { count: 3, radius: 0.5, length: 0.85, width: 0.2, color: "rgba(255, 110, 30, 0.5)", twist: 0.5 },
-            { count: 3, radius: 0.3, length: 0.6, width: 0.15, color: "rgba(255, 170, 50, 0.55)", twist: 1.2 },
-            { count: 2, radius: 0.1, length: 0.35, width: 0.1, color: "rgba(255, 240, 170, 0.5)", twist: 2.0 }
+            { count: 6, radius: 0.6, length: 0.95, width: 0.28, color: "rgba(255, 90, 25, 0.7)", twist: 0.5 },
+            { count: 5, radius: 0.32, length: 0.72, width: 0.22, color: "rgba(255, 150, 40, 0.7)", twist: 1.2 },
+            { count: 4, radius: 0.1, length: 0.42, width: 0.16, color: "rgba(255, 240, 170, 0.75)", twist: 2.0 }
         ].forEach(({ count, radius, length, width, color, twist }) => {
             for (let k = 0; k < count; k++) {
                 const a = (k / count) * TAU + twist;
                 flame(ctx, Math.cos(a) * radius, Math.sin(a) * radius, a + 0.7, length, width, color);
             }
         });
-        for (let k = 0; k < 3; k++) {
-            const a = (k / 3) * TAU + 0.9;
+        for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * TAU + 0.2;
             ctx.beginPath();
-            ctx.arc(0, 0, 0.85, a, a + 0.6);
-            strokePath(ctx, "rgba(255, 200, 90, 0.5)", 0.03);
+            ctx.arc(0, 0, 0.9, a, a + 0.5);
+            strokePath(ctx, "rgba(255, 210, 110, 0.8)", 0.06);
+        }
+        for (let k = 0; k < 6; k++) {
+            const a = (k / 6) * TAU + 0.7;
+            ctx.beginPath();
+            ctx.arc(0, 0, 0.66, a, a + 0.6);
+            strokePath(ctx, "rgba(255, 200, 90, 0.7)", 0.04);
         }
     },
 
     Duplicator: ctx => {
-        for (let i = 0; i < 4; i++) {
-            ctx.beginPath();
-            ctx.arc(i * 0.12 - 0.15, 0, 0.9 - i * 0.2, 0, TAU);
-            strokePath(ctx, `rgba(255, 255, 255, ${0.6 - i * 0.12})`, 0.07);
-        }
+        tint(ctx, "rgba(255, 255, 255, 0.22)");
+        [-0.55, 0, 0.55].forEach((rowY, row) => {
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.arc(i * 0.26 - 0.52 + (row % 2) * 0.13, rowY, 0.62 - i * 0.1, 0, TAU);
+                fillPath(ctx, "rgba(255, 255, 255, 0.16)");
+                strokePath(ctx, `rgba(255, 255, 255, ${0.85 - i * 0.12})`, 0.05);
+            }
+        });
     },
 
     Ghost: ctx => {
-        glow(ctx, -0.35, -0.25, 0.7, "rgba(235, 245, 255, 0.45)", "rgba(235, 245, 255, 0)");
-        glow(ctx, 0.3, 0.05, 0.6, "rgba(235, 245, 255, 0.4)", "rgba(235, 245, 255, 0)");
-        glow(ctx, -0.05, 0.5, 0.55, "rgba(235, 245, 255, 0.35)", "rgba(235, 245, 255, 0)");
+        tint(ctx, "rgba(170, 185, 210, 0.3)");
+        for (let k = -2; k <= 2; k++) {
+            const points = [];
+            for (let i = 0; i <= 16; i++) {
+                const y = -1.1 + i * 0.14;
+                points.push([k * 0.42 + Math.sin(y * 4 + k) * 0.14, y]);
+            }
+            trace(ctx, points, false);
+            strokePath(ctx, "rgba(120, 140, 175, 0.4)", 0.42);
+            trace(ctx, points, false);
+            strokePath(ctx, "rgba(80, 100, 140, 0.45)", 0.12);
+        }
+        glow(ctx, 0.1, -0.3, 0.6, "rgba(255, 255, 255, 0.5)", "rgba(255, 255, 255, 0)");
     },
 
     Alchemist: ctx => {
+        tint(ctx, "rgba(90, 40, 120, 0.22)");
         [
-            [0.8, 0.3, 4.2, "rgba(120, 255, 170, 0.55)"],
-            [0.52, 1.4, 5.0, "rgba(255, 110, 220, 0.5)"],
-            [0.26, 2.5, 4.6, "rgba(255, 210, 90, 0.55)"]
-        ].forEach(([r, start, end, color]) => {
+            [0.18, 0.0, 4.6, "rgba(120, 255, 170, 0.65)"],
+            [0.36, 1.4, 4.8, "rgba(255, 110, 220, 0.65)"],
+            [0.54, 2.6, 4.7, "rgba(255, 210, 90, 0.65)"],
+            [0.72, 3.9, 4.9, "rgba(90, 200, 255, 0.65)"],
+            [0.9, 5.2, 4.6, "rgba(255, 140, 80, 0.6)"]
+        ].forEach(([r, start, sweep, color]) => {
             ctx.beginPath();
-            ctx.arc(0, 0, r, start, end);
-            strokePath(ctx, color, 0.14);
+            ctx.arc(0, 0, r, start, start + sweep);
+            strokePath(ctx, color, 0.16);
         });
-        [[-0.6, 0.55], [0.55, -0.5], [0.7, 0.45], [-0.2, -0.75]].forEach(([x, y]) => {
-            dot(ctx, x, y, 0.06, "rgba(255, 255, 255, 0.8)");
-        });
+        [[-0.6, 0.55], [0.55, -0.5], [0.7, 0.45], [-0.2, -0.75], [0.1, 0.3], [-0.7, -0.1], [0.2, -0.2], [-0.35, 0.8]]
+            .forEach(([x, y]) => dot(ctx, x, y, 0.07, "rgba(255, 255, 255, 0.85)"));
     },
 
     Assassin: ctx => {
-        const shade = ctx.createLinearGradient(0, -1, 0, 1);
-        shade.addColorStop(0, "rgba(0, 0, 0, 0)");
-        shade.addColorStop(1, "rgba(0, 0, 0, 0.6)");
+        const shade = ctx.createLinearGradient(0, -1.2, 0, 1.2);
+        shade.addColorStop(0, "rgba(0, 0, 0, 0.4)");
+        shade.addColorStop(1, "rgba(0, 0, 0, 0.85)");
         ctx.fillStyle = shade;
         ctx.fillRect(-1.2, -1.2, 2.4, 2.4);
-        trace(ctx, [[-1, -0.7], [0.9, 0.8]], false);
-        strokePath(ctx, "rgba(235, 240, 255, 0.7)", 0.06);
-        trace(ctx, [[-0.9, 0.9], [0.5, -0.9]], false);
-        strokePath(ctx, "rgba(235, 240, 255, 0.45)", 0.04);
+        for (let i = -3; i <= 3; i++) {
+            trace(ctx, shardPoints(i * 0.32, i * 0.1, Math.PI / 4, 1.5, 0.07));
+            fillPath(ctx, "rgba(235, 240, 255, 0.6)");
+        }
+        for (let i = -2; i <= 2; i++) {
+            trace(ctx, shardPoints(i * 0.42, -i * 0.1, -Math.PI / 4, 1.4, 0.05));
+            fillPath(ctx, "rgba(200, 210, 255, 0.4)");
+        }
     },
 
     Mutant: ctx => {
+        tint(ctx, "rgba(60, 170, 90, 0.25)");
         [
-            [-0.45, -0.4, 0.36, 0.4, "rgba(120, 255, 140, 0.4)"],
-            [-0.02, -0.12, 0.27, 1.5, "rgba(60, 210, 170, 0.4)"],
-            [0.4, 0.22, 0.19, 2.6, "rgba(200, 255, 90, 0.35)"],
-            [0.68, 0.6, 0.12, 0.7, "rgba(40, 140, 70, 0.45)"]
+            [-0.55, -0.45, 0.42, 0.4, "rgba(130, 255, 150, 0.55)"],
+            [0.1, -0.5, 0.36, 1.5, "rgba(60, 210, 170, 0.55)"],
+            [0.6, -0.1, 0.4, 2.6, "rgba(200, 255, 90, 0.5)"],
+            [-0.3, 0.1, 0.5, 0.7, "rgba(40, 140, 70, 0.55)"],
+            [0.35, 0.55, 0.34, 4.0, "rgba(160, 240, 120, 0.55)"],
+            [-0.7, 0.5, 0.26, 2.0, "rgba(30, 110, 90, 0.55)"],
+            [0.0, 0.0, 0.2, 5.0, "rgba(220, 255, 140, 0.5)"]
         ].forEach(([x, y, r, phase, color]) => {
             smoothTrace(ctx, blobPoints(x, y, r, phase));
             fillPath(ctx, color);
-            strokePath(ctx, "rgba(230, 255, 230, 0.35)", 0.02);
+            strokePath(ctx, "rgba(230, 255, 230, 0.5)", 0.03);
         });
     },
 
     Knight: ctx => {
-        staggeredGrid(1, 2, 0.5, 0.42, (x, y) => {
-            trace(ctx, [[x - 0.22, y - 0.16], [x + 0.22, y - 0.16], [x + 0.22, y + 0.16], [x - 0.22, y + 0.16]]);
-            fillPath(ctx, "rgba(190, 200, 215, 0.3)");
-            strokePath(ctx, "rgba(30, 40, 60, 0.5)", 0.03);
+        tint(ctx, "rgba(90, 100, 120, 0.25)");
+        staggeredGrid(3, 3, 0.5, 0.42, (x, y) => {
+            chamferPlate(ctx, x, y, 0.23, 0.19, 0.08);
+            fillPath(ctx, "rgba(200, 210, 225, 0.45)");
+            strokePath(ctx, "rgba(25, 32, 50, 0.7)", 0.04);
         });
     },
 
     "Solar Beam": ctx => {
-        for (let k = 0; k < 8; k++) {
-            const a = (k / 8) * TAU;
+        glow(ctx, 0, 0, 1.1, "rgba(255, 250, 220, 0.85)", "rgba(255, 180, 40, 0.35)");
+        for (let k = 0; k < 10; k++) {
+            const a = (k / 10) * TAU;
             ctx.beginPath();
             ctx.moveTo(Math.cos(a) * 0.22, Math.sin(a) * 0.22);
-            ctx.quadraticCurveTo(Math.cos(a + 0.5) * 0.6, Math.sin(a + 0.5) * 0.6, Math.cos(a + 0.15) * 1.05, Math.sin(a + 0.15) * 1.05);
-            strokePath(ctx, "rgba(255, 220, 90, 0.6)", 0.07);
+            ctx.quadraticCurveTo(Math.cos(a + 0.5) * 0.6, Math.sin(a + 0.5) * 0.6, Math.cos(a + 0.15) * 1.1, Math.sin(a + 0.15) * 1.1);
+            strokePath(ctx, "rgba(255, 215, 90, 0.75)", 0.09);
         }
-        glow(ctx, 0, 0, 0.35, "rgba(255, 255, 240, 0.95)", "rgba(255, 220, 90, 0)");
+        for (let k = 0; k < 10; k++) {
+            const a = ((k + 0.5) / 10) * TAU;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * 0.3, Math.sin(a) * 0.3);
+            ctx.quadraticCurveTo(Math.cos(a - 0.4) * 0.7, Math.sin(a - 0.4) * 0.7, Math.cos(a) * 1.0, Math.sin(a) * 1.0);
+            strokePath(ctx, "rgba(255, 245, 200, 0.5)", 0.04);
+        }
+        glow(ctx, 0, 0, 0.3, "rgba(255, 255, 255, 1)", "rgba(255, 240, 170, 0)");
     },
 
     Berserker: ctx => {
+        tint(ctx, "rgba(120, 10, 20, 0.35)");
         [
-            [[-1, -0.6], [-0.4, -0.2], [-0.6, 0.15], [0.2, 0.35], [0.9, 0.1]],
-            [[-0.9, 0.6], [-0.2, 0.2], [0.1, 0.5], [0.8, -0.1]],
-            [[-0.2, -1], [0.1, -0.5], [-0.1, -0.1], [0.4, 0.5], [0.3, 1]],
-            [[0.5, -0.9], [0.2, -0.35], [0.7, 0.1]]
-        ].forEach(points => {
+            [[-1.1, -0.7], [1.1, 0.5]],
+            [[-1.1, 0.2], [1.0, -0.8]],
+            [[-0.4, -1.1], [0.5, 1.1]],
+            [[0.9, -1.0], [-0.6, 1.0]],
+            [[-1.0, 0.9], [1.1, 0.1]],
+            [[0.2, -1.1], [-1.0, -0.2]],
+            [[-0.2, 1.1], [1.0, 0.7]]
+        ].forEach(([[x0, y0], [x1, y1]], k) => {
+            const points = jagged(x0, y0, x1, y1, 6, 0.12, k);
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 50, 60, 0.65)", 0.07);
+            strokePath(ctx, "rgba(255, 50, 60, 0.75)", 0.09);
+            trace(ctx, points, false);
+            strokePath(ctx, "rgba(255, 180, 160, 0.6)", 0.03);
         });
     },
 
     Spider: ctx => {
-        for (let k = 0; k < 8; k++) {
-            const a = (k / 8) * TAU;
-            const b = ((k + 1) / 8) * TAU;
-            const mid = a + Math.PI / 8;
-            ctx.beginPath();
-            ctx.moveTo(Math.cos(a) * 0.3, Math.sin(a) * 0.3);
-            ctx.quadraticCurveTo(Math.cos(mid) * 0.45, Math.sin(mid) * 0.45, Math.cos(b) * 0.9, Math.sin(b) * 0.9);
-            strokePath(ctx, "rgba(240, 240, 240, 0.5)", 0.035);
-            trace(ctx, [[0, 0], [Math.cos(a), Math.sin(a)]], false);
-            strokePath(ctx, "rgba(240, 240, 240, 0.4)", 0.035);
+        tint(ctx, "rgba(200, 200, 210, 0.14)");
+        const spokes = 12;
+        const rings = [0.25, 0.5, 0.75, 1.0];
+        for (let k = 0; k < spokes; k++) {
+            const a0 = (k / spokes) * TAU;
+            const a1 = ((k + 1) / spokes) * TAU;
+            rings.forEach((r1, r) => {
+                const r0 = r === 0 ? 0 : rings[r - 1];
+                arcBand(ctx, 0, 0, r0, r1, a0, a1, (k + r) % 2 ? "rgba(240, 240, 240, 0.3)" : "rgba(240, 240, 240, 0.2)");
+            });
         }
-        [0.3, 0.6, 0.9].forEach(r => {
+        rings.forEach(r => {
             ctx.beginPath();
             ctx.arc(0, 0, r, 0, TAU);
-            strokePath(ctx, "rgba(240, 240, 240, 0.45)", 0.035);
+            strokePath(ctx, "rgba(245, 245, 245, 0.7)", 0.045);
         });
+        for (let k = 0; k < spokes; k++) {
+            const a = (k / spokes) * TAU;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(Math.cos(a + 0.12) * 0.5, Math.sin(a + 0.12) * 0.5, Math.cos(a) * 1.05, Math.sin(a) * 1.05);
+            strokePath(ctx, "rgba(245, 245, 245, 0.75)", 0.045);
+        }
     },
 
     Tunneler: ctx => {
+        tint(ctx, "rgba(110, 70, 40, 0.3)");
         [
-            [0, 0, 0.92, 0.0, "rgba(255, 200, 120, 0.55)"],
-            [0.06, -0.05, 0.66, 1.2, "rgba(200, 150, 90, 0.5)"],
-            [-0.05, 0.04, 0.42, 2.9, "rgba(255, 225, 160, 0.45)"]
-        ].forEach(([cx, cy, r, start, color]) => {
-            [[start, start + 2.1], [start + 2.7, start + 4.9]].forEach(([a0, a1]) => {
+            [0, 0, 0.18, 0.0, 2.2, "rgba(255, 200, 120, 0.75)"],
+            [0.04, -0.03, 0.37, 1.2, 2.4, "rgba(200, 150, 90, 0.7)"],
+            [-0.03, 0.05, 0.56, 2.9, 2.2, "rgba(255, 225, 160, 0.7)"],
+            [0.05, -0.02, 0.75, 0.6, 2.5, "rgba(200, 150, 90, 0.7)"],
+            [-0.02, 0.0, 0.95, 2.0, 2.3, "rgba(255, 225, 160, 0.65)"]
+        ].forEach(([cx, cy, r, start, sweep, color]) => {
+            [[start, start + sweep], [start + sweep + 0.35, start + sweep * 2 + 0.35]].forEach(([a0, a1]) => {
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, a0, a1);
-                strokePath(ctx, color, 0.09);
+                strokePath(ctx, color, 0.14);
             });
         });
-        dot(ctx, -0.05, 0.04, 0.2, "rgba(20, 12, 6, 0.5)");
+        dot(ctx, 0, 0, 0.1, "rgba(20, 12, 6, 0.6)");
     },
 
     Tornado: ctx => {
+        tint(ctx, "rgba(120, 190, 230, 0.22)");
         const band = (offset, sweep, color) => {
-            const samples = 12;
+            const samples = 14;
             const outer = [];
             const inner = [];
             for (let i = 0; i <= samples; i++) {
                 const t = i / samples;
                 const a = offset + t * sweep;
-                const r = 1 - 0.75 * t;
-                const w = 0.02 + 0.16 * (1 - t);
+                const r = 1.05 - 0.85 * t;
+                const w = 0.03 + 0.24 * (1 - t);
                 outer.push([Math.cos(a) * (r + w), Math.sin(a) * (r + w)]);
                 inner.push([Math.cos(a) * (r - w), Math.sin(a) * (r - w)]);
             }
@@ -312,187 +413,225 @@ const PAINTERS = {
             fillPath(ctx, color);
         };
         for (let k = 0; k < 4; k++) {
-            band(k * Math.PI / 2, 2.6, k % 2 ? "rgba(140, 210, 240, 0.4)" : "rgba(220, 245, 255, 0.45)");
+            band(k * Math.PI / 2, 3.4, k % 2 ? "rgba(120, 200, 240, 0.6)" : "rgba(225, 248, 255, 0.6)");
         }
     },
 
     Meteor: ctx => {
+        glow(ctx, 0.2, 0.1, 1.1, "rgba(255, 170, 70, 0.6)", "rgba(120, 30, 10, 0.3)");
         [
-            [[-1, 0.3], [-0.2, -0.1], [0.5, -0.5]],
-            [[-0.9, 0.7], [-0.1, 0.25], [0.6, -0.15]],
-            [[-0.4, 1], [0.1, 0.55], [0.9, 0.2]]
+            [[-1.1, 0.3], [-0.2, -0.1], [0.6, -0.6]],
+            [[-1.0, 0.7], [-0.1, 0.25], [0.7, -0.2]],
+            [[-0.5, 1.1], [0.1, 0.55], [1.0, 0.25]],
+            [[-1.1, -0.2], [-0.5, -0.4], [0.2, -0.9]]
         ].forEach(([start, control, end]) => {
             ctx.beginPath();
             ctx.moveTo(...start);
             ctx.quadraticCurveTo(...control, ...end);
-            strokePath(ctx, "rgba(255, 140, 40, 0.6)", 0.09);
+            strokePath(ctx, "rgba(255, 140, 40, 0.7)", 0.2);
+            ctx.beginPath();
+            ctx.moveTo(...start);
+            ctx.quadraticCurveTo(...control, ...end);
+            strokePath(ctx, "rgba(255, 220, 150, 0.7)", 0.05);
         });
-        [[0.55, 0.45], [-0.55, -0.35], [0.15, -0.7], [-0.2, 0.6]].forEach(([x, y]) => {
-            glow(ctx, x, y, 0.16, "rgba(255, 230, 150, 0.9)", "rgba(255, 150, 40, 0)");
-            dot(ctx, x, y, 0.04, "rgba(255, 255, 255, 0.9)");
+        [[0.55, 0.45], [-0.55, -0.35], [0.15, -0.7], [-0.2, 0.6], [0.8, -0.5], [-0.8, 0.3], [0.3, 0.1], [-0.35, -0.85]].forEach(([x, y]) => {
+            glow(ctx, x, y, 0.2, "rgba(255, 230, 150, 0.95)", "rgba(255, 150, 40, 0)");
+            dot(ctx, x, y, 0.045, "rgba(255, 255, 255, 0.95)");
         });
     },
 
     "Black Hole": ctx => {
+        tint(ctx, "rgba(40, 10, 70, 0.4)");
         const cx = 0.22;
         const cy = 0.15;
+        [0.55, 0.75, 0.95].forEach(r => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, TAU);
+            strokePath(ctx, "rgba(190, 130, 255, 0.5)", 0.05);
+        });
         for (let j = 0; j < 3; j++) {
             ctx.beginPath();
-            for (let i = 0; i <= 24; i++) {
-                const t = i / 24;
-                const a = j * 2.1 + t * TAU * 1.6;
-                const r = (1.05 - t * 0.8) * (1 + 0.08 * Math.sin(3 * a + j));
+            for (let i = 0; i <= 40; i++) {
+                const t = i / 40;
+                const a = j * (TAU / 3) + t * TAU * 1.5;
+                const r = (1.15 - t * 0.95) * (1 + 0.1 * Math.sin(3 * a + j));
                 const x = cx + Math.cos(a) * r;
                 const y = cy + Math.sin(a) * r;
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
-            strokePath(ctx, j % 2 ? "rgba(150, 70, 230, 0.55)" : "rgba(200, 140, 255, 0.45)", 0.09);
+            strokePath(ctx, j % 2 ? "rgba(140, 60, 220, 0.8)" : "rgba(90, 30, 160, 0.75)", 0.16);
         }
-        [0.5, 0.75].forEach(r => {
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, TAU);
-            strokePath(ctx, "rgba(190, 140, 255, 0.3)", 0.025);
-        });
-        glow(ctx, cx, cy, 0.34, "rgba(5, 0, 15, 0.95)", "rgba(60, 20, 110, 0)");
+        glow(ctx, cx, cy, 0.38, "rgba(3, 0, 10, 1)", "rgba(40, 10, 80, 0)");
     },
 
     Striker: ctx => {
-        for (let i = -2; i <= 2; i++) {
-            const y = i * 0.4;
-            trace(ctx, [[-1, y + 0.3], [0, y], [1, y + 0.3]], false);
-            strokePath(ctx, i % 2 ? "rgba(230, 240, 255, 0.45)" : "rgba(30, 50, 90, 0.35)", 0.12);
+        tint(ctx, "rgba(30, 50, 90, 0.3)");
+        for (let i = -3; i <= 3; i++) {
+            const y = i * 0.32;
+            trace(ctx, [[-1.2, y + 0.45], [0, y], [1.2, y + 0.45]], false);
+            strokePath(ctx, i % 2 ? "rgba(235, 242, 255, 0.65)" : "rgba(20, 40, 80, 0.65)", 0.2);
         }
     },
 
     Reaper: ctx => {
-        crescent(ctx, -0.3, -0.2, 0.9, 0.3, "rgba(90, 12, 28, 0.55)", "rgba(255, 40, 60, 0.6)");
-        crescent(ctx, 0.25, 0.1, 1.0, -0.6, "rgba(40, 40, 46, 0.6)");
-        crescent(ctx, -0.1, 0.45, 0.7, 2.0, "rgba(90, 12, 28, 0.5)", "rgba(255, 40, 60, 0.5)");
-        crescent(ctx, 0.4, -0.45, 0.6, 0.8, "rgba(40, 40, 46, 0.55)", "rgba(255, 40, 60, 0.45)");
-        crescent(ctx, -0.5, 0.3, 0.5, -1.4, "rgba(30, 30, 34, 0.6)");
+        tint(ctx, "rgba(35, 35, 40, 0.4)");
+        crescent(ctx, -0.35, -0.25, 1.05, 0.3, "rgba(95, 12, 30, 0.7)", "rgba(255, 40, 60, 0.7)");
+        crescent(ctx, 0.3, 0.1, 1.1, -0.6, "rgba(45, 45, 50, 0.7)", "rgba(255, 40, 60, 0.5)");
+        crescent(ctx, -0.1, 0.5, 0.85, 2.0, "rgba(95, 12, 30, 0.7)", "rgba(255, 40, 60, 0.7)");
+        crescent(ctx, 0.45, -0.5, 0.8, 0.8, "rgba(45, 45, 50, 0.7)", "rgba(255, 40, 60, 0.5)");
+        crescent(ctx, -0.55, 0.35, 0.8, -1.4, "rgba(30, 30, 34, 0.7)", "rgba(255, 40, 60, 0.6)");
+        crescent(ctx, 0.0, -0.1, 0.7, Math.PI, "rgba(110, 20, 40, 0.6)", null);
     },
 
     Vampire: ctx => {
-        [[0, "rgba(220, 30, 60, 0.7)"], [Math.PI, "rgba(90, 0, 25, 0.7)"]].forEach(([phase, color]) => {
-            ctx.beginPath();
+        tint(ctx, "rgba(70, 0, 20, 0.35)");
+        for (let row = -2; row <= 2; row++) {
+            const yOffset = row * 0.32;
+            const points = [];
             for (let i = 0; i <= 24; i++) {
-                const x = -1 + i / 12;
-                const y = Math.sin(x * Math.PI * 1.5 + phase) * 0.45;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+                const x = -1.2 + i * 0.1;
+                points.push([x, yOffset + Math.sin(x * Math.PI * 1.4 + row * 1.1) * 0.22]);
             }
-            strokePath(ctx, color, 0.12);
-        });
+            trace(ctx, points, false);
+            strokePath(ctx, row % 2 ? "rgba(90, 0, 25, 0.85)" : "rgba(220, 30, 60, 0.75)", 0.14);
+        }
     },
 
     Mahoraga: ctx => {
-        for (let k = 0; k < 8; k++) {
-            const a = (k / 8) * TAU;
-            ctx.beginPath();
-            ctx.arc(0, 0, 0.75, a + 0.12, a + TAU / 8 - 0.12);
-            strokePath(ctx, "rgba(255, 230, 150, 0.6)", 0.12);
+        tint(ctx, "rgba(120, 90, 30, 0.2)");
+        for (let ring = 0; ring < 3; ring++) {
+            const r0 = 0.12 + ring * 0.3;
+            const r1 = r0 + 0.26;
+            for (let k = 0; k < 8; k++) {
+                const a0 = (k / 8) * TAU + ring * 0.19 + 0.04;
+                const a1 = a0 + TAU / 8 - 0.08;
+                arcBand(ctx, 0, 0, r0, r1, a0, a1, (k + ring) % 2 ? "rgba(255, 230, 150, 0.65)" : "rgba(170, 120, 40, 0.6)");
+            }
         }
-        ctx.beginPath();
-        ctx.arc(0, 0, 0.42, 0, TAU);
-        strokePath(ctx, "rgba(255, 230, 150, 0.4)", 0.04);
-        dot(ctx, 0, 0, 0.14, "rgba(255, 245, 200, 0.6)");
+        [0.1, 0.4, 0.7, 0.98].forEach(r => {
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, TAU);
+            strokePath(ctx, "rgba(255, 245, 200, 0.6)", 0.03);
+        });
+        dot(ctx, 0, 0, 0.1, "rgba(255, 245, 200, 0.7)");
     },
 
     Snake: ctx => {
-        staggeredGrid(2, 2, 0.45, 0.36, (x, y, parity) => {
+        tint(ctx, "rgba(10, 60, 30, 0.35)");
+        staggeredGrid(3, 3, 0.4, 0.34, (x, y, parity) => {
             ctx.beginPath();
-            ctx.arc(x, y, 0.26, 0, Math.PI);
-            fillPath(ctx, parity % 2 ? "rgba(60, 200, 90, 0.5)" : "rgba(20, 120, 50, 0.55)");
+            ctx.arc(x, y, 0.22, 0, TAU);
+            fillPath(ctx, parity % 2 ? "rgba(70, 210, 100, 0.7)" : "rgba(25, 130, 60, 0.75)");
+            strokePath(ctx, "rgba(5, 40, 20, 0.6)", 0.03);
         });
     },
 
     "Laser Beam": ctx => {
-        [
-            [[-1, 0.1], [-0.2, 0.1], [0.15, 0.55], [0.95, 0.55]],
-            [[-0.45, -1], [-0.45, -0.35], [0.25, 0.05], [0.25, 0.95]],
-            [[-0.9, -0.6], [-0.45, -0.35], [0.5, -0.85]],
-            [[0.2, -0.5], [0.7, -0.05], [1, -0.5]],
-            [[-0.2, 0.1], [0.25, 0.05], [0.7, -0.05]],
-            [[-0.95, 0.75], [-0.2, 0.1]]
-        ].forEach(points => {
+        tint(ctx, "rgba(0, 120, 150, 0.3)");
+        const lines = [
+            [[-1.2, -0.7], [-0.4, -0.7], [0.0, -0.25], [0.5, -0.25], [1.2, -0.8]],
+            [[-1.2, 0.05], [-0.7, 0.05], [-0.35, 0.45], [0.2, 0.45], [0.6, 0.05], [1.2, 0.05]],
+            [[-0.4, -1.2], [-0.4, -0.7], [-0.1, 0.05], [-0.1, 0.45], [-0.25, 1.2]],
+            [[0.3, -1.2], [0.3, -0.25], [0.75, 0.45], [0.75, 1.2]],
+            [[-1.2, 0.8], [-0.7, 0.05]],
+            [[0.5, -0.25], [0.9, 0.05], [1.2, -0.1]],
+            [[-0.1, 0.45], [0.3, -0.25], [0.6, -1.2]],
+            [[-0.95, -1.0], [-0.4, -0.7], [-0.9, -0.1]]
+        ];
+        lines.forEach(points => {
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(0, 240, 255, 0.35)", 0.08);
-            strokePath(ctx, "rgba(190, 255, 255, 0.8)", 0.035);
+            strokePath(ctx, "rgba(0, 240, 255, 0.45)", 0.09);
+            trace(ctx, points, false);
+            strokePath(ctx, "rgba(200, 255, 255, 0.9)", 0.025);
         });
-        [[-0.2, 0.1], [0.15, 0.55], [-0.45, -0.35], [0.25, 0.05], [0.7, -0.05], [0.5, -0.85]].forEach(([x, y]) => {
-            glow(ctx, x, y, 0.16, "rgba(180, 250, 255, 0.85)", "rgba(0, 240, 255, 0)");
-            dot(ctx, x, y, 0.035, "rgba(255, 255, 255, 0.95)");
-        });
+        [[-0.4, -0.7], [0.0, -0.25], [0.5, -0.25], [-0.7, 0.05], [-0.35, 0.45], [0.2, 0.45], [0.6, 0.05], [-0.1, 0.05], [-0.1, 0.45], [0.3, -0.25], [0.75, 0.45]]
+            .forEach(([x, y]) => {
+                glow(ctx, x, y, 0.16, "rgba(180, 250, 255, 0.9)", "rgba(0, 240, 255, 0)");
+                dot(ctx, x, y, 0.04, "rgba(255, 255, 255, 0.95)");
+            });
     },
 
     Ninja: ctx => {
-        trace(ctx, [[-1, -0.3], [0.2, -1], [-0.2, 0.25]]);
-        fillPath(ctx, "rgba(0, 0, 0, 0.35)");
-        trace(ctx, [[-0.4, 1], [0.6, 0.05], [1, 0.9]]);
-        fillPath(ctx, "rgba(0, 0, 0, 0.4)");
-        trace(ctx, [[0.2, -1], [-0.2, 0.25], [0.6, 0.05]], false);
-        strokePath(ctx, "rgba(255, 50, 60, 0.55)", 0.035);
-        trace(ctx, [[-0.4, 1], [0.1, 0.45]], false);
-        strokePath(ctx, "rgba(255, 50, 60, 0.45)", 0.03);
+        tint(ctx, "rgba(10, 10, 16, 0.35)");
+        [
+            [[-1.2, -0.4], [0.2, -1.2], [-0.2, 0.3]],
+            [[-0.6, 1.2], [0.5, 0.0], [1.2, 1.0]],
+            [[0.4, -0.9], [1.2, -0.2], [0.8, 0.5]],
+            [[-1.2, 0.6], [-0.3, -0.1], [-0.5, 0.9]]
+        ].forEach(points => {
+            trace(ctx, points);
+            fillPath(ctx, "rgba(0, 0, 0, 0.55)");
+            strokePath(ctx, "rgba(255, 50, 60, 0.6)", 0.03);
+        });
     },
 
     Spearman: ctx => {
+        tint(ctx, "rgba(150, 190, 220, 0.2)");
         const cells = [];
-        staggeredGrid(2, 2, 0.4, 0.3, (x, y) => cells.push([x, y]));
+        staggeredGrid(3, 3, 0.26, 0.32, (x, y) => cells.push([x, y]));
         cells.forEach(([x, y]) => {
-            trace(ctx, diamondPoints(x, y, 0.1, 0.38));
-            fillPath(ctx, "rgba(225, 242, 255, 0.28)");
+            trace(ctx, diamondPoints(x, y, 0.13, 0.44));
+            fillPath(ctx, "rgba(225, 242, 255, 0.42)");
+            strokePath(ctx, "rgba(255, 255, 255, 0.5)", 0.03);
         });
         ctx.beginPath();
         cells.forEach(([x, y]) => {
-            ctx.moveTo(x, y - 0.38);
-            ctx.lineTo(x, y + 0.38);
+            ctx.moveTo(x, y - 0.44);
+            ctx.lineTo(x, y + 0.44);
         });
-        strokePath(ctx, "rgba(255, 255, 255, 0.45)", 0.012);
+        strokePath(ctx, "rgba(255, 255, 255, 0.8)", 0.03);
     },
 
     Gunner: ctx => {
-        const nodes = [[-0.65, -0.5], [0.05, -0.75], [0.6, -0.2], [-0.05, 0.1], [-0.7, 0.45], [0.45, 0.6]];
-        trace(ctx, nodes, false);
-        strokePath(ctx, "rgba(200, 255, 220, 0.5)", 0.03);
+        tint(ctx, "rgba(40, 80, 60, 0.25)");
+        const nodes = [];
+        staggeredGrid(3, 3, 0.42, 0.36, (x, y) => nodes.push([x, y]));
+        ctx.beginPath();
+        nodes.forEach(([ax, ay], i) => {
+            nodes.slice(i + 1).forEach(([bx, by]) => {
+                if (Math.hypot(bx - ax, by - ay) < 0.5) {
+                    ctx.moveTo(ax, ay);
+                    ctx.lineTo(bx, by);
+                }
+            });
+        });
+        strokePath(ctx, "rgba(200, 255, 220, 0.6)", 0.035);
         nodes.forEach(([x, y]) => {
             ctx.beginPath();
-            ctx.arc(x, y, 0.14, 0, TAU);
-            strokePath(ctx, "rgba(220, 255, 230, 0.75)", 0.04);
-            dot(ctx, x, y, 0.05, "rgba(220, 255, 230, 0.75)");
+            ctx.arc(x, y, 0.18, 0, TAU);
+            fillPath(ctx, "rgba(220, 255, 230, 0.45)");
+            strokePath(ctx, "rgba(230, 255, 235, 0.9)", 0.04);
+            dot(ctx, x, y, 0.05, "rgba(230, 255, 235, 0.9)");
         });
     },
 
     Samurai: ctx => {
         ctx.save();
         ctx.rotate(Math.PI / 4);
-        for (let i = -3; i <= 3; i++) {
-            ctx.fillStyle = "rgba(235, 235, 245, 0.32)";
-            ctx.fillRect(-1.5, i * 0.3 - 0.1, 3, 0.2);
+        for (let i = -4; i <= 4; i++) {
+            ctx.fillStyle = i % 2 ? "rgba(240, 240, 250, 0.55)" : "rgba(15, 15, 25, 0.6)";
+            ctx.fillRect(-1.5, i * 0.24 - 0.12, 3, 0.24);
         }
         ctx.restore();
         ctx.save();
         ctx.rotate(-Math.PI / 4);
-        for (let i = -3; i <= 3; i++) {
-            const y = i * 0.3 - 0.08;
-            ctx.fillStyle = "rgba(10, 10, 20, 0.45)";
-            if (i % 2) {
-                ctx.fillRect(-1.5, y, 3, 0.16);
-            } else {
-                ctx.fillRect(-1.5, y, 1.35, 0.16);
-                ctx.fillRect(0.15, y, 1.35, 0.16);
+        for (let i = -4; i <= 4; i++) {
+            for (let j = -3; j < 3; j++) {
+                ctx.fillStyle = (i + j) % 2 ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.4)";
+                ctx.fillRect(j * 0.5, i * 0.24 - 0.12, 0.5, 0.24);
             }
         }
         ctx.restore();
     },
 
     Grappler: ctx => {
-        staggeredGrid(1, 2, 0.5, 0.45, (x, y, parity) => {
+        tint(ctx, "rgba(120, 50, 20, 0.25)");
+        staggeredGrid(2, 2, 0.5, 0.42, (x, y, parity) => {
             ctx.beginPath();
             if (parity % 2) ctx.arc(x, y, 0.3, 0, Math.PI);
             else ctx.arc(x, y, 0.3, Math.PI, TAU);
-            strokePath(ctx, parity % 2 ? "rgba(255, 120, 60, 0.6)" : "rgba(255, 190, 90, 0.6)", 0.1);
+            strokePath(ctx, parity % 2 ? "rgba(255, 120, 60, 0.75)" : "rgba(255, 190, 90, 0.75)", 0.16);
         });
     },
 
@@ -505,16 +644,25 @@ const PAINTERS = {
     },
 
     Gambler: ctx => {
-        trace(ctx, diamondPoints(-0.2, -0.1, 0.55, 0.8));
-        strokePath(ctx, "rgba(255, 215, 90, 0.6)", 0.05);
-        trace(ctx, diamondPoints(0.25, 0.1, 0.5, 0.75));
-        strokePath(ctx, "rgba(255, 215, 90, 0.6)", 0.05);
-        heart(ctx, 0.5, -0.6, 0.2);
-        fillPath(ctx, "rgba(255, 80, 100, 0.7)");
-        trace(ctx, diamondPoints(-0.6, 0.6, 0.14, 0.2));
-        fillPath(ctx, "rgba(255, 255, 255, 0.6)");
-        [[-0.7, -0.2], [0.8, 0.5], [-0.1, 0.8]].forEach(([x, y]) => {
-            dot(ctx, x, y, 0.05, "rgba(255, 215, 90, 0.8)");
+        tint(ctx, "rgba(20, 110, 60, 0.35)");
+        [[-0.35, -0.3, 0.55, 0.8], [0.35, 0.2, 0.55, 0.8], [-0.35, 0.5, 0.4, 0.55], [0.5, -0.5, 0.4, 0.55]].forEach(([x, y, hw, hh]) => {
+            trace(ctx, diamondPoints(x, y, hw, hh));
+            fillPath(ctx, "rgba(255, 215, 90, 0.28)");
+            strokePath(ctx, "rgba(255, 215, 90, 0.75)", 0.04);
+        });
+        heart(ctx, 0.55, -0.6, 0.22);
+        fillPath(ctx, "rgba(255, 90, 110, 0.85)");
+        trace(ctx, diamondPoints(-0.6, 0.55, 0.14, 0.2));
+        fillPath(ctx, "rgba(255, 90, 110, 0.85)");
+        ctx.save();
+        ctx.translate(-0.55, -0.1);
+        ctx.scale(1, -1);
+        heart(ctx, 0, 0, 0.22);
+        ctx.restore();
+        fillPath(ctx, "rgba(255, 255, 255, 0.8)");
+        [[0.05, 0.75], [-0.05, 0.6], [0.15, 0.6]].forEach(([x, y]) => dot(ctx, x, y, 0.09, "rgba(255, 255, 255, 0.8)"));
+        [[-0.7, -0.6], [0.8, 0.2], [-0.1, -0.9], [-0.9, 0.3]].forEach(([x, y]) => {
+            dot(ctx, x, y, 0.06, "rgba(255, 215, 90, 0.9)");
         });
     },
 
@@ -537,53 +685,63 @@ const PAINTERS = {
     },
 
     Mimic: ctx => {
+        tint(ctx, "rgba(200, 160, 255, 0.35)");
         [
-            [-0.3, -0.2, 0.55, 0.38, 0.5, "rgba(255, 80, 200, 0.3)"],
-            [0.35, 0.1, 0.5, 0.3, -0.6, "rgba(80, 200, 255, 0.3)"],
-            [-0.1, 0.5, 0.45, 0.25, 0.1, "rgba(255, 220, 80, 0.3)"],
-            [0.45, -0.55, 0.3, 0.2, 0.9, "rgba(120, 255, 160, 0.3)"]
-        ].forEach(([x, y, rx, ry, rotation, color]) => {
-            ctx.beginPath();
-            ctx.ellipse(x, y, rx, ry, rotation, 0, TAU);
+            [-0.3, -0.2, 0.6, 0.4, "rgba(255, 80, 200, 0.5)"],
+            [0.35, 0.1, 0.55, 0.35, "rgba(80, 200, 255, 0.5)"],
+            [-0.1, 0.5, 0.5, 0.3, "rgba(255, 220, 80, 0.5)"],
+            [0.45, -0.55, 0.4, 0.3, "rgba(120, 255, 160, 0.5)"]
+        ].forEach(([x, y, r, phase, color], k) => {
+            ctx.save();
+            smoothTrace(ctx, blobPoints(x, y, r, phase));
+            ctx.clip();
             fillPath(ctx, color);
+            ctx.beginPath();
+            for (let i = -4; i <= 4; i++) {
+                const offset = i * 0.28;
+                ctx.moveTo(-1.2, offset + (k % 2 ? 0.4 : -0.4));
+                ctx.lineTo(1.2, offset - (k % 2 ? 0.4 : -0.4));
+            }
+            strokePath(ctx, "rgba(255, 255, 255, 0.3)", 0.07);
+            ctx.restore();
         });
-        for (let i = -2; i <= 2; i++) {
-            trace(ctx, [[-1, i * 0.35], [1, i * 0.35 + 0.3]], false);
-            strokePath(ctx, "rgba(255, 255, 255, 0.25)", 0.03);
-        }
     },
 
     Yeti: ctx => {
-        trace(ctx, [[-1, -0.2], [-0.6, -0.55], [-0.25, -0.1], [0.1, -0.6], [0.5, -0.2], [0.2, 0.25], [-0.3, 0.1]]);
-        fillPath(ctx, "rgba(120, 190, 255, 0.4)");
-        trace(ctx, [[-0.2, 0.5], [0.2, 0.3], [0.5, 0.7], [0.9, 0.35], [0.7, 0.9], [0.2, 1], [-0.45, 0.85]]);
-        fillPath(ctx, "rgba(90, 160, 240, 0.4)");
+        tint(ctx, "rgba(150, 210, 255, 0.3)");
+        trace(ctx, [[-1.2, -0.3], [-0.7, -0.6], [-0.4, -0.2], [0.0, -0.7], [0.4, -0.3], [0.8, -0.9], [1.2, -0.5], [1.2, 0.1], [0.7, 0.2], [0.2, 0.5], [-0.4, 0.2], [-1.2, 0.4]]);
+        fillPath(ctx, "rgba(120, 190, 255, 0.5)");
+        trace(ctx, [[-1.2, 0.6], [-0.6, 0.5], [-0.2, 0.9], [0.3, 0.6], [0.8, 1.0], [1.2, 0.7], [1.2, 1.2], [-1.2, 1.2]]);
+        fillPath(ctx, "rgba(90, 160, 240, 0.5)");
         [
-            [[-0.85, 0.55], [-0.4, 0.4], [-0.1, 0.6], [0.3, 0.45]],
-            [[0.1, -0.85], [0.35, -0.5], [0.7, -0.6], [0.95, -0.25]],
-            [[-0.7, -0.85], [-0.4, -0.7]]
+            jagged(-1.1, -0.6, 0.1, -0.85, 6, 0.1, 1),
+            jagged(0.2, -0.1, 1.1, -0.55, 6, 0.1, 2),
+            jagged(-0.9, 0.55, 0.3, 0.45, 6, 0.08, 3),
+            jagged(0.1, 0.8, 1.0, 0.95, 6, 0.08, 4)
         ].forEach(points => {
             trace(ctx, points, false);
-            strokePath(ctx, "rgba(255, 255, 255, 0.7)", 0.06);
+            strokePath(ctx, "rgba(255, 255, 255, 0.85)", 0.07);
         });
     },
 
     Summoner: ctx => {
+        glow(ctx, 0, 0, 1.1, "rgba(170, 110, 255, 0.45)", "rgba(90, 40, 160, 0.3)");
         [
-            [0.35, 0, 4.5],
-            [0.6, 1.2, 5.2],
-            [0.85, 2.6, 4.8]
+            [0.2, 0, 5.5],
+            [0.42, 1.2, 5.4],
+            [0.64, 2.5, 5.0],
+            [0.86, 0.4, 5.2]
         ].forEach(([r, start, end]) => {
             ctx.beginPath();
-            ctx.arc(0, 0, r, start, end);
-            strokePath(ctx, "rgba(190, 130, 255, 0.6)", 0.08);
+            ctx.arc(0, 0, r, start, start + end - 2.5);
+            strokePath(ctx, "rgba(210, 170, 255, 0.8)", 0.13);
         });
-        for (let k = 0; k < 5; k++) {
-            const a = (k / 5) * TAU + 0.3;
-            const x = Math.cos(a) * 0.6;
-            const y = Math.sin(a) * 0.6;
-            glow(ctx, x, y, 0.2, "rgba(235, 215, 255, 0.8)", "rgba(190, 130, 255, 0)");
-            dot(ctx, x, y, 0.06, "rgba(255, 245, 255, 0.95)");
+        for (let k = 0; k < 6; k++) {
+            const a = (k / 6) * TAU + 0.3;
+            const x = Math.cos(a) * 0.75;
+            const y = Math.sin(a) * 0.75;
+            glow(ctx, x, y, 0.22, "rgba(235, 215, 255, 0.9)", "rgba(190, 130, 255, 0)");
+            dot(ctx, x, y, 0.07, "rgba(255, 245, 255, 0.95)");
         }
     }
 };
@@ -593,6 +751,8 @@ export function drawBodyPattern(ctx, className, radius) {
     if (!paint) return;
     ctx.save();
     ctx.shadowBlur = 0;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.scale(radius, radius);
     paint(ctx);
     ctx.restore();
