@@ -2,6 +2,7 @@ import { EffectSystem } from "../systems/EffectSystem.js";
 import { audioManager } from "../audio/AudioManager.js";
 import { glowCircle, hitFlash, squashTransform, critBurst, castSigil } from "../systems/Fx.js";
 import { traceShape } from "../systems/Shapes.js";
+import { drawBodyPattern } from "../systems/BodyPatterns.js";
 import { BOOST_TRAIL_POINTS, drawStatusTrail, drawStatusVisuals, updateStatusVisuals } from "../systems/StatusVisuals.js";
 
 // Longest a pin/stun may last when the class that applied it never set a timer.
@@ -703,6 +704,13 @@ export class FighterBase {
             ctx.fillStyle = grad;
         }
         ctx.fill();
+
+        // Internal class pattern, clipped to the same silhouette so it never spills past the body.
+        ctx.save();
+        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true });
+        ctx.clip();
+        drawBodyPattern(ctx, this.name, this.radius);
+        ctx.restore();
 
         // Glossy specular highlight on the upper-left, so bodies read as lit 3D forms.
         if (!this.slowVisual) {
