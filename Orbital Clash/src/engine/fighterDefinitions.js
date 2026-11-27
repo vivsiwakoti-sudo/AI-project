@@ -57,7 +57,7 @@ export const FIGHTER_CLASSES = {
   },
   "Gunner": {
     name: "Gunner",
-    color: "#708090",
+    color: "#5A7D8C",
     health: 80,
     damage: 4.5,
     damageLabel: "5-15",
@@ -100,7 +100,7 @@ export const FIGHTER_CLASSES = {
   },
   "Mine Layer": {
     name: "Mine Layer",
-    color: "#FFD700",
+    color: "#B8860B",
     health: 90,
     damage: 10,
     speed: 5, // CONFIGURATION: Defaulted to 5, unspecified in spec.
@@ -281,7 +281,7 @@ export const FIGHTER_CLASSES = {
   },
   "Tornado": {
     name: "Tornado",
-    color: "#E0FFFF",
+    color: "#C8FFF0",
     health: 100,
     damage: 15,
     speed: 6,
@@ -295,7 +295,7 @@ export const FIGHTER_CLASSES = {
   },
   "Meteor": {
     name: "Meteor",
-    color: "#FF4500",
+    color: "#FF7A1A",
     health: 100,
     damage: 50,
     speed: 5,
@@ -309,7 +309,7 @@ export const FIGHTER_CLASSES = {
   },
   "Black Hole": {
     name: "Black Hole",
-    color: "#8A2BE2",
+    color: "#6A1FD0",
     health: 100,
     damage: 15,
     speed: 5,
@@ -338,7 +338,7 @@ export const FIGHTER_CLASSES = {
   },
   "Vampire": {
     name: "Vampire",
-    color: "#8B0000",
+    color: "#5C0A1E",
     health: 85,
     damage: 8,
     damageLabel: "8-14",
@@ -353,7 +353,7 @@ export const FIGHTER_CLASSES = {
   },
   "Mahoraga": {
     name: "Mahoraga",
-    color: "#FFFFFF",
+    color: "#F7E7B0",
     health: 130,
     damage: 10,
     speed: 4,
@@ -383,7 +383,7 @@ export const FIGHTER_CLASSES = {
   },
   "Yeti": {
     name: "Yeti",
-    color: "#E8F6FF",
+    color: "#BFE3FF",
     health: 120,
     damage: 10,
     speed: 5,
