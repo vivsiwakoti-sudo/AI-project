@@ -391,8 +391,7 @@ export function drawFighterOutlines(ctx, fighter) {
 
   traceShape(ctx, fighter.radius, fighter.shape, {
     angle: (fighter.lastAngle || 0) - Math.PI / 2,
-    spinAngle: fighter.spinAngle || 0,
-    outlineOnly: true
+    spinAngle: fighter.spinAngle || 0
   });
   ctx.strokeStyle = outlineColorFor(fighter.hitColor || fighter.color);
   ctx.lineWidth = OUTLINE_WIDTH;

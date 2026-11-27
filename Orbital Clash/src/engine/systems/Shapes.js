@@ -34,8 +34,8 @@ function arc(cx, cy, r, from, to, steps = 12) {
     return out;
 }
 
-// Each entry: { points | path, aim, spin }. `path` lets a shape combine several
-// closed loops (sub-paths) instead of a single outline.
+// Each entry: { points, aim, spin }. Every shape is one closed outline; the inner
+// detail (craters, eyes, rings, spokes) is painted by BodyPatterns.js instead.
 const SHAPES = {
     // Ice Sword - sharp faceted crystal that points where it swings.
     diamond: { aim: true, points: [[1, 0], [0.2, 0.85], [-0.55, 0], [0.2, -0.85]] },
@@ -67,13 +67,7 @@ const SHAPES = {
         ]
     },
     // Duplicator - lumpy splitting blob, wobbling.
-    blob: {
-        path: [
-            [...arc(0.35, 0.15, 0.75, 0, TAU, 12)],
-            [...arc(-0.5, -0.45, 0.4, 0, TAU, 10)],
-            [...arc(-0.45, 0.55, 0.34, 0, TAU, 10)]
-        ]
-    },
+    blob: { points: arc(0.35, 0.15, 0.75, 0, TAU, 12) },
     // Ghost - classic sheet spectre with a wavy hem.
     wisp: {
         points: [
@@ -91,14 +85,11 @@ const SHAPES = {
     },
     // Assassin - sleek forward-pointing blade silhouette.
     triangle: { aim: true, points: [[1.25, 0], [-0.7, 0.85], [-0.7, -0.85]] },
-    // Mutant - irregular amoeba with a bulge and a tendril.
+    // Mutant - irregular amoeba with a lumpy outline.
     amoeba: {
-        path: [
-            [
-                [1.05, 0], [0.7, 0.75], [0.15, 0.6], [-0.2, 1.05], [-0.85, 0.6],
-                [-0.7, -0.55], [-0.1, -0.95], [0.6, -0.75]
-            ],
-            [[1.15, -0.35], [1.55, -0.65], [1.2, -0.8]]
+        points: [
+            [1.05, 0], [0.7, 0.75], [0.15, 0.6], [-0.2, 1.05], [-0.85, 0.6],
+            [-0.7, -0.55], [-0.1, -0.95], [0.6, -0.75]
         ]
     },
     // Knight - heater shield with a flat top and a pointed base.
@@ -123,33 +114,17 @@ const SHAPES = {
             [-0.3, -0.55], [-0.95, -0.75], [-0.25, -1.05], [0.6, -0.8], [0.85, -0.4]
         ]
     },
-    // Meteor - cratered rock with a fiery rip across it.
+    // Meteor - cratered rock; the pattern paints its craters and fiery rip.
     meteor: {
-        path: [
-            [
-                [1, 0], [0.72, 0.7], [0.1, 0.98], [-0.62, 0.72], [-1, 0.05],
-                [-0.72, -0.68], [-0.05, -0.98], [0.65, -0.75]
-            ],
-            [[0.35, 0.42], [0.62, 0.2], [0.4, 0.02], [0.14, 0.24]],
-            [[-0.5, -0.28], [-0.22, -0.5], [-0.4, -0.64], [-0.66, -0.42]]
+        points: [
+            [1, 0], [0.72, 0.7], [0.1, 0.98], [-0.62, 0.72], [-1, 0.05],
+            [-0.72, -0.68], [-0.05, -0.98], [0.65, -0.75]
         ]
     },
-    // Black Hole - a dark core with a bright accretion rim.
-    void: {
-        path: [
-            [...arc(0, 0, 0.62, 0, TAU, 20)],
-            [...arc(0, 0, 1.06, 0, TAU, 20)]
-        ]
-    },
-    // Reaper - skull with eye sockets, a jaw and a narrow chin.
-    skull: {
-        path: [
-            [...arc(0, -0.12, 0.9, Math.PI * 0.92, Math.PI * 0.08, 12)],
-            [[0.34, 0.62], [0.42, 1.05], [0.1, 1.2], [-0.1, 1.2], [-0.42, 1.05], [-0.34, 0.62]],
-            [...arc(-0.33, -0.18, 0.22, 0, TAU, 8)],
-            [...arc(0.33, -0.18, 0.22, 0, TAU, 8)]
-        ]
-    },
+    // Black Hole - a round disc; the pattern paints its core and accretion rim.
+    void: { points: arc(0, 0, 1.06, 0, TAU, 20) },
+    // Reaper - rounded skull silhouette.
+    skull: { points: arc(0, -0.12, 0.9, Math.PI * 0.92, Math.PI * 0.08, 12) },
     // Vampire - a cape stretched into two winged tips.
     bat: {
         aim: true,
@@ -159,16 +134,8 @@ const SHAPES = {
             [-0.35, -1.15], [0.2, -0.95], [1.35, -1.05], [0.55, -0.55]
         ]
     },
-    // Mahoraga - the wheel: four spoked blades orbiting a hub.
-    wheel: {
-        spin: true,
-        path: [
-            [...arc(0, 0, 0.95, 0, TAU, 24)],
-            [[0.95, -0.16], [0.95, 0.16], [-0.95, 0.16], [-0.95, -0.16]],
-            [[-0.16, 0.95], [0.16, 0.95], [0.16, -0.95], [-0.16, -0.95]],
-            [...arc(0, 0, 0.3, 0, TAU, 12)]
-        ]
-    },
+    // Mahoraga - the wheel: a spinning disc, its spokes and hub painted on.
+    wheel: { spin: true, points: arc(0, 0, 0.95, 0, TAU, 24) },
     // Dragon - a crested body with a ring of dorsal spines.
     dragon: { points: polygon(14, { inner: 0.72 }) },
     // Yeti - a shaggy, jagged silhouette with a pale fur ruff.
@@ -208,7 +175,7 @@ function addHitCircle(ctx, loop) {
     ctx.closePath();
 }
 
-export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0, outlineOnly = false, hitCircle = false } = {}) {
+export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0, hitCircle = false } = {}) {
     const def = SHAPES[shape] || SHAPES.round;
     ctx.save();
     ctx.scale(radius, radius);
@@ -217,24 +184,13 @@ export function traceShape(ctx, radius, shape, { angle = 0, spinAngle = 0, outli
     const rotation = (def.aim ? angle : 0) + (def.spin ? spinAngle : 0);
     if (rotation) ctx.rotate(rotation);
 
-    // A multi-loop shape (meteor, void, skull, ...) is ONE path made of several
-    // sub-paths: beginPath() must run once, before the loop. It used to run
-    // inside it, so every loop but the last was discarded and the body was
-    // filled from a leftover crater/detail loop - Meteor rendered as a ~13px
-    // black rock instead of its outline. Each loop is explicitly closed so the
-    // nonzero fill rule treats the holes (a void's core, a skull's eyes) as
-    // holes rather than cancelling parts of the silhouette.
-    const allLoops = def.path ? def.path : [def.points];
-    const loops = outlineOnly ? allLoops.slice(0, 1) : allLoops;
     ctx.beginPath();
-    if (hitCircle) addHitCircle(ctx, loops[0]);
-    for (const loop of loops) {
-        loop.forEach(([px, py], i) => {
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
-        });
-        ctx.closePath();
-    }
+    if (hitCircle) addHitCircle(ctx, def.points);
+    def.points.forEach(([px, py], i) => {
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    });
+    ctx.closePath();
     ctx.restore();
 }
 

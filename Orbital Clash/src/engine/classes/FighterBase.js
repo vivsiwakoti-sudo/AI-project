@@ -695,7 +695,7 @@ export class FighterBase {
         const aimAngle = this.lastAngle - Math.PI / 2;
         // Body fill covers the whole hitbox circle plus the silhouette, so the
         // shape reaches the hitbox edge instead of leaving an empty ring.
-        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true, hitCircle: true });
+        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, hitCircle: true });
         if (this.slowVisual) {
             ctx.fillStyle = "rgba(80, 180, 255, 0.8)";
         } else {
@@ -709,7 +709,7 @@ export class FighterBase {
 
         // Internal class pattern, clipped to the same region as the body fill.
         ctx.save();
-        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, outlineOnly: true, hitCircle: true });
+        traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, hitCircle: true });
         ctx.clip();
         drawBodyPattern(ctx, this.name, this.radius);
         ctx.restore();
