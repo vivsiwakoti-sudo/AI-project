@@ -21,6 +21,7 @@ function recordingContext() {
     },
     set(obj, prop, value) {
       obj[prop] = value;
+      calls.push(['set', prop, value]);
       return true;
     }
   });
@@ -32,6 +33,20 @@ test('every fighter class paints at least one pattern stroke or fill', () => {
     const { ctx, calls } = recordingContext();
     drawBodyPattern(ctx, name, 20);
     assert.ok(calls.some(([op]) => PAINT_OPS.has(op)), `${name} drew nothing`);
+  }
+});
+
+test('pattern colours take the outline colour when one is given', () => {
+  for (const name of Object.keys(FIGHTER_CLASSES)) {
+    const { ctx, calls } = recordingContext();
+    drawBodyPattern(ctx, name, 20, '#123456');
+    const styles = calls
+      .filter(([op, prop, value]) => op === 'set' && (prop === 'fillStyle' || prop === 'strokeStyle') && typeof value === 'string')
+      .map(([, , value]) => value);
+    assert.ok(styles.length > 0, `${name} set no string colours`);
+    for (const style of styles) {
+      assert.match(style, /^rgba\(18, 52, 86, [\d.]+\)$/, `${name} strayed from the outline colour: ${style}`);
+    }
   }
 });
 

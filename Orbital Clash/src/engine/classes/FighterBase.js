@@ -693,6 +693,8 @@ export class FighterBase {
         // The colourful gradient core is shared, and the aimable shapes lean
         // toward whichever way the fighter is facing.
         const aimAngle = this.lastAngle - Math.PI / 2;
+        // Inner colour shared by the body gradient and the class pattern; it matches the outline.
+        const innerColor = outlineColorFor(this.hitColor || this.color);
         // Body fill covers the whole hitbox circle plus the silhouette, so the
         // shape reaches the hitbox edge instead of leaving an empty ring.
         traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, hitCircle: true });
@@ -701,7 +703,7 @@ export class FighterBase {
         } else {
             const grad = ctx.createRadialGradient(0, 0, this.radius * 0.2, 0, 0, this.radius);
             grad.addColorStop(0, "white");
-            grad.addColorStop(0.3, this.color);
+            grad.addColorStop(0.3, innerColor);
             grad.addColorStop(1, "black");
             ctx.fillStyle = grad;
         }
@@ -711,7 +713,7 @@ export class FighterBase {
         ctx.save();
         traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle, hitCircle: true });
         ctx.clip();
-        drawBodyPattern(ctx, this.name, this.radius);
+        drawBodyPattern(ctx, this.name, this.radius, innerColor);
         ctx.restore();
 
         // Glossy specular highlight on the upper-left, so bodies read as lit 3D forms.
@@ -728,12 +730,8 @@ export class FighterBase {
 
         // Outline so every class reads as its silhouette, not just its inner fill.
         //
-        // The stroke MUST use a colour shaded away from the body's own gradient,
-        // not the body colour itself. `hitColor || color` was the same hue as the
-        // fill for most classes (Meteor strokes #FF4500 over an #FF4500 body), so
-        // the edge carried no contrast and the design collapsed into one blob.
-        // Mixing toward white, and darkening a stroke that is already near-white
-        // (Tornado, Knight), guarantees a visible rim on every class.
+        // The stroke uses the same colour as the inner fill and patterns (outlineColorFor).
+        // The gradient fades to black at the rim, so the outline stays visible there.
         traceShape(ctx, this.radius, this.shape, { angle: aimAngle, spinAngle: this.spinAngle });
         ctx.shadowBlur = 0;
         ctx.strokeStyle = outlineColorFor(this.hitColor || this.color);

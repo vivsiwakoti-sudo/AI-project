@@ -7,13 +7,29 @@
 
 const TAU = Math.PI * 2;
 
+// Set while a body is painted: every pattern colour is replaced by the outline's
+// RGB (alpha is kept, so the layering still reads) and reset when painting ends.
+let ink = null;
+
+const parseInk = color => {
+    const hex = /^#([0-9a-f]{6})$/i.exec(color);
+    if (hex) return [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16));
+    return color.match(/\d+/g).slice(0, 3).map(Number);
+};
+
+const recolor = color => {
+    if (!ink) return color;
+    const alpha = /([\d.]+)\)\s*$/.exec(color)?.[1] ?? 1;
+    return `rgba(${ink.join(", ")}, ${alpha})`;
+};
+
 const fillPath = (ctx, color) => {
-    ctx.fillStyle = color;
+    ctx.fillStyle = recolor(color);
     ctx.fill();
 };
 
 const strokePath = (ctx, color, width) => {
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = recolor(color);
     ctx.lineWidth = width;
     ctx.stroke();
 };
@@ -29,7 +45,7 @@ const trace = (ctx, points, closed = true) => {
 
 // Base wash over the whole body so the design covers the full silhouette.
 const tint = (ctx, color) => {
-    ctx.fillStyle = color;
+    ctx.fillStyle = recolor(color);
     ctx.fillRect(-1.2, -1.2, 2.4, 2.4);
 };
 
@@ -41,8 +57,8 @@ const dot = (ctx, x, y, r, color) => {
 
 const glow = (ctx, x, y, r, inner, outer) => {
     const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, inner);
-    grad.addColorStop(1, outer);
+    grad.addColorStop(0, recolor(inner));
+    grad.addColorStop(1, recolor(outer));
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, TAU);
@@ -266,8 +282,8 @@ const PAINTERS = {
 
     Assassin: ctx => {
         const shade = ctx.createLinearGradient(0, -1.2, 0, 1.2);
-        shade.addColorStop(0, "rgba(10, 10, 20, 0.9)");
-        shade.addColorStop(1, "rgba(0, 0, 0, 0.95)");
+        shade.addColorStop(0, recolor("rgba(10, 10, 20, 0.9)"));
+        shade.addColorStop(1, recolor("rgba(0, 0, 0, 0.95)"));
         ctx.fillStyle = shade;
         ctx.fillRect(-1.2, -1.2, 2.4, 2.4);
         hatch(ctx, Math.PI / 4, 0.26, "rgba(200, 210, 255, 0.75)", 0.2);
@@ -435,7 +451,7 @@ const PAINTERS = {
         const cy = 0.15;
         ctx.beginPath();
         ctx.arc(cx, cy, 1.3, 0, TAU);
-        ctx.fillStyle = "rgba(60, 20, 110, 0.85)";
+        ctx.fillStyle = recolor("rgba(60, 20, 110, 0.85)");
         ctx.fill();
         [0.55, 0.75, 0.95, 1.15].forEach(r => {
             ctx.beginPath();
@@ -752,14 +768,19 @@ const PAINTERS = {
     }
 };
 
-export function drawBodyPattern(ctx, className, radius) {
+export function drawBodyPattern(ctx, className, radius, outlineColor) {
     const paint = PAINTERS[className];
     if (!paint) return;
-    ctx.save();
-    ctx.shadowBlur = 0;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.scale(radius, radius);
-    paint(ctx);
-    ctx.restore();
+    ink = outlineColor ? parseInk(outlineColor) : null;
+    try {
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.scale(radius, radius);
+        paint(ctx);
+        ctx.restore();
+    } finally {
+        ink = null;
+    }
 }
